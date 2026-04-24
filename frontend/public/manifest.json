@@ -1,0 +1,26 @@
+{
+  "name": "SOWorld DIY Prepaid",
+  "short_name": "SOWorld DIY",
+  "description": "3HK DIY 储值卡管理工具 - v1.0.4",
+  "version": "1.0.4",
+  "id": "/main",
+  "start_url": "/main",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#f5f7fa",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
