@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+
+# Build outputs
+dist/
+build/
+
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Frontend caches
+.vite/
+.eslintcache
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+auth_codes.json
+auth_code.txt
+
+# Runtime data
+flask_session_data/
+plans_cache/*.json
+*.log
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+.opencode/
