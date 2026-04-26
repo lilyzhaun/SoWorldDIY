@@ -96,11 +96,11 @@ html, body {
 }
 
 #root {
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
-    min-height: 100dvh !important;
-    flex: none !important;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    flex: none;
 }
 
 body { 
@@ -342,6 +342,7 @@ input::placeholder { color: var(--input-placeholder); font-size: 13px; }
         display: flex;
         flex-direction: row; 
         min-height: 100vh; 
+        flex: 1;
         position: relative;
     }
     .login-brand-panel {
