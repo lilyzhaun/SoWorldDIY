@@ -157,7 +157,7 @@ export function MainPage(): JSX.Element {
       setPlansLoading(true)
       try {
         const subParam = noNumberMode ? 'none' : currentSubId
-        const url = getApiUrl(`/api/plans?subscriptionId=${subParam}&brand=THREE`, accountId)
+        const url = getApiUrl(`/api/plans?subscriptionId=${subParam}`, accountId)
         const data = await apiGet<{ status?: string; plans?: Plan[] }>(url)
         if (!cancelled) setPlans(data.status === 'success' ? (data.plans || []).slice().sort((a, b) => a.price - b.price) : [])
       } catch {
