@@ -29,7 +29,7 @@
 如果任何真实凭据可能已经泄露：
 
 1. 立即停止公开传播包含凭据的内容。
-2. 轮换 `SESSION_SECRET`、`PASSWORD_ENCRYPTION_KEY`、external_delivery token、Redis 密码和相关代理凭据。
+2. 轮换 `SESSION_SECRET`、`PASSWORD_ENCRYPTION_KEY`、Redis 密码和相关代理凭据。
 3. 清理 Redis session，要求用户重新登录。
 4. 撤销并重新创建鉴权码。
 5. 检查 Git 历史、发布包、日志、备份和构建产物。

@@ -26,8 +26,6 @@
 
 - 演示站点：<https://3hk.exesim.com>
 
-演示站点仅用于展示功能形态，不保证可用性，也不应在其上输入真实账号或执行真实支付操作。
-
 ## 功能特性
 
 - 🔐 **多账号登录**：支持密码登录和 OTP 登录，服务端 session 由 Redis 管理
@@ -37,7 +35,6 @@
 - 📱 **CMN 换号**：查询换号资格、获取候选号码、创建换号订单
 - 🔄 **资源转移**：在号码之间转移数据或语音资源
 - 📲 **PWA 支持**：双入口 PWA，可安装到手机桌面
-- 🔔 **external_delivery 通知**：可选的登录和购买事件提醒
 
 ## 快速开始
 
@@ -62,7 +59,7 @@ cd 3hk_new
 cp .env.example backend/.env
 ```
 
-编辑 `backend/.env`，至少设置 `SESSION_SECRET` 和 `PASSWORD_ENCRYPTION_KEY` 为强随机值。完整配置见 [配置说明](docs/03-configuration.md)。
+至少需要设置 `SESSION_SECRET` 和 `PASSWORD_ENCRYPTION_KEY` 为强随机值。完整配置见 [配置说明](docs/03-configuration.md)。
 
 ### 3. 构建前端
 
@@ -163,7 +160,7 @@ cd frontend && npm test && npm run lint && npm run build
 - [ ] `frontend/dist/`、`frontend/node_modules/`、`backend/.venv/` 不在提交中
 - [ ] 真实凭据未出现在代码、文档、issue 或提交历史中
 - [ ] 后端测试、前端测试、lint 和构建全部通过
-- [ ] 如凭据曾外泄，已轮换 `SESSION_SECRET`、`PASSWORD_ENCRYPTION_KEY`、external_delivery token
+- [ ] 如凭据曾外泄，已轮换 `SESSION_SECRET`、`PASSWORD_ENCRYPTION_KEY`
 
 ## 贡献
 
