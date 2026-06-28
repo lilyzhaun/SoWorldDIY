@@ -1314,7 +1314,7 @@ def create_app() -> FastAPI:
             request=request,
             ctx=ctx,
             method="POST",
-            url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/mnms/holdAvailableNumbersFor15m/12/",
+            url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/mnms/holdAvailableNumbersFor15m/10/",
             account_id=req_ident,
             account_context=account_ctx,
         )
