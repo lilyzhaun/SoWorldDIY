@@ -4,7 +4,6 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-
 ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
