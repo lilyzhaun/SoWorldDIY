@@ -1,6 +1,12 @@
 # 贡献指南
 
-感谢你愿意改进 3HK Assistant。提交改动前请先确认变更范围清晰，并避免把运行时敏感数据带入仓库。
+感谢你愿意改进 3HK Assistant！欢迎所有形式的贡献：Issue、Pull Request、文档改进、问题排查等。
+
+> 在线示例：<https://3hk.exesim.com>
+
+## 开发环境
+
+推荐按 [安装与本地开发](docs/02-setup.md) 搭建本地环境。你也可以直接参考在线示例：<https://3hk.exesim.com>。
 
 ## 开发流程
 
@@ -58,4 +64,10 @@ git status --short
 
 ## Issue 与安全问题
 
-普通缺陷和改进可以通过 issue 讨论。安全问题请按 `SECURITY.md` 的流程处理，不要在公开 issue 中贴出真实凭据或可利用细节。
+普通缺陷和改进可以通过 Issue 讨论。
+
+**安全问题**请按 [安全政策](SECURITY.md) 的流程私下报告，不要在公开 Issue 中贴出真实凭据或可利用细节。
+
+## 行为准则
+
+参与本项目即表示你同意遵守 [行为准则](CODE_OF_CONDUCT.md)。请在所有交流中保持友善和尊重。
