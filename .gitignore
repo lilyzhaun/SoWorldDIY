@@ -26,6 +26,9 @@ __pycache__/
 auth_codes.json
 auth_code.txt
 
+# Local-only modules (events, integrations)
+delivery_extension_local.py
+
 # Runtime data
 flask_session_data/
 plans_cache/*.json
