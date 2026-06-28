@@ -31,6 +31,9 @@ flask_session_data/
 plans_cache/*.json
 *.log
 
+# Agent/runtime metadata
+.omo/
+
 # OS/editor
 .DS_Store
 .idea/
