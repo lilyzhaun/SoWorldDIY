@@ -1,5 +1,7 @@
 # 鉴权码管理
 
+> [← API 参考](05-api-reference.md) · [测试说明 →](07-testing.md)
+
 鉴权码用于限制谁可以通过登录页添加账号。它不是 3HK/SIMWorld 的账号密码，而是本应用自己的访问控制层。
 
 ## 存储方式
@@ -77,3 +79,7 @@ python -m app.auth_cli seed
 - 登录提示鉴权码已用完：使用 `list` 查看 `times_used` 和 `usage_limit`。
 - `seed` 没有效果：确认 `backend/auth_codes.json` 存在且 JSON 格式正确。
 - Redis 重启后鉴权码丢失：检查 Redis 持久化策略，或重新执行 `create` / `seed`。
+
+---
+
+[← API 参考](05-api-reference.md) · [测试说明 →](07-testing.md)

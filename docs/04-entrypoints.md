@@ -1,5 +1,7 @@
 # 入口与运行方式
 
+> [← 配置说明](03-configuration.md) · [API 参考 →](05-api-reference.md)
+
 本项目有后端入口、前端入口、PWA 入口和维护入口。部署时需要理解这些入口的职责边界。
 
 ## 后端入口
@@ -69,3 +71,7 @@ npm run build
 | `/internal/session-cleanup` | POST | 内部维护检查入口，要求请求头 `x-session-secret` 等于 `SESSION_SECRET`。 |
 
 生产环境不应把内部维护入口暴露给不可信网络。
+
+---
+
+[← 配置说明](03-configuration.md) · [API 参考 →](05-api-reference.md)

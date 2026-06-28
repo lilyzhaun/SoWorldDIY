@@ -1,5 +1,7 @@
 # API 参考
 
+> [← 入口与运行方式](04-entrypoints.md) · [鉴权码管理 →](06-auth-codes.md)
+
 本页列出后端主要 API。除登录前接口外，大多数 API 需要有效 `session_id` Cookie。会修改状态的 JSON 接口还需要 CSRF 头。
 
 ## 通用约定
@@ -64,3 +66,7 @@
 - `/api/sim/transfer`
 
 如果遇到 `CSRF token invalid`，通常是 Cookie 丢失、旧页面缓存、跨域代理配置错误或用户 session 已失效。
+
+---
+
+[← 入口与运行方式](04-entrypoints.md) · [鉴权码管理 →](06-auth-codes.md)

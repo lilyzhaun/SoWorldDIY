@@ -1,5 +1,9 @@
 # 故障排查
 
+> [← 安全与运维](09-security-and-operations.md) · [文档首页 →](README.md)
+
+本页列出常见问题和解决方案。
+
 ## 服务无法启动
 
 ### `SESSION_SECRET is required`
@@ -98,3 +102,7 @@ cd backend
 ```
 
 不要使用未安装项目依赖的系统 Python 直接运行测试。
+
+---
+
+[← 安全与运维](09-security-and-operations.md) · [文档首页 →](README.md)

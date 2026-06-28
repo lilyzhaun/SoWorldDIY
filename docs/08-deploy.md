@@ -1,6 +1,10 @@
 # 部署说明
 
-本项目推荐以“前端静态构建 + FastAPI 后端托管”的方式部署。生产环境应放在反向代理后，并启用 TLS。
+> [← 测试说明](07-testing.md) · [安全与运维 →](09-security-and-operations.md)
+
+本项目推荐以"前端静态构建 + FastAPI 后端托管"的方式部署。生产环境应放在反向代理后，并启用 TLS。
+
+可参考在线示例：<https://3hk.exesim.com>
 
 ## 部署流程
 
@@ -75,3 +79,7 @@ curl https://your-domain.example/_ready
 ```
 
 `/_ready` 返回 503 时，按返回的 `checks` 字段排查 Redis、前端构建产物或缓存目录。
+
+---
+
+[← 测试说明](07-testing.md) · [安全与运维 →](09-security-and-operations.md)

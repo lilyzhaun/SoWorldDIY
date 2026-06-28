@@ -1,5 +1,7 @@
 # 测试说明
 
+> [← 鉴权码管理](06-auth-codes.md) · [部署说明 →](08-deploy.md)
+
 本项目包含后端 pytest 测试和前端 Vitest 测试。文档和配置变更后也应运行构建和 lint。
 
 ## 后端测试
@@ -73,3 +75,7 @@ git ls-files backend/.env backend/auth_codes.json .omo frontend/dist backend/.ve
 ```
 
 预期只允许出现类似 `backend/plans_cache/.gitkeep` 的占位文件。
+
+---
+
+[← 鉴权码管理](06-auth-codes.md) · [部署说明 →](08-deploy.md)

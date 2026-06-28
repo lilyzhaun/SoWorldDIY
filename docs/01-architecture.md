@@ -1,22 +1,28 @@
 # 架构说明
 
+> [← 文档首页](README.md) · [安装与本地开发 →](02-setup.md)
+
 3HK Assistant 是一个自托管 Web 应用，核心由浏览器前端、FastAPI 后端、Redis 和 3HK/SIMWorld 上游接口组成。
+
+## 概览
+
+```text
+浏览器 / PWA
+  │
+  │  HTTP + session_id Cookie + CSRF 头
+  ▼
+FastAPI 后端
+  ├── Redis 会话存储
+  ├── Redis 鉴权码存储
+  ├── 本地套餐缓存文件
+  └── 可选 external_delivery 通知
+  ▼
+3HK / SoSIM / SIMWorld 上游服务
+```
 
 ## 组件
 
-```text
-Browser / PWA
-  |
-  |  HTTP + session_id cookie + CSRF header
-  v
-FastAPI backend
-  |-- Redis session store
-  |-- Redis-backed auth-code store
-  |-- local plan cache files
-  |-- optional external_delivery events
-  v
-3HK / SoSIM / SIMWorld upstream services
-```
+前端和后端分别位于独立目录，通过 HTTP 接口协作。
 
 ## 前端
 
@@ -56,4 +62,8 @@ CSRF token 存在 session 数据和 `csrf_token` Cookie 中。前端 API 客户�
 
 ## 外部服务边界
 
-后端会访问 `www.three.com.hk` 和 `simworld.net` 的多个接口。项目文档、代码和 UI 应明确这是第三方服务集成，部署者需要自行承担网络、账号、支付、号码和套餐操作风险。
+后端会访问 `www.three.com.hk` 和 `simworld.net` 的多个接口。项目不与这些服务存在从属或合作关系，部署者需自行承担网络、账号、支付、号码和套餐操作风险。
+
+---
+
+[← 文档首页](README.md) · [安装与本地开发 →](02-setup.md)

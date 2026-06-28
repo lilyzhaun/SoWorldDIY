@@ -1,5 +1,7 @@
 # 安装与本地开发
 
+> [← 架构说明](01-architecture.md) · [配置说明 →](03-configuration.md)
+
 本文说明从空环境启动 3HK Assistant 的最小流程。
 
 ## 准备依赖
@@ -16,9 +18,11 @@ Redis 需要能被后端访问。默认地址是 `redis://127.0.0.1:6379/0`。
 ## 克隆仓库
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/your-org/3hk_new.git
 cd 3hk_new
 ```
+
+> 可将 URL 替换为你自己 fork 的地址。
 
 ## 配置后端环境变量
 
@@ -89,3 +93,7 @@ uvicorn run:app --host 0.0.0.0 --port 8000
 - `SESSION_SECRET is required`：没有创建或填写 `backend/.env`。
 - `/_ready` 返回 503：检查 Redis 是否可用、前端是否已构建、`frontend/dist/` 是否存在。
 - 登录失败：确认鉴权码未用尽、账号信息正确、网络可访问上游服务。
+
+---
+
+[← 架构说明](01-architecture.md) · [配置说明 →](03-configuration.md)

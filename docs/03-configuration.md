@@ -1,5 +1,7 @@
 # 配置说明
 
+> [← 安装与本地开发](02-setup.md) · [入口与运行方式 →](04-entrypoints.md)
+
 后端配置由 `backend/app/config.py` 加载。启动时会先读取 `backend/.env`，再读取进程环境变量。若同名变量已经存在于进程环境中，`.env` 不会覆盖它。
 
 ## 环境变量矩阵
@@ -56,3 +58,7 @@ PROXY_URL=http://127.0.0.1:7890
 配置 `external_delivery_token` 和 `external_delivery_target` 后，后端会尝试发送登录和购买相关通知。通知失败不会阻止主流程。
 
 如果不需要通知，保持这两个变量为空或默认值即可。
+
+---
+
+[← 安装与本地开发](02-setup.md) · [入口与运行方式 →](04-entrypoints.md)
