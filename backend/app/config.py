@@ -22,16 +22,6 @@ def _load_env_file(path: Path = ENV_FILE) -> None:
         os.environ[name] = value.strip().strip('"').strip("'")
 
 
-def _get_int_env(name: str, default: int) -> int:
-    raw = os.environ.get(name)
-    if raw is None or raw == "":
-        return default
-    try:
-        return int(raw)
-    except ValueError as exc:
-        raise RuntimeError(f"{name} must be an integer") from exc
-
-
 def _get_required_env(name: str) -> str:
     value = os.environ.get(name, "").strip()
     if not value:
@@ -46,8 +36,6 @@ class Settings:
     redis_url: str
     redis_session_prefix: str
     proxy_url: str
-    external_delivery_token: str
-    external_delivery_target: int
     password_encryption_key: str
 
     @property
@@ -71,7 +59,5 @@ def load_settings() -> Settings:
         redis_url=os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0"),
         redis_session_prefix=os.environ.get("REDIS_SESSION_PREFIX", "session:"),
         proxy_url=os.environ.get("PROXY_URL", "").strip(),
-        external_delivery_token=os.environ.get("external_delivery_token", ""),
-        external_delivery_target=_get_int_env("external_delivery_target", 0),
         password_encryption_key=password_encryption_key,
     )
