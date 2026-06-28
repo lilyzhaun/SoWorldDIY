@@ -14,8 +14,7 @@
 FastAPI 后端
   ├── Redis 会话存储
   ├── Redis 鉴权码存储
-  ├── 本地套餐缓存文件
-  └── 可选 external_delivery 通知
+  └── 本地套餐缓存文件
   ▼
 3HK / SoSIM / SIMWorld 上游服务
 ```

@@ -13,8 +13,6 @@
 | `REDIS_URL` | 否 | `redis://127.0.0.1:6379/0` | Redis 连接地址。生产环境建议使用受控网络和密码。 |
 | `REDIS_SESSION_PREFIX` | 否 | `session:` | Redis session key 前缀。多环境共享 Redis 时需要区分。 |
 | `PROXY_URL` | 否 | 空 | 访问 3HK/SIMWorld 上游接口时使用的 HTTP/HTTPS 代理。 |
-| `external_delivery_token` | 否 | 空 | external_delivery Bot token。为空时禁用通知。 |
-| `external_delivery_target` | 否 | `0` | external_delivery 管理员 chat id。为空或 0 时不发送通知。 |
 
 ## `.env` 文件位置
 
@@ -31,7 +29,7 @@ cp .env.example backend/.env
 ## 密钥建议
 
 - `SESSION_SECRET` 至少使用 32 字节以上随机值。
-- `PASSWORD_ENCRYPTION_KEY` 建议独立生成，不要复用 external_delivery token、Redis 密码或其他账号密码。
+- `PASSWORD_ENCRYPTION_KEY` 建议独立生成，不要复用 Redis 密码或其他账号密码。
 - 如果密钥曾经进入聊天记录、日志、公开仓库、构建产物或发布包，应立即轮换。
 
 ## Redis 配置
@@ -53,11 +51,9 @@ PROXY_URL=http://127.0.0.1:7890
 
 该代理会同时用于 HTTP 和 HTTPS 请求。
 
-## external_delivery 通知
+## 通知扩展
 
-配置 `external_delivery_token` 和 `external_delivery_target` 后，后端会尝试发送登录和购买相关通知。通知失败不会阻止主流程。
-
-如果不需要通知，保持这两个变量为空或默认值即可。
+通知模块 `backend/app/delivery_extension.py` 默认为 no-op。如需启用本地通知，可在 `backend/app/` 下创建 `delivery_extension_local.py` 并在 `backend/.env` 中配置所需凭据。`delivery_extension_local.py` 已被 `.gitignore` 忽略，不会进入公开仓库。
 
 ---
 

@@ -11,7 +11,6 @@
 - `backend/.env`
 - `SESSION_SECRET`
 - `PASSWORD_ENCRYPTION_KEY`
-- external_delivery Bot token
 - Redis 密码和连接串
 - `backend/auth_codes.json`
 - 真实鉴权码
@@ -51,9 +50,9 @@
 - 换号和资源转移操作不可逆或难以撤销时的风险。
 - 代理网络不会泄露账号流量。
 
-## external_delivery 通知
+## 本地通知扩展
 
-启用 external_delivery 通知时，消息可能包含账号标识、套餐或购买信息。请确认 Bot 和 chat 的可见范围。
+通知模块默认为 no-op。如果你启用了本地通知扩展，消息可能包含账号标识、套餐或购买信息，请确认通知渠道的可见范围和凭据安全。
 
 ## 发布前清单
 
