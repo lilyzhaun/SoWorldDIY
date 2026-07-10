@@ -24,6 +24,7 @@ from .auth_codes import AuthCodeStore
 from .cache_store import MemoryCache
 from .config import load_settings
 from .delivery_extension import send as notify
+from .request_overrides import resolve_proxies
 from .security import (
     create_password_cipher,
     csrf_token_matches,
@@ -305,7 +306,7 @@ def make_3hk_request(
                 headers=headers,
                 params=params,
                 json=json_data,
-                proxies=PROXIES,
+                proxies=resolve_proxies(url, PROXIES),
                 timeout=(5, 15),
             )
 
