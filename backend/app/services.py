@@ -1,0 +1,156 @@
+from __future__ import annotations
+
+import json
+import logging
+from collections.abc import Callable
+from typing import Any, Protocol, runtime_checkable
+
+import requests
+
+from .runtime import BASE_HEADERS, PLANS_CACHE_DIR, PROXIES, plans_refresh_lock
+from .session_store import SessionContext
+
+logger = logging.getLogger(__name__)
+
+
+@runtime_checkable
+class ServiceDepsProtocol(Protocol):
+    """Read-only dependency surface for service helpers.
+
+    Members are ``@property`` so adapters like ``_MainDeps`` (which re-read
+    live ``main`` globals for monkeypatch seams) structurally satisfy this
+    protocol without mutable attribute assignment.
+    """
+
+    @property
+    def get_cache(self) -> Callable[[str], Any | None]: ...
+
+    @property
+    def get_account_context(
+        self,
+    ) -> Callable[[SessionContext, str | None], dict[str, Any] | None]: ...
+
+    @property
+    def notify(self) -> Callable[[str], None]: ...
+
+    @property
+    def plans_refreshing(self) -> set[str]: ...
+
+    @property
+    def get_isolated_session(self) -> Callable[[], requests.Session]: ...
+
+
+_service_deps_provider: Callable[[], ServiceDepsProtocol] | None = None
+
+
+def configure_service_deps(provider: Callable[[], ServiceDepsProtocol]) -> None:
+    global _service_deps_provider
+    _service_deps_provider = provider
+
+
+def _deps() -> ServiceDepsProtocol:
+    if _service_deps_provider is None:
+        raise RuntimeError("service deps not configured; call configure_service_deps")
+    return _service_deps_provider()
+
+
+def get_brand_by_sub_id(
+    ctx: SessionContext,
+    sub_id: str | None,
+    account_id: str | None,
+) -> str:
+    d = _deps()
+    if account_id:
+        data = d.get_cache(f"profile_{account_id}")
+        if data and isinstance(data, dict):
+            subscriptions = data.get("data", {}).get("subscriptions", [])
+            for sub in subscriptions:
+                if str(sub.get("subscriptionId")) == str(sub_id):
+                    return str(sub.get("brand", "THREE"))
+
+    account = d.get_account_context(ctx, account_id)
+    if account:
+        return str(account.get("sub_brand", "THREE"))
+    return "THREE"
+
+
+def handle_purchase_event(
+    payment_url: str, sub_id: str, amount_pay: float, account_id: str
+) -> None:
+    _ = amount_pay
+    d = _deps()
+    try:
+        phone = "未知"
+        profile_data = d.get_cache(f"profile_{account_id}")
+        if profile_data and isinstance(profile_data, dict):
+            for sub in profile_data.get("data", {}).get("subscriptions", []):
+                if str(sub.get("subscriptionId")) == str(sub_id):
+                    phone = str(sub.get("primaryMsisdn", "未知"))
+                    break
+        msg = f"💳 新支付请求\n👤 账号: {account_id}\n📱 {phone}\n🔗 {payment_url}"
+        d.notify(msg)
+    except Exception:
+        pass
+
+
+def fetch_and_save_plans_background(
+    sub_brand: str, cookies: dict[str, Any], user_agent: str | None
+) -> None:
+    d = _deps()
+    with plans_refresh_lock:
+        if sub_brand in d.plans_refreshing:
+            return
+        d.plans_refreshing.add(sub_brand)
+    file_path = PLANS_CACHE_DIR / f"plans_{sub_brand}.json"
+    try:
+        url = f"https://www.three.com.hk/account-pro/HTHK/THREE/{sub_brand}/offer/getPlanOffers/"
+        headers = dict(BASE_HEADERS)
+        if user_agent:
+            headers["User-Agent"] = user_agent
+        with d.get_isolated_session() as s:
+            s.cookies.update(cookies)
+            r = s.get(url, headers=headers, proxies=PROXIES, timeout=15)
+            if r.status_code == 200:
+                vas_plans: list[dict[str, Any]] = []
+                for offer in r.json().get("offers", []):
+                    if offer.get("offerType") != "VAS":
+                        continue
+                    subtype = str(offer.get("offerSubType", "")).upper()
+                    if "LOCAL" in subtype:
+                        category = "LOCAL"
+                    elif "TRAVEL" in subtype or "ROAMING" in subtype:
+                        category = "TRAVEL"
+                    elif "VOICE" in subtype:
+                        category = "VOICE"
+                    else:
+                        category = "OTHER"
+
+                    is_vowifi = any(
+                        "VOWIFI"
+                        in str(p.get("productName", "")).upper().replace(" ", "")
+                        for p in offer.get("products", [])
+                    )
+                    vas_plans.append(
+                        {
+                            "offerId": offer["offerId"],
+                            "name": offer.get("offerNameChi", offer.get("offerName")),
+                            "price": offer["offerPrice"],
+                            "validity": f"{offer['offerPeriod']} {offer['offerPeriodTerm']}",
+                            "desc": offer.get("offerDescChi", offer.get("offerDesc")),
+                            "isVoWifi": is_vowifi,
+                            "category": category,
+                        }
+                    )
+                result = {
+                    "status": "success",
+                    "plans": sorted(vas_plans, key=lambda x: x["price"]),
+                }
+                file_path.write_text(
+                    json.dumps(result, ensure_ascii=False), encoding="utf-8"
+                )
+                logger.info("Plans updated for %s", sub_brand)
+    except Exception as exc:
+        logger.error("Background plan fetch failed: %s", exc)
+    finally:
+        with plans_refresh_lock:
+            d.plans_refreshing.discard(sub_brand)

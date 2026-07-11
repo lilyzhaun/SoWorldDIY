@@ -4,216 +4,156 @@ import json
 import logging
 import threading
 import time
+from collections.abc import Callable, MutableMapping
 from contextlib import asynccontextmanager
-from datetime import timedelta
-from pathlib import Path
 from typing import Any, TypedDict
 
-import redis
 import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from redis.exceptions import RedisError
-from requests.adapters import HTTPAdapter
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
-from urllib3.util.retry import Retry
 
-from .auth_codes import AuthCodeStore
-from .cache_store import MemoryCache
-from .config import load_settings
-from .delivery_extension import send as notify
-from .request_overrides import resolve_proxies
-from .security import (
-    create_password_cipher,
-    csrf_token_matches,
-    new_csrf_token,
+from .delivery_extension import send as notify  # noqa: F401 — re-exported for monkeypatch seam
+from .request_overrides import (
+    resolve_proxies,  # noqa: F401 — re-exported for monkeypatch seam
 )
-from .security import (
-    decrypt_password as decrypt_password_value,
+from .responses import (  # noqa: F401 — re-exported for monkeypatch seam
+    _json_error,
+    _json_success,
+    _redirect_to_login,
+    _upstream_error,
 )
-from .security import (
-    encrypt_password as encrypt_password_value,
+from .runtime import (
+    BASE_HEADERS,
+    FRONTEND_DIST_DIR,
+    FRONTEND_STATIC_DIR,
+    PLANS_CACHE_DIR,
+    PROXIES,
+    SESSION_SECRET,
+    SUB_BRANDS,
+    auth_code_store,
+    decrypt_password,  # noqa: F401 — re-exported for monkeypatch seam
+    delete_cache,  # noqa: F401 — re-exported for monkeypatch seam
+    encrypt_password,  # noqa: F401 — re-exported for monkeypatch seam
+    get_cache,  # noqa: F401 — re-exported for monkeypatch seam
+    get_isolated_session,  # noqa: F401 — re-exported for monkeypatch seam
+    plans_refresh_lock,  # noqa: F401 — re-exported for monkeypatch seam
+    plans_refreshing,  # noqa: F401 — re-exported for monkeypatch seam
+    redis_client,
+    session_store,  # noqa: F401 — re-exported for monkeypatch seam
+    set_cache,  # noqa: F401 — re-exported for monkeypatch seam
+    verify_auth_code,  # noqa: F401 — re-exported for monkeypatch seam
 )
-from .session_store import RedisSessionStore, SessionContext
+from .services import (  # noqa: F401 — re-exported for monkeypatch seam
+    configure_service_deps,
+    fetch_and_save_plans_background,
+    get_brand_by_sub_id,
+    handle_purchase_event,
+)
+from .session_store import SessionContext
+from .session_utils import (  # noqa: F401 — re-exported for monkeypatch seam
+    SessionMiddleware,
+    SessionStoreProtocol,
+    _clear_session,
+    _create_session,
+    _mark_session_cookie_for_deletion,
+    _require_login,
+    _save_session,
+    _validate_csrf,
+    configure_session_store,
+    get_account_context,
+)
+from .upstream import (  # noqa: F401 — re-exported for monkeypatch seam
+    attempt_silent_relogin,
+    configure_upstream_deps,
+    make_3hk_request,
+)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-settings = load_settings()
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-FRONTEND_DIST_DIR = BASE_DIR.parent / "frontend" / "dist"
-FRONTEND_STATIC_DIR = FRONTEND_DIST_DIR / "static"
-PLANS_CACHE_DIR = BASE_DIR / "plans_cache"
-AUTH_CODES_FILE = BASE_DIR / "auth_codes.json"
-
-PLANS_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-
-SESSION_COOKIE_NAME = "session"
-CSRF_COOKIE_NAME = "csrf_token"
-CSRF_HEADER_NAME = "x-csrf-token"
-SESSION_LIFETIME_SECONDS = int(timedelta(days=7).total_seconds())
-SESSION_DAILY_REFRESH_SECONDS = 86400
-SESSION_KEY_PREFIX = "3hk_user_"
-SESSION_SECRET = settings.session_secret
-REDIS_URL = settings.redis_url
-REDIS_SESSION_PREFIX = settings.redis_session_prefix
-PROXIES = settings.proxies
-
-BASE_HEADERS: dict[str, str] = {
-    "Host": "www.three.com.hk",
-    "Content-Type": "application/json",
-    "Pragma": "no-cache",
-    "Accept": "application/json, text/plain, */*",
-    "Sec-Fetch-Site": "same-origin",
-    "Accept-Language": "zh-TW,zh-Hant;q=0.9",
-    "platformId": "GENERIC_ACCOUNT",
-    "Sec-Fetch-Mode": "cors",
-    "Accept-Encoding": "gzip, deflate, br",
-    "Origin": "https://www.three.com.hk",
-    "Referer": "https://www.three.com.hk/prepaid/account/tc/rnr-reg",
-    "platformVersion": "0.55.0",
-    "Connection": "keep-alive",
-    "Sec-Fetch-Dest": "empty",
-}
-
-SUB_BRANDS = ["THREE", "SOSIM", "HAHA", "TRADER"]
-
-retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
-global_adapter = HTTPAdapter(pool_connections=20, pool_maxsize=20, max_retries=retries)
-
-CACHE_DEFAULT_TIMEOUT = 300
-cache = MemoryCache(default_timeout=CACHE_DEFAULT_TIMEOUT)
-
-plans_refresh_lock = threading.Lock()
-plans_refreshing: set[str] = set()
-redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
-session_store = RedisSessionStore(
-    redis_client=redis_client,
-    key_prefix=REDIS_SESSION_PREFIX,
-    lifetime_seconds=SESSION_LIFETIME_SECONDS,
-    sid_prefix=SESSION_KEY_PREFIX,
-)
-password_cipher = create_password_cipher(settings.password_encryption_key)
-auth_code_store = AuthCodeStore(redis_client=redis_client, seed_file=AUTH_CODES_FILE)
 
 
-def set_cache(key: str, value: Any, timeout: int = CACHE_DEFAULT_TIMEOUT) -> None:
-    cache.set(key, value, timeout)
+class _MainDeps:
+    """Adapter exposing main-module seam values to service modules.
+
+    Each property reads the current value from ``main`` globals so that
+    ``monkeypatch.setattr(main, 'session_store', fake)`` (and other seams)
+    are immediately visible to session_utils, upstream, and services.
+    """
+
+    @property
+    def session_store(self) -> SessionStoreProtocol:  # noqa: F811
+        return globals()["session_store"]
+
+    @property
+    def decrypt_password(self) -> Callable[[str | None], str | None]:  # noqa: F811
+        return globals()["decrypt_password"]
+
+    @property
+    def get_isolated_session(self) -> Callable[[], requests.Session]:
+        return globals()["get_isolated_session"]
+
+    @property
+    def _save_session(self) -> Callable[[SessionContext], None]:
+        return globals()["_save_session"]
+
+    @property
+    def resolve_proxies(  # noqa: F811
+        self,
+    ) -> Callable[
+        [str, MutableMapping[str, str] | None], MutableMapping[str, str] | None
+    ]:
+        return globals()["resolve_proxies"]
+
+    @property
+    def attempt_silent_relogin(  # noqa: F811
+        self,
+    ) -> Callable[[Request, SessionContext, str, dict[str, Any]], bool]:
+        return globals()["attempt_silent_relogin"]
+
+    @property
+    def get_account_context(
+        self,
+    ) -> Callable[[SessionContext, str | None], dict[str, Any] | None]:
+        return globals()["get_account_context"]
+
+    @property
+    def make_3hk_request(self) -> Callable[..., requests.Response | None]:
+        return globals()["make_3hk_request"]
+
+    @property
+    def get_cache(self) -> Callable[[str], Any | None]:
+        return globals()["get_cache"]
+
+    @property
+    def notify(self) -> Callable[[str], None]:
+        return globals()["notify"]
+
+    @property
+    def plans_refreshing(self) -> set[str]:  # noqa: F811
+        return globals()["plans_refreshing"]
 
 
-def get_cache(key: str) -> Any | None:
-    return cache.get(key)
+_main_deps = _MainDeps()
 
 
-def delete_cache(key: str) -> None:
-    cache.delete(key)
+def _live_session_store() -> SessionStoreProtocol:
+    return globals()["session_store"]
 
 
-def encrypt_password(password: str | None) -> str | None:
-    return encrypt_password_value(password_cipher, password)
-
-
-def decrypt_password(encrypted_password: str | None) -> str | None:
-    return decrypt_password_value(password_cipher, encrypted_password)
-
-
-def get_isolated_session() -> requests.Session:
-    s = requests.Session()
-    s.mount("http://", global_adapter)
-    s.mount("https://", global_adapter)
-    return s
-
-
-def verify_auth_code(auth_code: str | None, consume: bool = False) -> tuple[bool, str]:
-    return auth_code_store.verify(auth_code, consume)
+configure_session_store(_live_session_store)
+configure_upstream_deps(lambda: _main_deps)
+configure_service_deps(lambda: _main_deps)
 
 
 class DTOAgg(TypedDict):
     usages: list[dict[str, Any]]
     dates: list[str]
     is_vowifi: bool
-
-
-def _get_session_if_exists(request: Request) -> SessionContext | None:
-    sid = request.cookies.get(SESSION_COOKIE_NAME)
-    if not sid:
-        return None
-
-    redis_data = session_store.load(sid)
-    if redis_data is not None:
-        return SessionContext(sid=sid, data=redis_data)
-
-    return None
-
-
-def _create_session() -> SessionContext:
-    data: dict[str, Any] = {"csrf_token": new_csrf_token()}
-    return session_store.create(data)
-
-
-def _save_session(ctx: SessionContext) -> None:
-    session_store.save(ctx.sid, ctx.data)
-
-
-def _clear_session(ctx: SessionContext) -> None:
-    session_store.delete(ctx.sid)
-    ctx.data.clear()
-
-
-def _mark_session_cookie_for_deletion(request: Request) -> None:
-    request.state.session_ctx = None
-    request.state.delete_session_cookie = True
-
-
-def _daily_refresh_session_if_needed(ctx: SessionContext) -> None:
-    accounts = ctx.data.get("accounts")
-    changed = False
-    if not ctx.data.get("csrf_token"):
-        ctx.data["csrf_token"] = new_csrf_token()
-        changed = True
-    if accounts:
-        now = time.time()
-        last_refresh = float(ctx.data.get("last_session_refresh", 0) or 0)
-        if now - last_refresh > SESSION_DAILY_REFRESH_SECONDS:
-            ctx.data["last_session_refresh"] = now
-            changed = True
-    if changed:
-        _save_session(ctx)
-
-
-def _ensure_csrf_token(ctx: SessionContext) -> str:
-    token = ctx.data.get("csrf_token")
-    if not isinstance(token, str) or not token:
-        token = new_csrf_token()
-        ctx.data["csrf_token"] = token
-        _save_session(ctx)
-    return token
-
-
-def _validate_csrf(request: Request, ctx: SessionContext | None) -> JSONResponse | None:
-    if ctx is None:
-        return None
-    expected = ctx.data.get("csrf_token")
-    provided = request.headers.get(CSRF_HEADER_NAME)
-    if not csrf_token_matches(str(expected) if expected else None, provided):
-        return _json_error("CSRF token invalid", 403)
-    return None
-
-
-def get_account_context(
-    ctx: SessionContext, account_id: str | None
-) -> dict[str, Any] | None:
-    if not account_id:
-        return None
-    accounts = ctx.data.get("accounts", {})
-    account = accounts.get(account_id)
-    if isinstance(account, dict):
-        return account
-    return None
 
 
 def internal_logout_account(ctx: SessionContext, account_id: str) -> bool:
@@ -229,302 +169,6 @@ def internal_logout_account(ctx: SessionContext, account_id: str) -> bool:
     ctx.data["accounts"] = accounts
     _save_session(ctx)
     return True
-
-
-def attempt_silent_relogin(
-    request: Request,
-    ctx: SessionContext,
-    account_id: str,
-    account_data: dict[str, Any],
-) -> bool:
-    if account_data.get("login_type") != "password" or not account_data.get(
-        "stored_password_encrypted"
-    ):
-        return False
-
-    password = decrypt_password(str(account_data.get("stored_password_encrypted")))
-    if not password:
-        return False
-    sub_brand = str(account_data.get("sub_brand", "THREE"))
-    login_url = (
-        f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{sub_brand}/user/login/"
-    )
-    payload = {
-        "id": account_id,
-        "password": password,
-        "rememberMe": True,
-        "forceLogin": False,
-    }
-
-    headers = dict(BASE_HEADERS)
-    headers["User-Agent"] = request.headers.get("User-Agent", "Mozilla/5.0")
-
-    try:
-        with get_isolated_session() as s:
-            r = s.post(
-                login_url, json=payload, headers=headers, proxies=PROXIES, timeout=10
-            )
-            if r.status_code == 204:
-                new_cookies = requests.utils.dict_from_cookiejar(r.cookies)
-                accounts = ctx.data.get("accounts", {})
-                if account_id in accounts:
-                    accounts[account_id]["cookies"] = new_cookies
-                    ctx.data["accounts"] = accounts
-                    _save_session(ctx)
-                    logger.info("Silent re-login successful for %s", account_id)
-                    return True
-    except Exception as exc:
-        logger.error("Silent re-login error: %s", exc)
-    return False
-
-
-def make_3hk_request(
-    request: Request,
-    ctx: SessionContext,
-    method: str,
-    url: str,
-    json_data: Any = None,
-    params: dict[str, Any] | None = None,
-    account_id: str | None = None,
-    account_context: dict[str, Any] | None = None,
-    _is_retry: bool = False,
-) -> requests.Response | None:
-    if not account_context:
-        logger.error("make_3hk_request called without account_context")
-        return None
-
-    cookies = account_context.get("cookies", {})
-    headers = dict(BASE_HEADERS)
-    headers["User-Agent"] = request.headers.get("User-Agent", "Mozilla/5.0")
-
-    try:
-        with get_isolated_session() as s:
-            s.cookies.update(cookies)
-            response = s.request(
-                method,
-                url,
-                headers=headers,
-                params=params,
-                json=json_data,
-                proxies=resolve_proxies(url, PROXIES),
-                timeout=(5, 15),
-            )
-
-            if response.status_code == 401:
-                target_id = account_id
-                if not target_id:
-                    for uid, data in ctx.data.get("accounts", {}).items():
-                        if data is account_context:
-                            target_id = uid
-                            break
-                if target_id and not _is_retry:
-                    logger.info("401 for %s, trying silent relogin", target_id)
-                    if attempt_silent_relogin(request, ctx, target_id, account_context):
-                        refreshed_ctx = get_account_context(ctx, target_id)
-                        return make_3hk_request(
-                            request=request,
-                            ctx=ctx,
-                            method=method,
-                            url=url,
-                            json_data=json_data,
-                            params=params,
-                            account_id=target_id,
-                            account_context=refreshed_ctx,
-                            _is_retry=True,
-                        )
-                    logger.warning("Relogin failed for %s", target_id)
-                return response
-
-            if response.cookies:
-                new_cookies = requests.utils.dict_from_cookiejar(response.cookies)
-                if new_cookies:
-                    account_context.setdefault("cookies", {})
-                    account_context["cookies"].update(new_cookies)
-                    if account_id:
-                        accounts = ctx.data.get("accounts", {})
-                        if account_id in accounts:
-                            accounts[account_id] = account_context
-                            ctx.data["accounts"] = accounts
-                    _save_session(ctx)
-
-            return response
-    except Exception as exc:
-        logger.error("Request Error: %s", exc)
-        return None
-
-
-def get_brand_by_sub_id(
-    ctx: SessionContext,
-    sub_id: str | None,
-    account_id: str | None,
-) -> str:
-    if account_id:
-        data = get_cache(f"profile_{account_id}")
-        if data and isinstance(data, dict):
-            subscriptions = data.get("data", {}).get("subscriptions", [])
-            for sub in subscriptions:
-                if str(sub.get("subscriptionId")) == str(sub_id):
-                    return str(sub.get("brand", "THREE"))
-
-    account = get_account_context(ctx, account_id)
-    if account:
-        return str(account.get("sub_brand", "THREE"))
-    return "THREE"
-
-
-def handle_purchase_event(
-    payment_url: str, sub_id: str, amount_pay: float, account_id: str
-) -> None:
-    _ = amount_pay
-    try:
-        phone = "未知"
-        profile_data = get_cache(f"profile_{account_id}")
-        if profile_data and isinstance(profile_data, dict):
-            for sub in profile_data.get("data", {}).get("subscriptions", []):
-                if str(sub.get("subscriptionId")) == str(sub_id):
-                    phone = str(sub.get("primaryMsisdn", "未知"))
-                    break
-        msg = f"💳 新支付请求\n👤 账号: {account_id}\n📱 {phone}\n🔗 {payment_url}"
-        notify(msg)
-    except Exception:
-        pass
-
-
-def fetch_and_save_plans_background(
-    sub_brand: str, cookies: dict[str, Any], user_agent: str | None
-) -> None:
-    with plans_refresh_lock:
-        if sub_brand in plans_refreshing:
-            return
-        plans_refreshing.add(sub_brand)
-    file_path = PLANS_CACHE_DIR / f"plans_{sub_brand}.json"
-    try:
-        url = f"https://www.three.com.hk/account-pro/HTHK/THREE/{sub_brand}/offer/getPlanOffers/"
-        headers = dict(BASE_HEADERS)
-        if user_agent:
-            headers["User-Agent"] = user_agent
-        with get_isolated_session() as s:
-            s.cookies.update(cookies)
-            r = s.get(url, headers=headers, proxies=PROXIES, timeout=15)
-            if r.status_code == 200:
-                vas_plans: list[dict[str, Any]] = []
-                for offer in r.json().get("offers", []):
-                    if offer.get("offerType") != "VAS":
-                        continue
-                    subtype = str(offer.get("offerSubType", "")).upper()
-                    if "LOCAL" in subtype:
-                        category = "LOCAL"
-                    elif "TRAVEL" in subtype or "ROAMING" in subtype:
-                        category = "TRAVEL"
-                    elif "VOICE" in subtype:
-                        category = "VOICE"
-                    else:
-                        category = "OTHER"
-
-                    is_vowifi = any(
-                        "VOWIFI"
-                        in str(p.get("productName", "")).upper().replace(" ", "")
-                        for p in offer.get("products", [])
-                    )
-                    vas_plans.append(
-                        {
-                            "offerId": offer["offerId"],
-                            "name": offer.get("offerNameChi", offer.get("offerName")),
-                            "price": offer["offerPrice"],
-                            "validity": f"{offer['offerPeriod']} {offer['offerPeriodTerm']}",
-                            "desc": offer.get("offerDescChi", offer.get("offerDesc")),
-                            "isVoWifi": is_vowifi,
-                            "category": category,
-                        }
-                    )
-                result = {
-                    "status": "success",
-                    "plans": sorted(vas_plans, key=lambda x: x["price"]),
-                }
-                file_path.write_text(
-                    json.dumps(result, ensure_ascii=False), encoding="utf-8"
-                )
-                logger.info("Plans updated for %s", sub_brand)
-    except Exception as exc:
-        logger.error("Background plan fetch failed: %s", exc)
-    finally:
-        with plans_refresh_lock:
-            plans_refreshing.discard(sub_brand)
-
-
-def _json_error(message: str, status_code: int = 400) -> JSONResponse:
-    return JSONResponse(
-        status_code=status_code, content={"status": "error", "message": message}
-    )
-
-
-def _upstream_error(
-    response: requests.Response | None,
-    public_message: str = "请求失败，请稍后重试",
-    status_code: int = 400,
-) -> JSONResponse:
-    if response is None:
-        logger.warning("Upstream request failed without response")
-    else:
-        logger.warning(
-            "Upstream request failed: status=%s body=%s",
-            response.status_code,
-            response.text[:1000],
-        )
-    return _json_error(public_message, status_code)
-
-
-def _json_success(content: dict[str, Any]) -> JSONResponse:
-    return JSONResponse(status_code=200, content=content)
-
-
-def _redirect_to_login() -> RedirectResponse:
-    return RedirectResponse(url="/", status_code=302)
-
-
-class SessionMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: Any) -> Response:
-        ctx = _get_session_if_exists(request)
-        request.state.session_ctx = ctx
-        request.state.delete_session_cookie = False
-        if ctx is None and request.cookies.get(SESSION_COOKIE_NAME):
-            request.state.delete_session_cookie = True
-        if ctx is not None:
-            _daily_refresh_session_if_needed(ctx)
-        response = await call_next(request)
-        current_ctx = getattr(request.state, "session_ctx", None)
-        if getattr(request.state, "delete_session_cookie", False):
-            response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
-            response.delete_cookie(key=CSRF_COOKIE_NAME, path="/")
-        elif current_ctx is not None:
-            csrf_token = _ensure_csrf_token(current_ctx)
-            response.set_cookie(
-                key=SESSION_COOKIE_NAME,
-                value=current_ctx.sid,
-                max_age=SESSION_LIFETIME_SECONDS,
-                httponly=True,
-                samesite="lax",
-                path="/",
-            )
-            response.set_cookie(
-                key=CSRF_COOKIE_NAME,
-                value=csrf_token,
-                max_age=SESSION_LIFETIME_SECONDS,
-                httponly=False,
-                samesite="lax",
-                path="/",
-            )
-        return response
-
-
-def _require_login(request: Request) -> SessionContext | None:
-    ctx = getattr(request.state, "session_ctx", None)
-    if ctx is None:
-        return None
-    accounts = ctx.data.get("accounts", {})
-    if not isinstance(accounts, dict) or not accounts:
-        return None
-    return ctx
 
 
 @asynccontextmanager
