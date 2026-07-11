@@ -1,12 +1,20 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import DOMPurify from 'dompurify'
-
-import { apiFetch, apiGet, apiPostJson } from './api/client'
+import { useEffect, useMemo, useState } from 'react'
+import { apiFetch, apiGet } from './api/client'
 import { BUILD_VERSION } from './build'
+import { CartQuantityModal } from './components/CartQuantityModal'
+import { HistoryModal } from './components/HistoryModal'
+import { InboxModal } from './components/InboxModal'
+import { MainHeader } from './components/MainHeader'
+import { PlanList } from './components/PlanList'
 import { useBodyScrollLock } from './hooks/useBodyScrollLock'
+import { useCmn } from './hooks/useCmn'
+import { useHistory } from './hooks/useHistory'
+import { useInbox } from './hooks/useInbox'
+import { usePurchaseCart } from './hooks/usePurchaseCart'
 import { useServiceWorker } from './hooks/useServiceWorker'
-import type { AvailableAccount, CartItem, Category, CmnCheckResponse, HistoryItem, InboxMessage, ModalMode, Plan, ProfileResponse, Subscription, TransferDraft } from './types'
-import { formatStatus, getAccountIdFromPathname, getApiUrl, getIsoTime, normalizeUnit, stripHtml } from './utils/mainPage'
+import { useTransfer } from './hooks/useTransfer'
+import type { AvailableAccount, Category, ModalMode, Plan, ProfileResponse, Subscription } from './types'
+import { getAccountIdFromPathname, getApiUrl, normalizeUnit, stripHtml } from './utils/mainPage'
 
 const SVG_SPRITE = `
 <svg>
@@ -31,21 +39,11 @@ export function MainPage(): JSX.Element {
   const [plansLoading, setPlansLoading] = useState(true)
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
 
-  const [cart, setCart] = useState<CartItem[]>([])
-  const [cartQtyDraft, setCartQtyDraft] = useState<{ offerId: string; name: string; price: number; quantity: number } | null>(null)
+  const { cart, cartCount, cartQtyDraft, cartTotal, confirmAddToCart, openAddToCart, openPurchaseModal, purchaseDraft, removeCartItem, resetCart, setCartQtyDraft, setPurchaseDraft, submitCheckout, submitCmnPurchase, updateCartItem } = usePurchaseCart(accountId, currentSubId, balance)
 
-  const [inboxOpen, setInboxOpen] = useState(false)
-  const [inboxLoading, setInboxLoading] = useState(false)
-  const [inboxMessages, setInboxMessages] = useState<InboxMessage[]>([])
-  const [activeInboxIndex, setActiveInboxIndex] = useState<number | null>(null)
+  const { activeInboxIndex, fetchInbox, inboxLoading, inboxMessages, inboxOpen, openInbox, setActiveInboxIndex, setInboxOpen } = useInbox(accountId)
 
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const [historyLoading, setHistoryLoading] = useState(false)
-  const [historyItems, setHistoryItems] = useState<HistoryItem[]>([])
-  const [historyDetailIndex, setHistoryDetailIndex] = useState<number | null>(null)
-  const [histStart, setHistStart] = useState('')
-  const [histEnd, setHistEnd] = useState('')
-  const [historyCache, setHistoryCache] = useState<Record<string, HistoryItem[]>>({})
+  const { fetchHistory, histEnd, histStart, historyDetailIndex, historyItems, historyLoading, historyOpen, openHistory, resetHistory, setHistEnd, setHistStart, setHistoryDetailIndex, setHistoryOpen } = useHistory(accountId, currentSubId)
 
   const [showModal, setShowModal] = useState(false)
   const [modalTitle, setModalTitle] = useState('标题')
@@ -53,26 +51,11 @@ export function MainPage(): JSX.Element {
   const [modalKind, setModalKind] = useState<'alert' | 'switch' | 'cart' | 'purchase' | 'transfer' | null>(null)
   const [alertText, setAlertText] = useState('')
 
-  const [purchaseDraft, setPurchaseDraft] = useState<{ title: string; price: number; txnAmount: number; paymentType: 'ALCN' | 'ALHK' | 'WECHAT' | 'MPGS'; submitting: boolean; source: 'cart' | 'cmn'; newLine: boolean } | null>(null)
-
-  const [transferDraft, setTransferDraft] = useState<TransferDraft | null>(null)
-  const [transferTarget, setTransferTarget] = useState('')
-  const [transferAmount, setTransferAmount] = useState('')
-  const [transferError, setTransferError] = useState('')
-  const [transferSubmitting, setTransferSubmitting] = useState(false)
+  const { openTransferModal, resetTransfer, setTransferAmount, setTransferTarget, submitTransfer, transferAmount, transferDraft, transferError, transferSubmitting, transferTarget } = useTransfer(accountId, currentSubId)
 
   const [refreshingUsage, setRefreshingUsage] = useState(false)
 
-  const [cmnLoading, setCmnLoading] = useState(false)
-  const [cmnError, setCmnError] = useState('')
-  const [cmnData, setCmnData] = useState<CmnCheckResponse['data'] | null>(null)
-  const [cmnNumbers, setCmnNumbers] = useState<string[]>([])
-  const [cmnNumbersLoading, setCmnNumbersLoading] = useState(false)
-  const [selectedNumber, setSelectedNumber] = useState<string | null>(null)
-  const [cmnCanRefresh, setCmnCanRefresh] = useState(true)
-  const [cmnCooldown, setCmnCooldown] = useState(0)
-
-  const longPressRef = useRef<number | null>(null)
+  const { checkCmnEligibility, clearLongPress, cmnCanRefresh, cmnCooldown, cmnData, cmnError, cmnLoading, cmnNumbers, cmnNumbersLoading, refreshCmnNumbers, selectedNumber, setSelectedNumber, startLongPressEdit, submitChangeNumber } = useCmn(accountId, currentSubId)
 
   const currentSub = useMemo(
     () => subscriptions.find((item) => item.subscriptionId === currentSubId) ?? null,
@@ -90,9 +73,6 @@ export function MainPage(): JSX.Element {
       return `${plan.name}${plan.desc}${plan.price}`.toLowerCase().includes(keyword)
     })
   }, [plans, search, category, showFreePlans])
-
-  const cartCount = useMemo(() => cart.reduce((acc, item) => acc + item.quantity, 0), [cart])
-  const cartTotal = useMemo(() => cart.reduce((acc, item) => acc + item.price * item.quantity, 0), [cart])
 
   useServiceWorker(BUILD_VERSION)
   useBodyScrollLock(inboxOpen || historyOpen || showModal)
@@ -170,12 +150,11 @@ export function MainPage(): JSX.Element {
     void fetchBalance()
     void fetchPlans()
     if (!noNumberMode) {
-      void fetchInbox(false)
-      void fetchHistory(false, true)
+      void fetchInbox(false, showAlert)
+      void fetchHistory(false, true, showAlert)
     }
-    setCart([])
-    setHistoryItems([])
-    setHistoryDetailIndex(null)
+    resetCart()
+    resetHistory()
     if (category === 'CMN' && !noNumberMode) void checkCmnEligibility()
 
     return () => {
@@ -185,22 +164,6 @@ export function MainPage(): JSX.Element {
     // including them would retrigger this initialization effect on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId, category, currentSubId, noNumberMode])
-
-  useEffect(() => {
-    if (cmnCooldown <= 0) return
-    const timer = window.setInterval(() => {
-      setCmnCooldown((prev) => {
-        const next = prev - 1
-        if (next <= 0) {
-          setCmnCanRefresh(true)
-          window.clearInterval(timer)
-          return 0
-        }
-        return next
-      })
-    }, 1000)
-    return () => window.clearInterval(timer)
-  }, [cmnCooldown])
 
   const showAlert = (text: string, title = '提示'): void => {
     setModalKind('alert')
@@ -212,8 +175,7 @@ export function MainPage(): JSX.Element {
 
   const closeCustomModal = (): void => {
     setShowModal(false)
-    setTransferError('')
-    setTransferSubmitting(false)
+    resetTransfer()
   }
 
   const switchCategory = (nextCategory: Category): void => {
@@ -234,88 +196,6 @@ export function MainPage(): JSX.Element {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const openInbox = async (): Promise<void> => {
-    setInboxOpen(true)
-    if (inboxMessages.length === 0) await fetchInbox(true)
-  }
-
-  const fetchInbox = async (force: boolean): Promise<void> => {
-    if (!force && inboxMessages.length > 0) return
-    setInboxLoading(true)
-    try {
-      const url = getApiUrl('/api/inbox', accountId)
-      const d = await apiGet<{ status?: string; messages?: InboxMessage[] }>(url)
-      if (d.status === 'success') setInboxMessages(d.messages || [])
-      else if (inboxOpen) showAlert('加载失败')
-    } catch {
-      if (inboxOpen) showAlert('加载失败')
-    } finally {
-      setInboxLoading(false)
-    }
-  }
-
-  const openHistory = async (): Promise<void> => {
-    const now = new Date()
-    if (!histStart || !histEnd) {
-      setHistStart(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0])
-      setHistEnd(new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0])
-    }
-    setHistoryOpen(true)
-    if (historyItems.length === 0) await fetchHistory(true)
-  }
-
-  const fetchHistory = async (manual = false, silent = false): Promise<void> => {
-    if (!currentSubId) return
-    const now = new Date()
-    const start = histStart || new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-    const end = histEnd || new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
-    const startStr = getIsoTime(new Date(start))
-    const endStr = getIsoTime(new Date(end), true)
-    const cacheKey = `${currentSubId}_${startStr}_${endStr}`
-    if (!manual && historyCache[cacheKey]) {
-      setHistoryItems(historyCache[cacheKey])
-      return
-    }
-    if (!silent) setHistoryLoading(true)
-    try {
-      const url = getApiUrl(`/api/history?subscriptionId=${currentSubId}&startDate=${startStr}&endDate=${endStr}&_t=${Date.now()}`, accountId)
-      const d = await apiGet<{ status?: string; data?: HistoryItem[]; message?: string }>(url)
-      if (d.status === 'success') {
-        const next = d.data || []
-        setHistoryItems(next)
-        setHistoryCache((prev) => ({ ...prev, [cacheKey]: next }))
-      } else if (!silent) {
-        showAlert(d.message || '查询失败')
-      }
-    } catch {
-      if (!silent) showAlert('网络错误')
-    } finally {
-      if (!silent) setHistoryLoading(false)
-    }
-  }
-
-  const openAddToCart = (event: React.MouseEvent, plan: Plan): void => {
-    event.stopPropagation()
-    const existing = cart.find((x) => x.offerId === plan.offerId)
-    setCartQtyDraft({ offerId: plan.offerId, name: plan.name, price: plan.price, quantity: existing?.quantity || 1 })
-  }
-
-  const confirmAddToCart = (): void => {
-    if (!cartQtyDraft) return
-    const quantity = Math.max(1, Math.min(99, cartQtyDraft.quantity))
-    setCart((prev) => {
-      const idx = prev.findIndex((x) => x.offerId === cartQtyDraft.offerId)
-      if (idx >= 0) {
-        const next = prev.slice()
-        next[idx] = { ...next[idx], quantity }
-        return next
-      }
-      return [...prev, { offerId: cartQtyDraft.offerId, name: cartQtyDraft.name, price: cartQtyDraft.price, quantity }]
-    })
-    setCartQtyDraft(null)
-    showAlert(`已加入: ${cartQtyDraft.name} x ${quantity}`, '成功')
-  }
-
   const openCartModal = (): void => {
     if (cart.length === 0) return
     setModalKind('cart')
@@ -324,159 +204,20 @@ export function MainPage(): JSX.Element {
     setShowModal(true)
   }
 
+  const showPurchaseModal = (title: string, price: number, source: 'cart' | 'cmn'): void => {
+    openPurchaseModal(title, price, source, () => {
+      setModalKind('purchase')
+      setModalTitle('确认订单')
+      setModalMode('center')
+      setShowModal(true)
+    })
+  }
+
   const openSwitchModal = (): void => {
     setModalKind('switch')
     setModalTitle('账号管理')
     setModalMode('bottom-sheet')
     setShowModal(true)
-  }
-
-  const updateCartItem = (index: number, delta: number): void => {
-    setCart((prev) => {
-      const next = prev.slice()
-      next[index] = { ...next[index], quantity: next[index].quantity + delta }
-      if (next[index].quantity <= 0) next.splice(index, 1)
-      return next
-    })
-  }
-
-  const removeCartItem = (index: number): void => {
-    setCart((prev) => prev.filter((_, i) => i !== index))
-  }
-
-  const openPurchaseModal = (title: string, price: number, source: 'cart' | 'cmn'): void => {
-    const currentBalance = Number.parseFloat(balance) || 0
-    const txn = currentBalance >= price ? price : Math.max(currentBalance, 0)
-    setPurchaseDraft({ title, price, txnAmount: txn, paymentType: 'ALCN', submitting: false, source, newLine: false })
-    setModalKind('purchase')
-    setModalTitle('确认订单')
-    setModalMode('center')
-    setShowModal(true)
-  }
-
-  const submitCheckout = async (): Promise<void> => {
-    if (!purchaseDraft || purchaseDraft.source !== 'cart') return
-    setPurchaseDraft((prev) => (prev ? { ...prev, submitting: true } : null))
-    try {
-      const url = getApiUrl('/api/purchase', accountId)
-      const d = await apiPostJson<{ status?: string; message?: string; paymentUrl?: string }>(url, {
-          items: cart,
-          subscriptionId: currentSubId,
-          price: purchaseDraft.price,
-          paymentType: purchaseDraft.paymentType,
-          txnAmount: purchaseDraft.txnAmount,
-          new_line: purchaseDraft.newLine,
-          account_id: accountId,
-        })
-      if (d.status === 'success' && d.paymentUrl) {
-        setCart([])
-        window.location.href = d.paymentUrl
-      } else {
-        showAlert(d.message || '提交失败', '错误')
-        setPurchaseDraft((prev) => (prev ? { ...prev, submitting: false } : null))
-      }
-    } catch {
-      showAlert('网络错误', '错误')
-      setPurchaseDraft((prev) => (prev ? { ...prev, submitting: false } : null))
-    }
-  }
-
-  const submitChangeNumber = async (): Promise<void> => {
-    if (!selectedNumber) {
-      showAlert('请先选择号码', '提示')
-      return
-    }
-    if (!cmnData) return
-    openPurchaseModal(`更换号码: ${selectedNumber}`, cmnData.price, 'cmn')
-  }
-
-  const submitCmnPurchase = async (): Promise<void> => {
-    if (!purchaseDraft || purchaseDraft.source !== 'cmn' || !cmnData || !selectedNumber) return
-    setPurchaseDraft((prev) => (prev ? { ...prev, submitting: true } : null))
-    try {
-      const url = getApiUrl('/api/cmn/purchase', accountId)
-      const d = await apiPostJson<{ status?: string; paymentUrl?: string; message?: string }>(url, {
-          offerId: cmnData.offerId,
-          offerSubType: cmnData.offerSubType,
-          price: cmnData.price,
-          subscriptionId: currentSubId,
-          selectedNumber,
-          paymentType: purchaseDraft.paymentType,
-          txnAmount: purchaseDraft.txnAmount,
-          account_id: accountId,
-        })
-      if (d.status === 'success' && d.paymentUrl) {
-        window.location.href = d.paymentUrl
-      } else {
-        showAlert(d.message || '提交失败', '失败')
-        setPurchaseDraft((prev) => (prev ? { ...prev, submitting: false } : null))
-      }
-    } catch {
-      showAlert('网络错误', '错误')
-      setPurchaseDraft((prev) => (prev ? { ...prev, submitting: false } : null))
-    }
-  }
-
-  const checkCmnEligibility = async (): Promise<void> => {
-    if (!currentSubId) return
-    setCmnLoading(true)
-    setCmnError('')
-    try {
-      const url = getApiUrl(`/api/cmn/check?subscriptionId=${currentSubId}`, accountId)
-      const d = await apiGet<CmnCheckResponse>(url)
-      if (d.status === 'success' && d.data) {
-        setCmnData(d.data)
-      } else {
-        setCmnData(null)
-        setCmnError(d.message || '无法使用换号服务')
-      }
-    } catch {
-      setCmnData(null)
-      setCmnError('网络错误')
-    } finally {
-      setCmnLoading(false)
-    }
-  }
-
-  const refreshCmnNumbers = async (): Promise<void> => {
-    if (!cmnCanRefresh || !currentSubId) return
-    setCmnCanRefresh(false)
-    setCmnNumbersLoading(true)
-    setCmnNumbers([])
-    try {
-      const url = getApiUrl(`/api/cmn/numbers?subscriptionId=${currentSubId}`, accountId)
-      const d = await apiGet<{ status?: string; numbers?: string[]; message?: string }>(url)
-      if (d.status === 'success') {
-        setSelectedNumber(null)
-        setCmnNumbers(d.numbers || [])
-        setCmnCooldown(60)
-      } else {
-        setCmnCanRefresh(true)
-        showAlert(d.message || '获取号码失败')
-      }
-    } catch {
-      setCmnCanRefresh(true)
-      showAlert('请求失败')
-    } finally {
-      setCmnNumbersLoading(false)
-    }
-  }
-
-  const startLongPressEdit = (n: string): void => {
-    longPressRef.current = window.setTimeout(() => {
-      const edited = window.prompt('手动编辑:', n)
-      if (!edited || !edited.trim()) return
-      const value = edited.trim()
-      setCmnNumbers((prev) => prev.map((item) => (item === n ? value : item)))
-      setSelectedNumber(value)
-    }, 800)
-  }
-
-  const clearLongPress = (): void => {
-    if (longPressRef.current) {
-      window.clearTimeout(longPressRef.current)
-      longPressRef.current = null
-    }
   }
 
   const refreshProfileData = async (): Promise<void> => {
@@ -498,6 +239,14 @@ export function MainPage(): JSX.Element {
     }
   }
 
+  const handleSubmitTransfer = async (): Promise<void> => {
+    const target = await submitTransfer(currentSub)
+    if (!target) return
+    closeCustomModal()
+    showAlert(`✅ 资源已成功转移给 ${target}`, '办理成功')
+    void refreshProfileData()
+  }
+
   const performSwitch = (sub: Subscription): void => {
     if (sub.subscriptionId !== currentSubId) setCurrentSubId(sub.subscriptionId)
     closeCustomModal()
@@ -515,68 +264,6 @@ export function MainPage(): JSX.Element {
     let url = '/logout'
     if (accountId) url += `?account_id=${accountId}`
     window.location.href = url
-  }
-
-  const openTransferModal = (event: React.MouseEvent, draft: TransferDraft): void => {
-    event.stopPropagation()
-    setTransferDraft(draft)
-    setTransferTarget('')
-    setTransferAmount('')
-    setTransferError('')
-    setModalKind('transfer')
-    setModalTitle('资源转移')
-    setModalMode('center')
-    setShowModal(true)
-  }
-
-  const submitTransfer = async (): Promise<void> => {
-    if (!transferDraft || !currentSub) return
-    const target = transferTarget.trim()
-    const amount = Number.parseFloat(transferAmount)
-    if (!target || target.length < 8) {
-      setTransferError('❌ 请输入有效的手机号码')
-      return
-    }
-    if (!amount || Number.isNaN(amount)) {
-      setTransferError('❌ 请输入转移数量')
-      return
-    }
-    if (amount < transferDraft.minTransfer) {
-      setTransferError(`❌ 转移数量不能少于 ${transferDraft.minTransfer}`)
-      return
-    }
-    if (amount > transferDraft.maxValue) {
-      setTransferError('❌ 余额不足')
-      return
-    }
-
-    setTransferSubmitting(true)
-    setTransferError('')
-    try {
-      const url = getApiUrl('/api/sim/transfer', accountId)
-      const d = await apiPostJson<{ status?: string; message?: string }>(url, {
-          subscriptionId: currentSubId,
-          sourceMsisdn: currentSub.mobile,
-          targetMsisdn: target,
-          amount,
-          userOfferId: transferDraft.userOfferId,
-          balanceResourceId: transferDraft.balanceResourceId,
-          unit: transferDraft.unit,
-          productFamily: transferDraft.productFamily,
-          account_id: accountId,
-        })
-      if (d.status === 'success') {
-        closeCustomModal()
-        showAlert(`✅ 资源已成功转移给 ${target}`, '办理成功')
-        void refreshProfileData()
-      } else {
-        setTransferSubmitting(false)
-        setTransferError(`❌ ${d.message || '转移失败'}`)
-      }
-    } catch {
-      setTransferSubmitting(false)
-      setTransferError('❌ 网络请求失败')
-    }
   }
 
   const renderPurchase = purchaseDraft
@@ -651,7 +338,7 @@ export function MainPage(): JSX.Element {
       return (
         <>
           <button className="modal-btn cancel" onClick={closeCustomModal}>取消</button>
-          <button className="modal-btn confirm" onClick={() => openPurchaseModal(`购物车共 ${cart.length} 项商品`, cartTotal, 'cart')}>去结算</button>
+          <button className="modal-btn confirm" onClick={() => showPurchaseModal(`购物车共 ${cart.length} 项商品`, cartTotal, 'cart')}>去结算</button>
         </>
       )
     }
@@ -664,8 +351,8 @@ export function MainPage(): JSX.Element {
             disabled={purchaseDraft?.submitting}
             onClick={() => {
               if (!purchaseDraft) return
-              if (purchaseDraft.source === 'cart') void submitCheckout()
-              else void submitCmnPurchase()
+              if (purchaseDraft.source === 'cart') void submitCheckout(showAlert)
+              else void submitCmnPurchase(cmnData, selectedNumber, showAlert)
             }}
           >
             {purchaseDraft?.submitting ? '提交中...' : '确认'}
@@ -677,16 +364,12 @@ export function MainPage(): JSX.Element {
       return (
         <>
           <button className="modal-btn cancel" onClick={closeCustomModal}>取消</button>
-          <button className="modal-btn confirm" disabled={transferSubmitting} onClick={() => void submitTransfer()}>{transferSubmitting ? '处理中...' : '确认转移'}</button>
+          <button className="modal-btn confirm" disabled={transferSubmitting} onClick={() => void handleSubmitTransfer()}>{transferSubmitting ? '处理中...' : '确认转移'}</button>
         </>
       )
     }
     return <></>
   }
-
-  const historyDetail = historyDetailIndex !== null ? historyItems[historyDetailIndex] : null
-  const activeInboxContent = activeInboxIndex !== null ? inboxMessages[activeInboxIndex]?.content || '' : ''
-  const safeActiveInboxContent = useMemo(() => DOMPurify.sanitize(activeInboxContent), [activeInboxContent])
 
   return (
     <>
@@ -696,72 +379,10 @@ export function MainPage(): JSX.Element {
         <div className="loader-content"><div className="spinner"></div><div className="loader-text">正在同步账户信息...</div></div>
       </div>
 
-      <div className="fixed-header-wrapper">
-        <div className="container" style={{ paddingBottom: 0 }}>
-          <div className="mini-user-card">
-            <div className="user-main">
-              <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span id="u_mobile">{noNumberMode ? '无号码账号' : (currentSub?.mobile || '加载中...')}</span>
-                <span id="u_switch_hint" style={{ display: availableAccounts.length > 0 ? 'inline-block' : 'none', cursor: 'pointer' }} onClick={openSwitchModal}>▼ 切换</span>
-              </h2>
-              <div style={{ fontSize: '24px', fontWeight: 800, color: '#2d3748', margin: '5px 0 2px 0', display: noNumberMode ? 'none' : 'flex', alignItems: 'center' }}>
-                <span style={{ fontSize: '14px', color: '#64748b', fontWeight: 600, marginRight: '2px' }}>$</span>
-                <span id="u_balance">{balance}</span>
-                <button className="topup-mini-btn" onClick={() => currentSub?.mobile ? window.open(`https://www.three.com.hk/prepaid/account/tc/topup/${currentSub.mobile}`, '_blank') : showAlert('无法获取当前手机号')}>充值</button>
-              </div>
-              <div className="user-sub" id="u_dates_container" style={{ display: noNumberMode ? 'none' : undefined }}>
-                {currentSub?.activationDate ? <span>{currentSub.activationDate} 激活</span> : null}
-                {currentSub?.activationDate && currentSub?.subsEndDate ? ' · ' : null}
-                {currentSub?.subsEndDate ? <span>{currentSub.subsEndDate} 到期</span> : null}
-              </div>
-              <div className="user-sub" style={{ marginTop: '4px', fontSize: '11px', opacity: 0.85, display: noNumberMode ? 'none' : undefined }}>
-                <span id="u_status_badge" style={{ fontWeight: 700, color: formatStatus(currentSub?.status).color }}>{formatStatus(currentSub?.status).text}</span> · ICCID: <span id="u_iccid">{currentSub?.iccid || '--'}</span>
-              </div>
-            </div>
-            <div className="user-actions" style={{ display: noNumberMode ? 'none' : undefined }}>
-              <button className="icon-btn" aria-label="交易记录" onClick={() => void openHistory()}><svg className="icon"><use xlinkHref="#icon-history"></use></svg></button>
-              <button className="icon-btn" aria-label="收件箱" onClick={() => void openInbox()}><svg className="icon"><use xlinkHref="#icon-mail"></use></svg></button>
-              <a href="javascript:void(0)" onClick={handleLogout} className="logout-btn-icon" aria-label="退出登录">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16 13v-2H7V8l-5 4 5 4v-3z"></path><path d="M20 3h-9c-1.103 0-2 .897-2 2v4h2V5h9v14h-9v-4H9v4c0 1.103.897 2 2 2h9c1.103 0 2-.897 2-2V5c0-1.103-.897-2-2-2z"></path></svg>
-              </a>
-            </div>
-          </div>
-
-          <div className="toolbar">
-            <div className="search-box" id="searchBoxContainer" style={{ display: category === 'CMN' || category === 'SUBSCRIBED' ? 'none' : undefined }}>
-              <input type="text" id="searchInput" placeholder="搜索套餐..." value={search} onChange={(event) => setSearch(event.target.value)} />
-            </div>
-            <div className="category-tabs">
-              {(noNumberMode ? ['ALL', 'LOCAL', 'TRAVEL', 'OTHER'] as Category[] : ['ALL', 'LOCAL', 'TRAVEL', 'SUBSCRIBED', 'OTHER', 'CMN'] as Category[]).map((item) => (
-                <div key={item} className={`cat-tab ${category === item ? 'active' : ''}`} style={item === 'CMN' ? { color: '#e53e3e' } : undefined} onClick={() => switchCategory(item)}>
-                  {item === 'ALL' ? '全部' : item === 'LOCAL' ? '本地' : item === 'TRAVEL' ? '外遊' : item === 'SUBSCRIBED' ? '已订购' : item === 'OTHER' ? '其他' : '更换号码'}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+      <MainHeader availableAccounts={availableAccounts} balance={balance} category={category} currentSub={currentSub} noNumberMode={noNumberMode} onLogout={handleLogout} onOpenHistory={() => void openHistory(showAlert)} onOpenInbox={() => void openInbox(showAlert)} onOpenSwitch={openSwitchModal} onSearchChange={setSearch} onShowAlert={showAlert} onSwitchCategory={switchCategory} search={search} />
 
       <div className="content-wrapper">
-        <div id="planListContainer" style={{ display: category === 'SUBSCRIBED' || category === 'CMN' ? 'none' : undefined }}>
-          <div id="planList" className="plan-list">
-            {plansLoading ? <div className="loader">正在加载套餐...</div> : filteredPlans.map((plan) => {
-              const isOpen = selectedPlanId === plan.offerId
-              return (
-                <div key={plan.offerId} className="plan-card" onClick={() => setSelectedPlanId(isOpen ? null : plan.offerId)}>
-                  {plan.isVoWifi ? <div className="tag-vowifi">VoWiFi</div> : null}
-                  <div className="card-header"><div className="plan-name">{plan.name}</div><div className="plan-price">${plan.price}</div></div>
-                  <div className="card-meta"><span className="validity-badge">📅 {plan.validity}</span><span className="arrow" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span></div>
-                  <div className={`card-details ${isOpen ? 'open' : ''}`}>
-                    <div className="detail-desc">{stripHtml(plan.desc)}</div>
-                    <button className="buy-btn" type="button" style={{ display: (noNumberMode && !showFreePlans) ? 'none' : undefined }} onClick={(event) => openAddToCart(event, plan)}>加入购物车</button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          <div id="emptyState" className="empty-state" style={{ display: !plansLoading && filteredPlans.length === 0 ? 'block' : 'none' }}>无匹配结果</div>
-        </div>
+        <PlanList filteredPlans={filteredPlans} noNumberMode={noNumberMode} onAddToCart={openAddToCart} onSelectPlan={setSelectedPlanId} plansLoading={plansLoading} selectedPlanId={selectedPlanId} showFreePlans={showFreePlans} visible={category !== 'SUBSCRIBED' && category !== 'CMN'} />
 
         <div id="activeOffersContainer" style={{ display: category === 'SUBSCRIBED' ? 'block' : 'none' }}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-10px', paddingBottom: '10px', paddingRight: '5px' }}>
@@ -811,6 +432,11 @@ export function MainPage(): JSX.Element {
                                         minTransfer: u.minTransfer || 0,
                                         productFamily: u.productFamily || '',
                                         maxValue: u.remain || 0,
+                                      }, () => {
+                                        setModalKind('transfer')
+                                        setModalTitle('资源转移')
+                                        setModalMode('center')
+                                        setShowModal(true)
                                       })}
                                     >转</button>
                                   ) : null}
@@ -842,7 +468,7 @@ export function MainPage(): JSX.Element {
                   <div className="cmn-price-box"><div className="cmn-price-label">服务费用</div><div className="cmn-price-val">$<span id="cmn-price">{cmnData.price}</span></div><div className="cmn-price-tip">* ⚠️ 号码更换后，旧号码将立即失效且无法找回</div></div>
                   <div id="numbers-section">
                     <div id="initial-load-area" style={{ textAlign: 'center', padding: '10px 0 30px 0', display: (cmnNumbers.length > 0 || cmnNumbersLoading) ? 'none' : 'block' }}>
-                      <button className="refresh-btn" id="initLoadBtn" onClick={() => void refreshCmnNumbers()}><span>🔍</span> <span>获取一组新号码</span></button>
+                      <button className="refresh-btn" id="initLoadBtn" onClick={() => void refreshCmnNumbers(showAlert)}><span>🔍</span> <span>获取一组新号码</span></button>
                     </div>
                     <div id="num-grid-wrapper" style={{ display: (cmnNumbers.length > 0 || cmnNumbersLoading) ? 'block' : 'none' }}>
                       <div style={{ fontSize: '12px', color: 'var(--text-sub)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}><span>选择心仪号码</span><span>长按可手填</span></div>
@@ -866,8 +492,8 @@ export function MainPage(): JSX.Element {
                         ))}
                       </div>
                       <div className="cmn-actions">
-                        <button className="refresh-btn" id="refreshNumBtn" disabled={!cmnCanRefresh} onClick={() => void refreshCmnNumbers()}>{cmnCanRefresh ? '🔄 换一批' : `⏳ (`}<span id="refresh-timer">{cmnCanRefresh ? '' : `${cmnCooldown}s`}</span>{cmnCanRefresh ? '' : ')'}</button>
-                        <button className="buy-btn" id="cmnBuyBtn" onClick={() => void submitChangeNumber()}>确认支付并更换</button>
+                        <button className="refresh-btn" id="refreshNumBtn" disabled={!cmnCanRefresh} onClick={() => void refreshCmnNumbers(showAlert)}>{cmnCanRefresh ? '🔄 换一批' : `⏳ (`}<span id="refresh-timer">{cmnCanRefresh ? '' : `${cmnCooldown}s`}</span>{cmnCanRefresh ? '' : ')'}</button>
+                        <button className="buy-btn" id="cmnBuyBtn" onClick={() => submitChangeNumber(showAlert, showPurchaseModal)}>确认支付并更换</button>
                       </div>
                     </div>
                   </div>
@@ -890,82 +516,30 @@ export function MainPage(): JSX.Element {
         <span className="cart-total-preview" id="cartTotalPreview">${cartTotal.toFixed(1)}</span>
       </div>
 
-      <div id="inboxModal" className={`modal-overlay ${inboxOpen ? 'show' : ''}`} onClick={(event) => { if (event.target === event.currentTarget) setInboxOpen(false) }}>
-        <div className="modal-box" style={{ maxWidth: '400px', padding: '20px 0', height: '80vh', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '0 20px 15px 20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-            <div className="modal-title" style={{ margin: 0 }}>收件箱</div>
-            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-              <div id="inboxRefresh" style={{ color: '#64748b', fontSize: '18px', cursor: 'pointer' }} onClick={() => void fetchInbox(true)}>↻</div>
-              <div style={{ color: '#94a3b8', fontSize: '24px', cursor: 'pointer', lineHeight: 1 }} onClick={() => setInboxOpen(false)}>&times;</div>
-            </div>
-          </div>
-          <div id="inboxContent" style={{ padding: 0, flex: 1, overflowY: 'auto' }}>
-            {inboxLoading ? <div className="loader" style={{ padding: '20px' }}>加载中...</div> : activeInboxIndex === null ? (
-              inboxMessages.length === 0 ? <div className="empty-state">暂无消息</div> : <div className="inbox-list-container">{inboxMessages.map((msg, index) => {
-                const dateStr = (msg.post_dt || '').replace('T', ' ').split('+')[0].slice(0, 16)
-                const mobile = subscriptions.find((item) => item.subscriptionId === msg.intended_subscription_id)?.mobile || msg.intended_subscription_id
-                return <div key={`${msg.subject}-${index}`} className="inbox-item" onClick={() => setActiveInboxIndex(index)}><div className="inbox-subject">{msg.subject}</div><div className="inbox-meta"><span>📱 {mobile}</span><span>{dateStr}</span></div></div>
-              })}</div>
-            ) : (
-              <div style={{ padding: 0 }}>
-                <div className="inbox-back-header" onClick={() => setActiveInboxIndex(null)}><span>← 返回</span></div>
-                <div style={{ padding: '0 20px' }}>
-                  <div style={{ marginBottom: '15px' }}><div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '5px' }}>{inboxMessages[activeInboxIndex]?.subject}</div><div style={{ fontSize: '12px', color: '#94a3b8' }}>{(inboxMessages[activeInboxIndex]?.post_dt || '').replace('T', ' ').split('+')[0]}</div></div>
-                  <div className="inbox-detail" dangerouslySetInnerHTML={{ __html: safeActiveInboxContent }}></div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <InboxModal
+        activeInboxIndex={activeInboxIndex}
+        inboxLoading={inboxLoading}
+        inboxMessages={inboxMessages}
+        inboxOpen={inboxOpen}
+        onClose={() => setInboxOpen(false)}
+        onRefresh={() => void fetchInbox(true, showAlert)}
+        onSelectMessage={setActiveInboxIndex}
+        subscriptions={subscriptions}
+      />
 
-      <div id="historyModal" className={`modal-overlay ${historyOpen ? 'show' : ''}`} onClick={(event) => { if (event.target === event.currentTarget) setHistoryOpen(false) }}>
-        <div className="modal-box" style={{ maxWidth: '400px', padding: '20px 0', height: '80vh', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '0 20px 15px 20px', borderBottom: '1px solid #eee', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
-            <div className="modal-title" style={{ margin: 0 }}>交易记录</div>
-            <div style={{ color: '#94a3b8', fontSize: '24px', cursor: 'pointer', lineHeight: 1 }} onClick={() => setHistoryOpen(false)}>&times;</div>
-          </div>
-          <div className="history-filter-bar">
-            <input type="date" id="histStart" className="date-input" value={histStart} onChange={(event) => setHistStart(event.target.value)} />
-            <span style={{ color: '#94a3b8' }}>至</span>
-            <input type="date" id="histEnd" className="date-input" value={histEnd} onChange={(event) => setHistEnd(event.target.value)} />
-            <button className="filter-btn" disabled={historyLoading} onClick={() => void fetchHistory(true)}>{historyLoading ? '查询中...' : '查询'}</button>
-          </div>
-          <div id="historyContent" style={{ padding: 0, flex: 1, overflowY: 'auto' }}>
-            {historyLoading ? <div className="loader" style={{ padding: '20px' }}>加载中...</div> : historyDetail ? (
-              <div style={{ padding: 0 }}>
-                <div className="inbox-back-header" onClick={() => setHistoryDetailIndex(null)}><span>← 返回</span></div>
-                <div style={{ padding: '0 20px' }}>
-                  <div style={{ fontSize: '24px', fontWeight: 800, textAlign: 'center' }}>${Number(historyDetail.purchase?.paymentDetail?.amnt || 0).toFixed(1)}</div>
-                  <div style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-sub)', marginBottom: '20px' }}>交易金额</div>
-                  <div className="cart-list" style={{ padding: 0 }}>
-                    <div className="cart-item"><span>状态</span><span>{historyDetail.purchase?.purchaseStatus || '--'}</span></div>
-                    <div className="cart-item"><span>时间</span><span>{(historyDetail.transactionDate || '').replace('T', ' ')}</span></div>
-                    <div className="cart-item"><span>单号</span><span>{historyDetail.purchase?.purchaseId || '--'}</span></div>
-                  </div>
-                </div>
-              </div>
-            ) : historyItems.length === 0 ? <div className="empty-state">该时段无交易记录</div> : (
-              <div className="inbox-list-container">
-                {historyItems.map((item, index) => {
-                  const p = item.purchase || {}
-                  const dateStr = (item.transactionDate || '').replace('T', ' ').split('.')[0]
-                  const status = p.purchaseStatus || 'UNKNOWN'
-                  const statusColor = status === 'SUCCESS' ? '#10b981' : (status === 'CANCEL' || status === 'FAILED' ? '#e53e3e' : '#f59e0b')
-                  const amount = p.paymentDetail ? (p.paymentDetail.amnt || p.paymentDetail.walletAmt || 0) : 0
-                  const title = p.purchaseType === 'PREPAID_RECHARGE' ? '充值' : (p.purchaseType === 'SOSIM_VAS' ? '购买套餐' : item.type || '未知')
-                  return (
-                    <div key={`${title}-${index}`} className="inbox-item" onClick={() => setHistoryDetailIndex(index)}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}><div style={{ fontWeight: 600 }}>{title}</div><div style={{ fontWeight: 700, color: statusColor }}>${Number(amount).toFixed(1)}</div></div>
-                      <div className="inbox-meta"><span>{dateStr}</span><span>{status}</span></div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <HistoryModal
+        histEnd={histEnd}
+        histStart={histStart}
+        historyDetailIndex={historyDetailIndex}
+        historyItems={historyItems}
+        historyLoading={historyLoading}
+        historyOpen={historyOpen}
+        onChangeEnd={setHistEnd}
+        onChangeStart={setHistStart}
+        onClose={() => setHistoryOpen(false)}
+        onQuery={() => void fetchHistory(true, false, showAlert)}
+        onSelectDetail={setHistoryDetailIndex}
+      />
 
       <div id="customModal" className={`modal-overlay ${showModal ? 'show' : ''} ${modalMode === 'bottom-sheet' ? 'bottom-sheet-overlay' : ''}`} onClick={(event) => { if (event.target === event.currentTarget) closeCustomModal() }}>
         <div className="modal-box">
@@ -1036,17 +610,13 @@ export function MainPage(): JSX.Element {
       </div>
 
       {cartQtyDraft ? (
-        <div id="customModal" className="modal-overlay show" onClick={(event) => { if (event.target === event.currentTarget) setCartQtyDraft(null) }}>
-          <div className="modal-box">
-            <div className="modal-title">{cart.some((x) => x.offerId === cartQtyDraft.offerId) ? '调整数量' : '加入购物车'}</div>
-            <div className="modal-text" style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '14px', color: '#64748b' }}>{cartQtyDraft.name}</div>
-              <div style={{ fontSize: '20px', fontWeight: 800, color: '#FF7B00', margin: '10px 0' }}>${cartQtyDraft.price} / 件</div>
-              <div className="qty-selector"><button className="qty-btn" onClick={() => setCartQtyDraft((prev) => (prev ? { ...prev, quantity: Math.max(1, prev.quantity - 1) } : null))}>-</button><input type="number" className="qty-input" value={cartQtyDraft.quantity} min={1} max={99} onChange={(event) => setCartQtyDraft((prev) => (prev ? { ...prev, quantity: Math.max(1, Math.min(99, Number.parseInt(event.target.value || '1', 10) || 1)) } : null))} /><button className="qty-btn" onClick={() => setCartQtyDraft((prev) => (prev ? { ...prev, quantity: Math.min(99, prev.quantity + 1) } : null))}>+</button></div>
-            </div>
-            <div className="modal-actions"><button className="modal-btn cancel" onClick={() => setCartQtyDraft(null)}>取消</button><button className="modal-btn confirm" onClick={confirmAddToCart}>确定</button></div>
-          </div>
-        </div>
+        <CartQuantityModal
+          cart={cart}
+          draft={cartQtyDraft}
+          onCancel={() => setCartQtyDraft(null)}
+          onConfirm={() => confirmAddToCart(showAlert)}
+          onUpdateDraft={setCartQtyDraft}
+        />
       ) : null}
     </>
   )
