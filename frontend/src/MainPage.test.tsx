@@ -32,8 +32,8 @@ describe('MainPage rendered contract', () => {
       'id="cmnContainer"',
       'id="mainFooter" class="footer-note-main"',
       'id="cartFab" class="cart-fab"',
-      'id="inboxModal" class="modal-overlay "',
-      'id="historyModal" class="modal-overlay "',
+      'id="inboxModal" class="modal-overlay records-modal-overlay "',
+      'id="historyModal" class="modal-overlay records-modal-overlay "',
       'id="customModal" class="modal-overlay  "',
     ]
 

@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <body>
+    <div id="rendered"></div>
+    <script type="module">
+      import { sanitizeInboxContent } from '/src/utils/sanitizeInboxContent.ts'
+
+      const rendered = document.querySelector('#rendered')
+      rendered.innerHTML = sanitizeInboxContent('<p title="期限60天">有效期60天</p><img src="x" onerror="alert(1)"><script>alert(2)<\/script>')
+      document.body.dataset.complete = 'true'
+    </script>
+  </body>
+</html>
