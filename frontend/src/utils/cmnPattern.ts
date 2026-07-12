@@ -1,3 +1,9 @@
+import type { BranchValidation } from './cmnPatternCapture'
+import {
+  parseBackreference,
+  validateCapture,
+} from './cmnPatternCapture'
+
 const MAX_PATTERN_LENGTH = 32
 const MAX_BRANCHES = 4
 const MAX_ATOMS_PER_BRANCH = 8
@@ -18,10 +24,6 @@ export type CmnCandidateSegment = {
   readonly text: string
   readonly highlighted: boolean
 }
-
-type BranchValidation =
-  | { readonly valid: true }
-  | { readonly valid: false; readonly message: string }
 
 function invalid(message: string): CmnPattern {
   return { kind: 'invalid', message }
@@ -71,9 +73,10 @@ function validateQuantifier(source: string, start: number): number | null {
   return end + 1
 }
 
-function validateBranch(source: string): BranchValidation {
+function validateBranch(source: string, hasTopLevelAlternation = false): BranchValidation {
   let index = 0
   let atoms = 0
+  let openGroups = 0
 
   while (index < source.length) {
     const character = source[index]
@@ -92,11 +95,38 @@ function validateBranch(source: string): BranchValidation {
     }
 
     let nextIndex: number | null
-    if (character && character >= '0' && character <= '9') nextIndex = index + 1
-    else if (character === '.') nextIndex = index + 1
-    else if (character === '\\' && source[index + 1] === 'd') nextIndex = index + 2
-    else if (character === '[') nextIndex = validateClass(source, index)
-    else return { valid: false, message: '包含不支持的正则语法' }
+    if (character === '(') {
+      if (hasTopLevelAlternation) return { valid: false, message: '分支中存在捕获组时不支持顶层替换分支' }
+      const capture = validateCapture(source, index, openGroups, atoms)
+      if (capture === null) return { valid: false, message: '捕获组语法不安全' }
+      index = capture.nextIndex
+      openGroups = capture.openGroups
+      atoms = capture.atoms
+      if (atoms > MAX_ATOMS_PER_BRANCH) return { valid: false, message: '每个分支最多允许 8 个匹配项' }
+      continue
+    }
+
+    if (character === '\\') {
+      const backreference = parseBackreference(source, index)
+      if (backreference !== null) {
+        if (hasTopLevelAlternation) return { valid: false, message: '反向引用与顶层替换分支不兼容' }
+        const groupId = Number.parseInt(source[index + 1], 10)
+        if (groupId === 0 || groupId > openGroups) return { valid: false, message: '反向引用必须引用已闭合的捕获组' }
+        nextIndex = backreference
+      } else if (source[index + 1] === 'd') {
+        nextIndex = index + 2
+      } else {
+        return { valid: false, message: '包含不支持的正则语法' }
+      }
+    } else if (character && character >= '0' && character <= '9') {
+      nextIndex = index + 1
+    } else if (character === '.') {
+      nextIndex = index + 1
+    } else if (character === '[') {
+      nextIndex = validateClass(source, index)
+    } else {
+      return { valid: false, message: '包含不支持的正则语法' }
+    }
 
     if (nextIndex === null) return { valid: false, message: '数字字符类或范围格式无效' }
     atoms += 1
@@ -127,8 +157,13 @@ export function parseCmnPattern(input: string): CmnPattern {
   if (branches.length > MAX_BRANCHES) return invalid('最多允许 4 个非空分支')
   if (branches.some((branch) => branch.length === 0)) return invalid('分支不能为空')
 
+  const hasTopLevelAlternation = branches.length > 1
+
+  const containsBackreference = /\\[1-4]/.test(input)
+  const containsCapture = input.includes('(')
+
   for (const branch of branches) {
-    const result = validateBranch(branch)
+    const result = validateBranch(branch, hasTopLevelAlternation && (containsBackreference || containsCapture))
     if (!result.valid) return invalid(result.message)
   }
 

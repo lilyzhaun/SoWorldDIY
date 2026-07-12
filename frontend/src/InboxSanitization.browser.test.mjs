@@ -1,56 +1,18 @@
-import { execFile } from 'node:child_process'
-import { constants as fsConstants } from 'node:fs'
-import { access, chmod, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { chmod, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import process from 'node:process'
 import { URL, fileURLToPath } from 'node:url'
-import { promisify } from 'node:util'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createServer } from 'vite'
 
-const executeFile = promisify(execFile)
+import { dumpBrowserDom, resolveBrowserExecutable } from './test-utils/browserHarness.mjs'
+
 const frontendRoot = fileURLToPath(new URL('..', import.meta.url))
-const browserEnvironmentVariables = ['CHROME_BIN', 'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH', 'THREEHK_CHROME_BIN']
-const browserPathCandidates = ['chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable']
 let server
 let browserProfile
 let browserExecutable
 let testUrl
-
-async function isExecutable(filePath, platform) {
-  try {
-    await access(filePath, platform === 'win32' ? fsConstants.F_OK : fsConstants.X_OK)
-    return true
-  } catch {
-    return false
-  }
-}
-
-async function resolveBrowserExecutable(environment = process.env, platform = process.platform) {
-  for (const variableName of browserEnvironmentVariables) {
-    const configuredPath = environment[variableName]
-    if (configuredPath && await isExecutable(configuredPath, platform)) return configuredPath
-  }
-
-  const pathSeparator = platform === 'win32' ? ';' : ':'
-  const pathDirectories = (environment.PATH ?? '').split(pathSeparator).filter(Boolean)
-  const extensions = platform === 'win32'
-    ? (environment.PATHEXT ?? '.EXE;.CMD;.BAT;.COM').split(';')
-    : ['']
-  for (const directory of pathDirectories) {
-    const normalizedDirectory = directory.replace(/^"|"$/g, '')
-    for (const candidate of browserPathCandidates) {
-      for (const extension of extensions) {
-        const candidatePath = join(normalizedDirectory, `${candidate}${extension}`)
-        if (await isExecutable(candidatePath, platform)) return candidatePath
-      }
-    }
-  }
-
-  throw new Error(`Chromium browser executable not found. Set one of ${browserEnvironmentVariables.join(', ')} to an executable path, or install one of these PATH candidates: ${browserPathCandidates.join(', ')}.`)
-}
 
 describe('browser executable resolver', () => {
   it('prefers an explicit accepted environment variable over PATH', async () => {
@@ -99,7 +61,7 @@ afterAll(async () => {
 
 describe('inbox sanitization in a real browser DOM', () => {
   it('sanitizes malicious HTML and wraps numeric time units without touching attributes', async () => {
-    const { stdout } = await executeFile(browserExecutable, ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage', `--user-data-dir=${browserProfile}`, '--dump-dom', testUrl], { maxBuffer: 1_000_000 })
+    const { stdout } = await dumpBrowserDom(browserExecutable, browserProfile, testUrl)
 
     expect(stdout).toContain('data-complete="true"')
     expect(stdout).toContain('title="期限60天"')

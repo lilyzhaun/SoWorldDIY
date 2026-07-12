@@ -12,6 +12,11 @@ const mainStyles = readFileSync(fileURLToPath(new globalThis.URL('./styles/main.
 const loginStyles = readFileSync(fileURLToPath(new globalThis.URL('./styles/login.css', import.meta.url)), 'utf8')
 
 describe('visual QA blocking contracts', () => {
+  it('uses the accessible theme focus-ring token without changing focus geometry', () => {
+    expect(mainStyles).toMatch(/\*:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--focus-ring\)[^}]*outline-offset:\s*2px/s)
+    expect(mainStyles).not.toMatch(/\*:focus-visible\s*\{[^}]*outline:[^;}]*var\(--primary\)/s)
+  })
+
   it('uses theme tokens for dark-mode-sensitive quantity controls', () => {
     expect(mainStyles).toContain('.qty-btn')
     expect(mainStyles).toContain('background: var(--bg-card)')

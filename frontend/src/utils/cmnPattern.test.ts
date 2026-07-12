@@ -18,6 +18,18 @@ describe('parseCmnPattern', () => {
   })
 
   it.each([
+    '([0-9])\\1{2}',
+    '([0-9])\\1{3}',
+    '([0-9]{2})\\1',
+    '^([0-9])\\1{2}',
+    '([0-9])\\1{2}$',
+  ])('accepts safe capture/backreference patterns %s', (source) => {
+    const parsed = parseCmnPattern(source)
+
+    expect(parsed.kind).toBe('regex')
+  })
+
+  it.each([
     '[',
     '(\\d+)+',
     '\\d*',
@@ -34,8 +46,32 @@ describe('parseCmnPattern', () => {
     '1|2|3|4|5',
     '.........',
     '6{0}',
+    '\\1',
+    '(\\d+)\\1',
+    '([0-9]*)\\1',
+    '\\10',
+    '([0-9])\\10',
+    '([0-9])\\11',
+    '12345678(9)',
+    '([0-9])\\20',
+    '((\\d))\\1',
+    '(?:\\d)',
+    '(?=\\d)',
+    '(?<x>\\d)',
+    '([0-9]|[1-2])\\1',
+    '([0-9]){3}',
+    '([0-9])\\2',
+    '([0-9]{2})\\1|([0-9])\\1',
+    '([0-9])\\1|666',
+    '1|([0-9])\\1',
   ])('rejects the invalid or unsafe pattern %s', (source) => {
     const parsed = parseCmnPattern(source)
+
+    expect(parsed.kind).toBe('invalid')
+  })
+
+  it('rejects top-level alternation when capture/backrefs are used', () => {
+    const parsed = parseCmnPattern('([0-9])\\1|([0-9])\\2')
 
     expect(parsed.kind).toBe('invalid')
   })
@@ -79,6 +115,33 @@ describe('findCmnPatternRanges', () => {
   it.each(['(\\d+)+', '', '<img src=x onerror=alert(1)>', '['])('returns no ranges and does not throw for unsafe raw input %s', (pattern) => {
     expect(() => findCmnPatternRanges('66666666', pattern)).not.toThrow()
     expect(findCmnPatternRanges('66666666', pattern)).toEqual([])
+  })
+
+  it('matches full repeated sequence and highlights backreference captures', () => {
+    const pattern = '([0-9])\\1{2}'
+    const ranges = findCmnPatternRanges('16661234', pattern)
+
+    expect(ranges).toEqual([{ start: 1, end: 4 }])
+    expect(segmentCmnCandidate('16661234', ranges)).toEqual([
+      { text: '1', highlighted: false },
+      { text: '666', highlighted: true },
+      { text: '1234', highlighted: false },
+    ])
+  })
+
+  it('highlights the full repeated pair from ( [0-9]{2} )\\1', () => {
+    const pattern = '([0-9]{2})\\1'
+    const ranges = findCmnPatternRanges('12127890', pattern)
+
+    expect(ranges).toEqual([{ start: 0, end: 4 }])
+    expect(segmentCmnCandidate('12127890', ranges)).toEqual([
+      { text: '1212', highlighted: true },
+      { text: '7890', highlighted: false },
+    ])
+  })
+
+  it('does not match 678 with ([0-9])\\1', () => {
+    expect(findCmnPatternRanges('678', '([0-9])\\1')).toEqual([])
   })
 })
 

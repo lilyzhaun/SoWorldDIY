@@ -70,7 +70,7 @@ export function MainPage(): JSX.Element {
 
   const [refreshingUsage, setRefreshingUsage] = useState(false)
 
-  const { checkCmnEligibility, cmnCanRefresh, cmnCooldown, cmnData, cmnError, cmnLoading, cmnNumbers, cmnNumbersLoading, cmnPattern, parsedCmnPattern, refreshCmnNumbers, selectedNumber, setCmnPattern, setSelectedNumber, submitChangeNumber } = useCmn(accountId, currentSubId)
+  const { cancelCmnAutoRefresh, changeCmnPattern, checkCmnEligibility, cmnAutoRefresh, cmnCanRefresh, cmnCooldown, cmnData, cmnError, cmnLoading, cmnNumbers, cmnNumbersLoading, cmnPattern, parsedCmnPattern, refreshCmnNumbers, selectedNumber, setSelectedNumber, startCmnAutoRefresh, submitChangeNumber } = useCmn(accountId, currentSubId, category === 'CMN')
 
   const currentSub = useMemo(
     () => subscriptions.find((item) => item.subscriptionId === currentSubId) ?? null,
@@ -347,7 +347,7 @@ export function MainPage(): JSX.Element {
         <PlanList filteredPlans={filteredPlans} noNumberMode={noNumberMode} onAddToCart={openAddToCart} onSelectPlan={setSelectedPlanId} plansLoading={plansLoading} selectedPlanId={selectedPlanId} showFreePlans={showFreePlans} visible={category !== 'SUBSCRIBED' && category !== 'CMN'} />
 
         <ActiveOffersSection currentSub={currentSub} onOpenTransfer={(event, draft) => openTransferModal(event, draft, () => { setModalKind('transfer'); setModalTitle('资源转移'); setModalMode('center'); setShowModal(true) })} onRefresh={() => void refreshProfileData()} onSelectOffer={setSelectedPlanId} refreshingUsage={refreshingUsage} selectedPlanId={selectedPlanId} visible={category === 'SUBSCRIBED'} />
-        <CmnSection canRefresh={cmnCanRefresh} cooldown={cmnCooldown} data={cmnData} error={cmnError} loading={cmnLoading} numbers={cmnNumbers} numbersLoading={cmnNumbersLoading} onPatternChange={setCmnPattern} onRefresh={() => void refreshCmnNumbers(showAlert)} onSelectNumber={setSelectedNumber} onSubmit={() => submitChangeNumber(showAlert, showPurchaseModal)} parsedPattern={parsedCmnPattern} pattern={cmnPattern} selectedNumber={selectedNumber} visible={category === 'CMN'} />
+        <CmnSection autoRefresh={cmnAutoRefresh} canRefresh={cmnCanRefresh} cooldown={cmnCooldown} data={cmnData} error={cmnError} loading={cmnLoading} numbers={cmnNumbers} numbersLoading={cmnNumbersLoading} onAutoRefreshCancel={cancelCmnAutoRefresh} onAutoRefreshStart={() => startCmnAutoRefresh(showAlert)} onPatternChange={changeCmnPattern} onRefresh={() => void refreshCmnNumbers(showAlert)} onSelectNumber={setSelectedNumber} onSubmit={() => submitChangeNumber(showAlert, showPurchaseModal)} parsedPattern={parsedCmnPattern} pattern={cmnPattern} selectedNumber={selectedNumber} visible={category === 'CMN'} />
         <MainFooter visible={category === 'ALL' || category === 'CMN'} />
       </div>
 
