@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 
 import { apiFetch, apiPostJson } from './api/client'
+import { LoginSuccessStatus } from './components/LoginSuccessStatus'
 import { toErrorMessage } from './utils'
 
 type TabType = 'password' | 'otp'
+const LOGIN_REDIRECT_DELAY_MS = 800
 
 export function LoginPage(): JSX.Element {
   const [tab, setTab] = useState<TabType>('password')
@@ -16,6 +18,7 @@ export function LoginPage(): JSX.Element {
   const [otpBusy, setOtpBusy] = useState(false)
   const [otpLabel, setOtpLabel] = useState('获取验证码')
   const [submitBusy, setSubmitBusy] = useState(false)
+  const [loginSucceeded, setLoginSucceeded] = useState(false)
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
@@ -94,10 +97,11 @@ export function LoginPage(): JSX.Element {
         throw new Error(data.message ?? '登录失败')
       }
 
-      setToast('🎉 登录成功')
+      setToast('')
+      setLoginSucceeded(true)
       window.setTimeout(() => {
         window.location.href = data.redirect ?? '/main'
-      }, 800)
+      }, LOGIN_REDIRECT_DELAY_MS)
     } catch (error: unknown) {
       setToast(`⚠️ ${toErrorMessage(error)}`)
       setSubmitBusy(false)
@@ -243,6 +247,7 @@ export function LoginPage(): JSX.Element {
       </div>
 
       <div className={`toast${toast ? ' show' : ''}`} id="toast">{toast}</div>
+      {loginSucceeded ? <LoginSuccessStatus durationMs={LOGIN_REDIRECT_DELAY_MS} /> : null}
     </>
   )
 }

@@ -41,6 +41,7 @@ export function CmnSection({ canRefresh, cooldown, data, error, loading, numbers
                     <label htmlFor="cmn-pattern-input">号码模式</label>
                     <input
                       id="cmn-pattern-input"
+                      className="cmn-pattern-input"
                       type="text"
                       maxLength={32}
                       autoComplete="off"
@@ -57,10 +58,12 @@ export function CmnSection({ canRefresh, cooldown, data, error, loading, numbers
                   <div className="cmn-grid-label">选择心仪号码</div>
                   <div className="num-grid" id="numGrid">
                     {numbersLoading ? <div className="loader" style={{ gridColumn: 'span 3', padding: '20px' }}>正在获取号码库...</div> : visibleNumbers.map((number) => (
-                      <button key={number} type="button" className={`num-btn ${selectedNumber === number ? 'selected' : ''}`} onClick={() => onSelectNumber(number)}>
-                        {segmentCmnCandidate(number, findCmnPatternRanges(number, pattern)).map((segment, index) => (
-                          segment.highlighted ? <mark key={`${number}-${index}`}>{segment.text}</mark> : <span key={`${number}-${index}`}>{segment.text}</span>
-                        ))}
+                      <button key={number} type="button" className={`num-btn ${selectedNumber === number ? 'selected' : ''}`} aria-pressed={selectedNumber === number} onClick={() => onSelectNumber(number)}>
+                        <span className="num-btn-label">
+                          {segmentCmnCandidate(number, findCmnPatternRanges(number, pattern)).map((segment, index) => (
+                            segment.highlighted ? <mark className="cmn-match" key={`${number}-${index}`}>{segment.text}</mark> : <span key={`${number}-${index}`}>{segment.text}</span>
+                          ))}
+                        </span>
                       </button>
                     ))}
                   </div>
