@@ -10,11 +10,12 @@ import { CustomModal } from './CustomModal'
 import { MainFooter } from './MainFooter'
 import { PurchaseModalContent } from './PurchaseModalContent'
 import { TransferModalContent } from './TransferModalContent'
+import { parseCmnPattern } from '../utils/cmnPattern'
 
 describe('MainPage presentation component contracts', () => {
   it('preserves the section and floating-cart markup contracts', () => {
     const activeOffers = renderToStaticMarkup(<ActiveOffersSection currentSub={null} onOpenTransfer={vi.fn()} onRefresh={vi.fn()} onSelectOffer={vi.fn()} refreshingUsage={false} selectedPlanId={null} visible={false} />)
-    const cmn = renderToStaticMarkup(<CmnSection canRefresh cooldown={0} data={null} error="" loading={false} numbers={[]} numbersLoading={false} onClearLongPress={vi.fn()} onRefresh={vi.fn()} onSelectNumber={vi.fn()} onStartLongPress={vi.fn()} onSubmit={vi.fn()} selectedNumber={null} visible={false} />)
+    const cmn = renderToStaticMarkup(<CmnSection canRefresh cooldown={0} data={null} error="" loading={false} numbers={[]} numbersLoading={false} onPatternChange={vi.fn()} onRefresh={vi.fn()} onSelectNumber={vi.fn()} onSubmit={vi.fn()} parsedPattern={parseCmnPattern('')} pattern="" selectedNumber={null} visible={false} />)
     const footer = renderToStaticMarkup(<MainFooter visible />)
     const cartFab = renderToStaticMarkup(<CartFab count={2} onOpen={vi.fn()} total={12.3} />)
 
@@ -55,9 +56,34 @@ describe('MainPage presentation component contracts', () => {
 
   it('renders at most nine CMN candidates for a three-by-three grid', () => {
     const numbers = Array.from({ length: 10 }, (_, index) => String(60000000 + index))
-    const html = renderToStaticMarkup(<CmnSection canRefresh cooldown={0} data={{ offerId: 'offer-1', offerSubType: 'CMN', price: 28 }} error="" loading={false} numbers={numbers} numbersLoading={false} onClearLongPress={vi.fn()} onRefresh={vi.fn()} onSelectNumber={vi.fn()} onStartLongPress={vi.fn()} onSubmit={vi.fn()} selectedNumber={null} visible />)
+    const html = renderToStaticMarkup(<CmnSection canRefresh cooldown={0} data={{ offerId: 'offer-1', offerSubType: 'CMN', price: 28 }} error="" loading={false} numbers={numbers} numbersLoading={false} onPatternChange={vi.fn()} onRefresh={vi.fn()} onSelectNumber={vi.fn()} onSubmit={vi.fn()} parsedPattern={parseCmnPattern('6[0-9]{2}')} pattern="6[0-9]{2}" selectedNumber={null} visible />)
 
     expect((html.match(/class="num-btn /g) || []).length).toBe(9)
     expect(html).not.toContain(numbers[9])
+  })
+
+  it('renders accessible safe-pattern search and React mark nodes without long-press behavior', () => {
+    const numbers = ['66612345', '12345666', '88888888', '10000000', '20000000', '30000000', '40000000', '50000000', '60000000']
+    const html = renderToStaticMarkup(<CmnSection canRefresh cooldown={0} data={{ offerId: 'offer-1', offerSubType: 'CMN', price: 28 }} error="" loading={false} numbers={numbers} numbersLoading={false} onPatternChange={vi.fn()} onRefresh={vi.fn()} onSelectNumber={vi.fn()} onSubmit={vi.fn()} parsedPattern={parseCmnPattern('666')} pattern="666" selectedNumber="66612345" visible />)
+
+    expect(html).toContain('id="cmn-pattern-input"')
+    expect(html).toContain('maxLength="32"')
+    expect(html).toContain('autoComplete="off"')
+    expect(html).toContain('<mark>666</mark><span>12345</span>')
+    expect(html).toContain('<span>12345</span><mark>666</mark>')
+    expect((html.match(/class="num-btn /g) || []).length).toBe(9)
+    expect(html).not.toContain('长按可手填')
+    expect(html).not.toContain('onmousedown')
+    expect(html).not.toContain('ontouchstart')
+  })
+
+  it('escapes invalid HTML-like input, reports an alert, and renders no highlights', () => {
+    const pattern = '<img src=x onerror=alert(1)>'
+    const html = renderToStaticMarkup(<CmnSection canRefresh cooldown={0} data={{ offerId: 'offer-1', offerSubType: 'CMN', price: 28 }} error="" loading={false} numbers={['66612345']} numbersLoading={false} onPatternChange={vi.fn()} onRefresh={vi.fn()} onSelectNumber={vi.fn()} onSubmit={vi.fn()} parsedPattern={parseCmnPattern(pattern)} pattern={pattern} selectedNumber={null} visible />)
+
+    expect(html).toContain('role="alert"')
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;')
+    expect(html).not.toContain('<img')
+    expect(html).not.toContain('<mark>')
   })
 })

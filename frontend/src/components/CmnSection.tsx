@@ -1,4 +1,5 @@
 import type { CmnCheckResponse } from '../types'
+import { findCmnPatternRanges, segmentCmnCandidate, type CmnPattern } from '../utils/cmnPattern'
 
 type CmnSectionProps = {
   readonly canRefresh: boolean
@@ -8,17 +9,19 @@ type CmnSectionProps = {
   readonly loading: boolean
   readonly numbers: string[]
   readonly numbersLoading: boolean
-  readonly onClearLongPress: () => void
+  readonly onPatternChange: (pattern: string) => void
   readonly onRefresh: () => void
   readonly onSelectNumber: (number: string) => void
-  readonly onStartLongPress: (number: string) => void
   readonly onSubmit: () => void
+  readonly parsedPattern: CmnPattern
+  readonly pattern: string
   readonly selectedNumber: string | null
   readonly visible: boolean
 }
 
-export function CmnSection({ canRefresh, cooldown, data, error, loading, numbers, numbersLoading, onClearLongPress, onRefresh, onSelectNumber, onStartLongPress, onSubmit, selectedNumber, visible }: CmnSectionProps): JSX.Element {
+export function CmnSection({ canRefresh, cooldown, data, error, loading, numbers, numbersLoading, onPatternChange, onRefresh, onSelectNumber, onSubmit, parsedPattern, pattern, selectedNumber, visible }: CmnSectionProps): JSX.Element {
   const visibleNumbers = numbers.slice(0, 9)
+  const patternError = parsedPattern.kind === 'invalid' ? parsedPattern.message : ''
   return (
     <div id="cmnContainer" style={{ display: visible ? 'block' : 'none' }}>
       <div className="cmn-view-card">
@@ -34,10 +37,31 @@ export function CmnSection({ canRefresh, cooldown, data, error, loading, numbers
                   <button className="refresh-btn" id="initLoadBtn" onClick={onRefresh}><span>🔍</span> <span>获取一组新号码</span></button>
                 </div>
                 <div id="num-grid-wrapper" style={{ display: (numbers.length > 0 || numbersLoading) ? 'block' : 'none' }}>
-                  <div style={{ fontSize: '12px', color: 'var(--text-sub)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}><span>选择心仪号码</span><span>长按可手填</span></div>
+                  <div className="cmn-pattern-field">
+                    <label htmlFor="cmn-pattern-input">号码模式</label>
+                    <input
+                      id="cmn-pattern-input"
+                      type="text"
+                      maxLength={32}
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={pattern}
+                      placeholder="例如 666 或 6[0-9]{2}"
+                      aria-describedby={patternError ? 'cmn-pattern-description cmn-pattern-error' : 'cmn-pattern-description'}
+                      aria-invalid={patternError ? 'true' : 'false'}
+                      onChange={(event) => onPatternChange(event.target.value)}
+                    />
+                    <div id="cmn-pattern-description" className="cmn-pattern-description">纯数字按原文查找，也支持安全数字模式。</div>
+                    {patternError ? <div id="cmn-pattern-error" className="cmn-pattern-error" role="alert">{patternError}</div> : null}
+                  </div>
+                  <div className="cmn-grid-label">选择心仪号码</div>
                   <div className="num-grid" id="numGrid">
                     {numbersLoading ? <div className="loader" style={{ gridColumn: 'span 3', padding: '20px' }}>正在获取号码库...</div> : visibleNumbers.map((number) => (
-                      <div key={number} className={`num-btn ${selectedNumber === number ? 'selected' : ''}`} onClick={() => onSelectNumber(number)} onMouseDown={() => onStartLongPress(number)} onTouchStart={() => onStartLongPress(number)} onMouseUp={onClearLongPress} onMouseLeave={onClearLongPress} onTouchEnd={onClearLongPress} onTouchMove={onClearLongPress}>{number}</div>
+                      <button key={number} type="button" className={`num-btn ${selectedNumber === number ? 'selected' : ''}`} onClick={() => onSelectNumber(number)}>
+                        {segmentCmnCandidate(number, findCmnPatternRanges(number, pattern)).map((segment, index) => (
+                          segment.highlighted ? <mark key={`${number}-${index}`}>{segment.text}</mark> : <span key={`${number}-${index}`}>{segment.text}</span>
+                        ))}
+                      </button>
                     ))}
                   </div>
                   <div className="cmn-actions">

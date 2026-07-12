@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import { apiGet } from '../api/client'
 import type { CmnCheckResponse } from '../types'
+import { parseCmnPattern } from '../utils/cmnPattern'
 import { getApiUrl } from '../utils/mainPage'
 
 type ShowAlert = (text: string, title?: string) => void
 type OpenPurchase = (title: string, price: number, source: 'cmn') => void
+
+export const CMN_REFRESH_COOLDOWN_SECONDS = 3
 
 export function useCmn(accountId: string, currentSubId: string) {
   const [cmnLoading, setCmnLoading] = useState(false)
@@ -16,7 +19,8 @@ export function useCmn(accountId: string, currentSubId: string) {
   const [selectedNumber, setSelectedNumber] = useState<string | null>(null)
   const [cmnCanRefresh, setCmnCanRefresh] = useState(true)
   const [cmnCooldown, setCmnCooldown] = useState(0)
-  const longPressRef = useRef<number | null>(null)
+  const [cmnPattern, setCmnPattern] = useState('')
+  const parsedCmnPattern = useMemo(() => parseCmnPattern(cmnPattern), [cmnPattern])
 
   useEffect(() => {
     if (cmnCooldown <= 0) return
@@ -66,7 +70,7 @@ export function useCmn(accountId: string, currentSubId: string) {
       if (data.status === 'success') {
         setSelectedNumber(null)
         setCmnNumbers(data.numbers || [])
-        setCmnCooldown(60)
+        setCmnCooldown(CMN_REFRESH_COOLDOWN_SECONDS)
       } else {
         setCmnCanRefresh(true)
         showAlert(data.message || '获取号码失败')
@@ -88,22 +92,5 @@ export function useCmn(accountId: string, currentSubId: string) {
     openPurchase(`更换号码: ${selectedNumber}`, cmnData.price, 'cmn')
   }
 
-  const startLongPressEdit = (number: string): void => {
-    longPressRef.current = window.setTimeout(() => {
-      const edited = window.prompt('手动编辑:', number)
-      if (!edited || !edited.trim()) return
-      const value = edited.trim()
-      setCmnNumbers((previous) => previous.map((item) => (item === number ? value : item)))
-      setSelectedNumber(value)
-    }, 800)
-  }
-
-  const clearLongPress = (): void => {
-    if (longPressRef.current) {
-      window.clearTimeout(longPressRef.current)
-      longPressRef.current = null
-    }
-  }
-
-  return { checkCmnEligibility, clearLongPress, cmnCanRefresh, cmnCooldown, cmnData, cmnError, cmnLoading, cmnNumbers, cmnNumbersLoading, refreshCmnNumbers, selectedNumber, setSelectedNumber, startLongPressEdit, submitChangeNumber }
+  return { checkCmnEligibility, cmnCanRefresh, cmnCooldown, cmnData, cmnError, cmnLoading, cmnNumbers, cmnNumbersLoading, cmnPattern, parsedCmnPattern, refreshCmnNumbers, selectedNumber, setCmnPattern, setSelectedNumber, submitChangeNumber }
 }
