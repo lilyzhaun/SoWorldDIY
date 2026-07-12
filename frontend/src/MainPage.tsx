@@ -1,11 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { apiFetch, apiGet } from './api/client'
 import { BUILD_VERSION } from './build'
+import { AccountSwitchModalContent } from './components/AccountSwitchModalContent'
+import { ActiveOffersSection } from './components/ActiveOffersSection'
+import { CartFab } from './components/CartFab'
+import { CartModalContent } from './components/CartModalContent'
 import { CartQuantityModal } from './components/CartQuantityModal'
+import { CmnSection } from './components/CmnSection'
+import { CustomModal } from './components/CustomModal'
 import { HistoryModal } from './components/HistoryModal'
 import { InboxModal } from './components/InboxModal'
+import { MainFooter } from './components/MainFooter'
 import { MainHeader } from './components/MainHeader'
 import { PlanList } from './components/PlanList'
+import { PurchaseModalContent } from './components/PurchaseModalContent'
+import { TransferModalContent } from './components/TransferModalContent'
 import { useBodyScrollLock } from './hooks/useBodyScrollLock'
 import { useCmn } from './hooks/useCmn'
 import { useHistory } from './hooks/useHistory'
@@ -14,7 +23,7 @@ import { usePurchaseCart } from './hooks/usePurchaseCart'
 import { useServiceWorker } from './hooks/useServiceWorker'
 import { useTransfer } from './hooks/useTransfer'
 import type { AvailableAccount, Category, ModalMode, Plan, ProfileResponse, Subscription } from './types'
-import { getAccountIdFromPathname, getApiUrl, normalizeUnit, stripHtml } from './utils/mainPage'
+import { getAccountIdFromPathname, getApiUrl } from './utils/mainPage'
 
 const SVG_SPRITE = `
 <svg>
@@ -266,67 +275,6 @@ export function MainPage(): JSX.Element {
     window.location.href = url
   }
 
-  const renderPurchase = purchaseDraft
-    ? (() => {
-        const currentBalance = Number.parseFloat(balance) || 0
-        const maxAllowed = Math.min(currentBalance, purchaseDraft.price)
-        const validTxn = Math.max(0, Math.min(purchaseDraft.txnAmount, maxAllowed))
-        const payAmount = Math.max(0, purchaseDraft.price - validTxn)
-        const isThree = showFreePlans && purchaseDraft.source === 'cart'
-        return (
-          <div style={{ textAlign: 'left' }}>
-            <div style={{ fontSize: '14px', color: '#64748b' }}>商品信息</div>
-            <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '15px', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>{purchaseDraft.title}</div>
-            {isThree && (
-                <div
-                  onClick={() => setPurchaseDraft((prev) => (prev ? { ...prev, newLine: !prev.newLine } : null))}
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px', padding: '12px', borderRadius: '10px', border: `1.5px solid ${purchaseDraft.newLine ? '#774FDA' : '#e2e8f0'}`, background: purchaseDraft.newLine ? 'rgba(119,79,218,0.06)' : '#f8fafc', cursor: 'pointer', userSelect: 'none' }}
-                >
-                  <div style={{ width: '20px', height: '20px', borderRadius: '5px', border: `2px solid ${purchaseDraft.newLine ? '#774FDA' : '#cbd5e1'}`, background: purchaseDraft.newLine ? '#774FDA' : 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.2s' }}>
-                    {purchaseDraft.newLine && <span style={{ color: 'white', fontSize: '13px', fontWeight: 700, lineHeight: 1 }}>✓</span>}
-                  </div>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '13px', color: purchaseDraft.newLine ? '#774FDA' : '#374151' }}>新开UFO</div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>新开号码(GLOBAL_ESIM)</div>
-                  </div>
-                </div>
-            )}
-            <div style={{ marginBottom: '15px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}><span>余额抵扣</span><span style={{ color: '#64748b' }}>(可用: ${currentBalance})</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontWeight: 'bold' }}>$</span>
-                <input
-                  type="number"
-                  value={validTxn}
-                  step="0.1"
-                  max={maxAllowed}
-                  min={0}
-                  onChange={(event) => {
-                    const next = Number.parseFloat(event.target.value)
-                    setPurchaseDraft((prev) => (prev ? { ...prev, txnAmount: Number.isNaN(next) ? 0 : next } : null))
-                  }}
-                  style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 700 }}
-                />
-              </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px', fontWeight: 700 }}>
-              <span>需支付</span><span style={{ fontSize: '18px', color: '#e53e3e' }}>${payAmount.toFixed(1)}</span>
-            </div>
-            <div id="modalPaySection" style={{ display: payAmount > 0.01 ? 'block' : 'none' }}>
-              <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>补款方式</div>
-              <div className="payment-grid">
-                {(['ALCN', 'ALHK', 'WECHAT', 'MPGS'] as const).map((item) => (
-                  <div key={item} className={`pay-opt ${purchaseDraft.paymentType === item ? 'selected' : ''}`} onClick={() => setPurchaseDraft((prev) => (prev ? { ...prev, paymentType: item } : null))}>
-                    {item === 'ALCN' ? '支付宝' : item === 'ALHK' ? 'AlipayHK' : item === 'WECHAT' ? '微信' : '信用卡'}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )
-      })()
-    : null
-
   const renderModalActions = (): JSX.Element => {
     if (modalKind === 'alert') {
       return <button className="modal-btn confirm alert-ok" onClick={closeCustomModal}>关闭</button>
@@ -384,137 +332,12 @@ export function MainPage(): JSX.Element {
       <div className="content-wrapper">
         <PlanList filteredPlans={filteredPlans} noNumberMode={noNumberMode} onAddToCart={openAddToCart} onSelectPlan={setSelectedPlanId} plansLoading={plansLoading} selectedPlanId={selectedPlanId} showFreePlans={showFreePlans} visible={category !== 'SUBSCRIBED' && category !== 'CMN'} />
 
-        <div id="activeOffersContainer" style={{ display: category === 'SUBSCRIBED' ? 'block' : 'none' }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-10px', paddingBottom: '10px', paddingRight: '5px' }}>
-            <button id="refreshUsageBtn" className="refresh-text-btn" disabled={refreshingUsage} onClick={() => void refreshProfileData()}>{refreshingUsage ? '同步中...' : '↻ 刷新用量'}</button>
-          </div>
-          <div id="activeOffersList" className="plan-list">
-            {(currentSub?.activeOffers || []).map((offer) => {
-              const isOpen = selectedPlanId === `sub-${offer.offerId}`
-              let st = offer.planStatus || ''
-              let sc = '#64748b'
-              let sb = '#f1f5f9'
-              if (st === 'ACTIVE') { st = '生效中'; sc = '#059669'; sb = '#d1fae5' }
-              else if (st === 'PREACTIVE') { st = '待生效'; sc = '#d97706'; sb = '#fef3c7' }
-              return (
-                <div key={offer.offerId} className="plan-card" onClick={() => setSelectedPlanId(isOpen ? null : `sub-${offer.offerId}`)}>
-                  {offer.isVoWifi ? <div className="tag-vowifi">VoWiFi</div> : null}
-                  <div className="card-header"><div className="plan-name">{offer.name}</div><div className="plan-price">{offer.price ? `$${offer.price}` : ''}</div></div>
-                  <div className="card-meta"><div style={{ display: 'flex', alignItems: 'center' }}><span style={{ background: sb, color: sc, padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, marginRight: '6px' }}>{st || '--'}</span><span className="validity-badge" style={{ background: '#e0f2fe', color: '#0369a1' }}>有效期至 {offer.endDate}</span></div><span className="arrow" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span></div>
-                  <div className={`card-details ${isOpen ? 'open' : ''}`}>
-                    {offer.usage && offer.usage.length > 0 ? (
-                      <div className="usage-section">
-                        {offer.usage.map((u, index) => {
-                          const unit = (u.unit || '').toLowerCase()
-                          let totalLabel = `${Math.floor(u.total || 0)}${normalizeUnit(u.unit)}`
-                          let remainLabel = `${Math.floor(u.remain || 0)}${normalizeUnit(u.unit)}`
-                          if (unit === 'megabytes') {
-                            const total = u.total || 0
-                            const remain = u.remain || 0
-                            totalLabel = total > 1024 ? `${(total / 1024).toFixed(1)}GB` : `${Math.floor(total)}MB`
-                            remainLabel = remain > 1024 ? `${(remain / 1024).toFixed(1)}GB` : `${Math.floor(remain)}MB`
-                          }
-                          const percent = u.percent || 0
-                          const barClass = `usage-bar ${percent < 20 ? 'critical' : percent < 50 ? 'low' : ''}`.trim()
-                          return (
-                            <div key={`${offer.offerId}-${index}`} className="usage-item">
-                              <div className="usage-header">
-                                <span>{u.name || '数据'}</span>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                  <span>剩 {remainLabel} / 总 {totalLabel}</span>
-                                  {u.canTransfer ? (
-                                    <button
-                                      className="trans-btn"
-                                      onClick={(event) => openTransferModal(event, {
-                                        userOfferId: offer.offerId,
-                                        balanceResourceId: String(u.balanceResourceId || ''),
-                                        unit: u.unit || '',
-                                        minTransfer: u.minTransfer || 0,
-                                        productFamily: u.productFamily || '',
-                                        maxValue: u.remain || 0,
-                                      }, () => {
-                                        setModalKind('transfer')
-                                        setModalTitle('资源转移')
-                                        setModalMode('center')
-                                        setShowModal(true)
-                                      })}
-                                    >转</button>
-                                  ) : null}
-                                </div>
-                              </div>
-                              <div className="usage-track"><div className={barClass} style={{ width: `${percent}%` }}></div></div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : null}
-                    <div className="detail-desc">{offer.desc ? stripHtml(offer.desc) : ''}</div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          <div id="activeEmptyState" className="empty-state" style={{ display: (currentSub?.activeOffers || []).length === 0 ? 'block' : 'none' }}>当前没有已订购的生效套餐</div>
-        </div>
-
-        <div id="cmnContainer" style={{ display: category === 'CMN' ? 'block' : 'none' }}>
-          <div className="cmn-view-card">
-            <div className="cmn-header"><div className="cmn-title">更改电话号码服务</div><div className="cmn-desc">更换后原号码将立即失效</div></div>
-            <div id="cmn-loading" className="loader" style={{ display: cmnLoading ? 'block' : 'none' }}>正在检查换号资格...</div>
-            {cmnError ? <div style={{ color: 'var(--danger)', padding: '20px' }}>{cmnError}</div> : null}
-            {cmnData && !cmnLoading ? (
-              <div id="cmn-content" style={{ display: 'block' }}>
-                <div className="cmn-body">
-                  <div className="cmn-price-box"><div className="cmn-price-label">服务费用</div><div className="cmn-price-val">$<span id="cmn-price">{cmnData.price}</span></div><div className="cmn-price-tip">* ⚠️ 号码更换后，旧号码将立即失效且无法找回</div></div>
-                  <div id="numbers-section">
-                    <div id="initial-load-area" style={{ textAlign: 'center', padding: '10px 0 30px 0', display: (cmnNumbers.length > 0 || cmnNumbersLoading) ? 'none' : 'block' }}>
-                      <button className="refresh-btn" id="initLoadBtn" onClick={() => void refreshCmnNumbers(showAlert)}><span>🔍</span> <span>获取一组新号码</span></button>
-                    </div>
-                    <div id="num-grid-wrapper" style={{ display: (cmnNumbers.length > 0 || cmnNumbersLoading) ? 'block' : 'none' }}>
-                      <div style={{ fontSize: '12px', color: 'var(--text-sub)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}><span>选择心仪号码</span><span>长按可手填</span></div>
-                      <div className="num-grid" id="numGrid">
-                        {cmnNumbersLoading ? (
-                          <div className="loader" style={{ gridColumn: 'span 3', padding: '20px' }}>正在获取号码库...</div>
-                        ) : cmnNumbers.map((n) => (
-                          <div
-                            key={n}
-                            className={`num-btn ${selectedNumber === n ? 'selected' : ''}`}
-                            onClick={() => setSelectedNumber(n)}
-                            onMouseDown={() => startLongPressEdit(n)}
-                            onTouchStart={() => startLongPressEdit(n)}
-                            onMouseUp={clearLongPress}
-                            onMouseLeave={clearLongPress}
-                            onTouchEnd={clearLongPress}
-                            onTouchMove={clearLongPress}
-                          >
-                            {n}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="cmn-actions">
-                        <button className="refresh-btn" id="refreshNumBtn" disabled={!cmnCanRefresh} onClick={() => void refreshCmnNumbers(showAlert)}>{cmnCanRefresh ? '🔄 换一批' : `⏳ (`}<span id="refresh-timer">{cmnCanRefresh ? '' : `${cmnCooldown}s`}</span>{cmnCanRefresh ? '' : ')'}</button>
-                        <button className="buy-btn" id="cmnBuyBtn" onClick={() => submitChangeNumber(showAlert, showPurchaseModal)}>确认支付并更换</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div id="mainFooter" className="footer-note-main" style={{ display: category === 'ALL' || category === 'CMN' ? 'block' : 'none' }}>
-          仅供个人学习使用，高净值账号请勿使用本网站。<br />
-          <span>如使用密码登录请于24h内更改密码。<br />发生一切损失于本网站无关。</span>
-          <br />
-          <a href="https://example.invalid/support" target="_blank" rel="noopener noreferrer" className="support-link-main" aria-label="联系 external_delivery 客服"><svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 11.944 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" fill="currentColor" /></svg></a>
-        </div>
+        <ActiveOffersSection currentSub={currentSub} onOpenTransfer={(event, draft) => openTransferModal(event, draft, () => { setModalKind('transfer'); setModalTitle('资源转移'); setModalMode('center'); setShowModal(true) })} onRefresh={() => void refreshProfileData()} onSelectOffer={setSelectedPlanId} refreshingUsage={refreshingUsage} selectedPlanId={selectedPlanId} visible={category === 'SUBSCRIBED'} />
+        <CmnSection canRefresh={cmnCanRefresh} cooldown={cmnCooldown} data={cmnData} error={cmnError} loading={cmnLoading} numbers={cmnNumbers} numbersLoading={cmnNumbersLoading} onClearLongPress={clearLongPress} onRefresh={() => void refreshCmnNumbers(showAlert)} onSelectNumber={setSelectedNumber} onStartLongPress={startLongPressEdit} onSubmit={() => submitChangeNumber(showAlert, showPurchaseModal)} selectedNumber={selectedNumber} visible={category === 'CMN'} />
+        <MainFooter visible={category === 'ALL' || category === 'CMN'} />
       </div>
 
-      <div id="cartFab" className="cart-fab" style={{ display: cartCount > 0 ? 'flex' : 'none' }} onClick={openCartModal}>
-        <div className="cart-icon-wrapper"><svg className="icon"><use xlinkHref="#icon-cart"></use></svg><span id="cartCount" className="cart-badge">{cartCount}</span></div>
-        <span className="cart-total-preview" id="cartTotalPreview">${cartTotal.toFixed(1)}</span>
-      </div>
+      <CartFab count={cartCount} onOpen={openCartModal} total={cartTotal} />
 
       <InboxModal
         activeInboxIndex={activeInboxIndex}
@@ -541,73 +364,13 @@ export function MainPage(): JSX.Element {
         onSelectDetail={setHistoryDetailIndex}
       />
 
-      <div id="customModal" className={`modal-overlay ${showModal ? 'show' : ''} ${modalMode === 'bottom-sheet' ? 'bottom-sheet-overlay' : ''}`} onClick={(event) => { if (event.target === event.currentTarget) closeCustomModal() }}>
-        <div className="modal-box">
-          <div className="modal-title" id="modalTitle">{modalTitle}</div>
-          <div className="modal-text" id="modalText">
-            {modalMode === 'bottom-sheet' ? <div className="modal-handle"></div> : null}
-            {modalKind === 'alert' ? alertText : null}
-            {modalKind === 'switch' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '10px' }}>
-                {subscriptions.length > 0 ? (
-                  <div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-sub)', marginBottom: '10px', fontWeight: 600 }}>当前账号号码</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {subscriptions.map((s) => {
-                        const isCurr = s.subscriptionId === currentSubId
-                        const statusIcon = s.status === 'ACTIVE' ? '🟢' : s.status === 'PREACTIVE' ? '🟠' : s.status === 'SUSPENDED' ? '🔴' : '⚪'
-                        return (
-                          <div key={s.subscriptionId} onClick={() => performSwitch(s)} style={{ padding: '14px', borderRadius: '16px', cursor: 'pointer', position: 'relative', transition: '0.2s', background: isCurr ? 'rgba(255, 123, 0, 0.05)' : 'var(--bg-card)', border: isCurr ? '1.5px solid var(--primary)' : '1px solid var(--border-color)' }}>
-                            <div style={{ fontSize: '17px', fontWeight: 700, display: 'flex', justifyContent: 'space-between', color: isCurr ? 'var(--primary)' : 'var(--text-main)' }}><span>📱 {s.mobile}</span>{isCurr ? <span>✔</span> : null}</div>
-                            <div style={{ fontSize: '12px', color: 'var(--text-sub)', marginTop: '6px', display: 'flex', justifyContent: 'space-between' }}><span>{statusIcon} {s.brand || '3HK'}</span><span style={{ fontFamily: 'monospace' }}>..{(s.iccid || '').slice(-4)}</span></div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-                {availableAccounts.length > 0 ? (
-                  <div>
-                    <div style={{ fontSize: '13px', color: 'var(--text-sub)', marginBottom: '10px', fontWeight: 600 }}>切换其他账号</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {availableAccounts.map((acc) => (
-                        <div key={acc.identifier} onClick={() => { if (!acc.active) switchAccount(acc.identifier) }} style={{ padding: '12px 14px', borderRadius: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--border-color)', cursor: acc.active ? 'default' : 'pointer', background: acc.active ? 'var(--bg-secondary)' : 'var(--bg-card)', opacity: acc.active ? 0.6 : 1 }}>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}><div style={{ fontSize: '14px', fontWeight: 600 }}>👤 {acc.identifier}</div><div style={{ fontSize: '11px', color: 'var(--text-sub)' }}>{acc.subBrand}</div></div>
-                          {acc.active ? <span style={{ fontSize: '10px', padding: '2px 8px', background: 'var(--border-color)', borderRadius: '6px' }}>当前</span> : <span style={{ color: 'var(--text-sub)', fontSize: '18px' }}>›</span>}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                <button onClick={addAccount} style={{ width: '100%', padding: '14px', background: 'var(--bg-secondary)', border: '1px dashed var(--border-color)', color: 'var(--text-sub)', borderRadius: '14px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '8px' }}><span style={{ fontSize: '18px' }}>+</span> 添加账号</button>
-              </div>
-            ) : null}
-            {modalKind === 'cart' ? (
-              <div>
-                <div className="cart-list">
-                  {cart.map((item, index) => (
-                    <div key={`${item.offerId}-${index}`} className="cart-item">
-                      <div className="cart-item-info"><div className="cart-item-title">{item.name}</div><div className="cart-item-price">${item.price} x {item.quantity} = ${(item.price * item.quantity).toFixed(1)}</div></div>
-                      <div className="cart-item-ctrl"><button className="cart-mini-btn" onClick={() => updateCartItem(index, -1)}>-</button><span style={{ fontWeight: 600, width: '20px', textAlign: 'center' }}>{item.quantity}</span><button className="cart-mini-btn" onClick={() => updateCartItem(index, 1)}>+</button><button className="cart-mini-btn cart-remove" onClick={() => removeCartItem(index)}>×</button></div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ marginTop: '15px', paddingTop: '15px', borderTop: '1px solid #eee', display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '18px' }}><span>总计</span><span style={{ color: '#e53e3e' }}>${cartTotal.toFixed(1)}</span></div>
-              </div>
-            ) : null}
-            {modalKind === 'purchase' ? renderPurchase : null}
-            {modalKind === 'transfer' && transferDraft ? (
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: '14px', color: 'var(--text-sub)', marginBottom: '15px' }}>资源转移 ({normalizeUnit(transferDraft.unit)})</div>
-                <div className="form-group" style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>对方号码</label><input type="tel" value={transferTarget} onChange={(event) => setTransferTarget(event.target.value)} placeholder="输入 8 位手机号码" style={{ width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '12px', fontSize: '16px' }} /></div>
-                <div className="form-group"><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>转移数量 (可用: {Math.floor(transferDraft.maxValue)})</label><input type="number" value={transferAmount} onChange={(event) => setTransferAmount(event.target.value)} placeholder={`最少 ${transferDraft.minTransfer}`} style={{ width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '12px', fontSize: '16px' }} /></div>
-                <div id="transErrorMsg" className="form-error-msg" style={{ display: transferError ? 'block' : 'none' }}>{transferError}</div>
-              </div>
-            ) : null}
-          </div>
-          <div className="modal-actions" id="modalActions">{renderModalActions()}</div>
-        </div>
-      </div>
+      <CustomModal actions={renderModalActions()} mode={modalMode} onClose={closeCustomModal} open={showModal} title={modalTitle}>
+        {modalKind === 'alert' ? alertText : null}
+        {modalKind === 'switch' ? <AccountSwitchModalContent availableAccounts={availableAccounts} currentSubId={currentSubId} onAddAccount={addAccount} onSwitchAccount={switchAccount} onSwitchSubscription={performSwitch} subscriptions={subscriptions} /> : null}
+        {modalKind === 'cart' ? <CartModalContent cart={cart} onRemove={removeCartItem} onUpdateQuantity={updateCartItem} total={cartTotal} /> : null}
+        {modalKind === 'purchase' && purchaseDraft ? <PurchaseModalContent balance={balance} draft={purchaseDraft} onChangeDraft={setPurchaseDraft} showNewLineOption={showFreePlans && purchaseDraft.source === 'cart'} /> : null}
+        {modalKind === 'transfer' && transferDraft ? <TransferModalContent amount={transferAmount} draft={transferDraft} error={transferError} onChangeAmount={setTransferAmount} onChangeTarget={setTransferTarget} target={transferTarget} /> : null}
+      </CustomModal>
 
       {cartQtyDraft ? (
         <CartQuantityModal

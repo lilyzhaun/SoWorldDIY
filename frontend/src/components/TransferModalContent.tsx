@@ -1,0 +1,8 @@
+import type { TransferDraft } from '../types'
+import { normalizeUnit } from '../utils/mainPage'
+
+type TransferModalContentProps = { readonly amount: string; readonly draft: TransferDraft; readonly error: string; readonly onChangeAmount: (value: string) => void; readonly onChangeTarget: (value: string) => void; readonly target: string }
+
+export function TransferModalContent({ amount, draft, error, onChangeAmount, onChangeTarget, target }: TransferModalContentProps): JSX.Element {
+  return <div style={{ textAlign: 'left' }}><div style={{ fontSize: '14px', color: 'var(--text-sub)', marginBottom: '15px' }}>资源转移 ({normalizeUnit(draft.unit)})</div><div className="form-group" style={{ marginBottom: '15px' }}><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>对方号码</label><input type="tel" value={target} onChange={(event) => onChangeTarget(event.target.value)} placeholder="输入 8 位手机号码" style={{ width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '12px', fontSize: '16px' }} /></div><div className="form-group"><label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>转移数量 (可用: {Math.floor(draft.maxValue)})</label><input type="number" value={amount} onChange={(event) => onChangeAmount(event.target.value)} placeholder={`最少 ${draft.minTransfer}`} style={{ width: '100%', padding: '12px', border: '1px solid var(--border-color)', borderRadius: '12px', fontSize: '16px' }} /></div><div id="transErrorMsg" className="form-error-msg" style={{ display: error ? 'block' : 'none' }}>{error}</div></div>
+}
