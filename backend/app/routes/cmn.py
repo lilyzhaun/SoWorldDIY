@@ -78,13 +78,13 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             request=request,
             ctx=ctx,
             method="POST",
-            url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/mnms/holdAvailableNumbersFor15m/10/",
+            url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/mnms/holdAvailableNumbersFor15m/9/",
             account_id=req_ident,
             account_context=account_ctx,
         )
         if not r or r.status_code != 200:
             return deps._json_error("Fetch failed", 400)
-        numbers = sorted(list(set(r.json().get("lineList", []))))
+        numbers = sorted(set(r.json().get("lineList", [])))[:9]
         return deps._json_success({"status": "success", "numbers": numbers})
 
 

@@ -52,4 +52,12 @@ describe('MainPage presentation component contracts', () => {
     expect(html.indexOf('取消')).toBeLessThan(html.indexOf('确认'))
     expect(html).toContain('class="modal-actions" id="modalActions"')
   })
+
+  it('renders at most nine CMN candidates for a three-by-three grid', () => {
+    const numbers = Array.from({ length: 10 }, (_, index) => String(60000000 + index))
+    const html = renderToStaticMarkup(<CmnSection canRefresh cooldown={0} data={{ offerId: 'offer-1', offerSubType: 'CMN', price: 28 }} error="" loading={false} numbers={numbers} numbersLoading={false} onClearLongPress={vi.fn()} onRefresh={vi.fn()} onSelectNumber={vi.fn()} onStartLongPress={vi.fn()} onSubmit={vi.fn()} selectedNumber={null} visible />)
+
+    expect((html.match(/class="num-btn /g) || []).length).toBe(9)
+    expect(html).not.toContain(numbers[9])
+  })
 })

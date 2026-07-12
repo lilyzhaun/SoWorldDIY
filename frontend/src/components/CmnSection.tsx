@@ -18,6 +18,7 @@ type CmnSectionProps = {
 }
 
 export function CmnSection({ canRefresh, cooldown, data, error, loading, numbers, numbersLoading, onClearLongPress, onRefresh, onSelectNumber, onStartLongPress, onSubmit, selectedNumber, visible }: CmnSectionProps): JSX.Element {
+  const visibleNumbers = numbers.slice(0, 9)
   return (
     <div id="cmnContainer" style={{ display: visible ? 'block' : 'none' }}>
       <div className="cmn-view-card">
@@ -35,7 +36,7 @@ export function CmnSection({ canRefresh, cooldown, data, error, loading, numbers
                 <div id="num-grid-wrapper" style={{ display: (numbers.length > 0 || numbersLoading) ? 'block' : 'none' }}>
                   <div style={{ fontSize: '12px', color: 'var(--text-sub)', marginBottom: '10px', display: 'flex', justifyContent: 'space-between' }}><span>选择心仪号码</span><span>长按可手填</span></div>
                   <div className="num-grid" id="numGrid">
-                    {numbersLoading ? <div className="loader" style={{ gridColumn: 'span 3', padding: '20px' }}>正在获取号码库...</div> : numbers.map((number) => (
+                    {numbersLoading ? <div className="loader" style={{ gridColumn: 'span 3', padding: '20px' }}>正在获取号码库...</div> : visibleNumbers.map((number) => (
                       <div key={number} className={`num-btn ${selectedNumber === number ? 'selected' : ''}`} onClick={() => onSelectNumber(number)} onMouseDown={() => onStartLongPress(number)} onTouchStart={() => onStartLongPress(number)} onMouseUp={onClearLongPress} onMouseLeave={onClearLongPress} onTouchEnd={onClearLongPress} onTouchMove={onClearLongPress}>{number}</div>
                     ))}
                   </div>
