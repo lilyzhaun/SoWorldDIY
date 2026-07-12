@@ -29,6 +29,7 @@ auth_code.txt
 # Local-only modules (events, integrations)
 delivery_extension_local.py
 request_overrides_local.py
+requirements-local.txt
 
 # Runtime data
 flask_session_data/
