@@ -1,5 +1,6 @@
 import type { Subscription, TransferDraft } from '../types'
 import { normalizeUnit, stripHtml } from '../utils/mainPage'
+import { UiIcon } from './UiIcon'
 
 type ActiveOffersSectionProps = {
   readonly currentSub: Subscription | null
@@ -16,7 +17,7 @@ export function ActiveOffersSection({ currentSub, onOpenTransfer, onRefresh, onS
   return (
     <div id="activeOffersContainer" style={{ display: visible ? 'block' : 'none' }}>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-10px', paddingBottom: '10px', paddingRight: '5px' }}>
-        <button id="refreshUsageBtn" className="refresh-text-btn" disabled={refreshingUsage} onClick={onRefresh}>{refreshingUsage ? '同步中...' : '↻ 刷新用量'}</button>
+        <button id="refreshUsageBtn" className="refresh-text-btn" disabled={refreshingUsage} onClick={onRefresh}><UiIcon className="refresh-text-icon" name="refresh" /> {refreshingUsage ? '同步中…' : '刷新用量'}</button>
       </div>
       <div id="activeOffersList" className="plan-list">
         {activeOffers.map((offer) => {
@@ -27,14 +28,17 @@ export function ActiveOffersSection({ currentSub, onOpenTransfer, onRefresh, onS
           if (status === 'ACTIVE') { status = '生效中'; statusColor = '#059669'; statusBackground = '#d1fae5' }
           else if (status === 'PREACTIVE') { status = '待生效'; statusColor = '#d97706'; statusBackground = '#fef3c7' }
           return (
-            <div key={offer.offerId} className="plan-card" onClick={() => onSelectOffer(isOpen ? null : `sub-${offer.offerId}`)}>
+            <div key={offer.offerId} className={`plan-card ${isOpen ? 'open' : ''}`}>
               {offer.isVoWifi ? <div className="tag-vowifi">VoWiFi</div> : null}
-              <div className="card-header"><div className="plan-name">{offer.name}</div><div className="plan-price">{offer.price ? `$${offer.price}` : ''}</div></div>
-              <div className="card-meta"><div style={{ display: 'flex', alignItems: 'center' }}><span style={{ background: statusBackground, color: statusColor, padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, marginRight: '6px' }}>{status || '--'}</span><span className="validity-badge" style={{ background: '#e0f2fe', color: '#0369a1' }}>有效期至 {offer.endDate}</span></div><span className="arrow" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span></div>
-              <div className={`card-details ${isOpen ? 'open' : ''}`}>
-                {offer.usage && offer.usage.length > 0 ? (
-                  <div className="usage-section">
-                    {offer.usage.map((usage, index) => {
+              <button type="button" className="plan-card-disclosure" aria-expanded={isOpen} aria-controls={`active-offer-details-${offer.offerId}`} onClick={() => onSelectOffer(isOpen ? null : `sub-${offer.offerId}`)}>
+                <div className="card-header"><div className="plan-name">{offer.name}</div><div className="plan-price">{offer.price ? `$${offer.price}` : ''}</div></div>
+                <div className="card-meta"><div style={{ display: 'flex', alignItems: 'center' }}><span style={{ background: statusBackground, color: statusColor, padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 700, marginRight: '6px' }}>{status || '--'}</span><span className="validity-badge" style={{ background: '#e0f2fe', color: '#0369a1' }}>有效期至 {offer.endDate}</span></div><UiIcon className={`arrow ${isOpen ? 'open' : ''}`} name="chevron-down" /></div>
+              </button>
+              <div id={`active-offer-details-${offer.offerId}`} className={`card-details ${isOpen ? 'open' : ''}`} aria-hidden={!isOpen} inert={isOpen ? undefined : ''}>
+                <div className="card-details-inner">
+                  {offer.usage && offer.usage.length > 0 ? (
+                    <div className="usage-section">
+                      {offer.usage.map((usage, index) => {
                       const unit = (usage.unit || '').toLowerCase()
                       let totalLabel = `${Math.floor(usage.total || 0)}${normalizeUnit(usage.unit)}`
                       let remainLabel = `${Math.floor(usage.remain || 0)}${normalizeUnit(usage.unit)}`
@@ -52,16 +56,17 @@ export function ActiveOffersSection({ currentSub, onOpenTransfer, onRefresh, onS
                             <span>{usage.name || '数据'}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                               <span>剩 {remainLabel} / 总 {totalLabel}</span>
-                              {usage.canTransfer ? <button className="trans-btn" onClick={(event) => onOpenTransfer(event, { userOfferId: offer.offerId, balanceResourceId: String(usage.balanceResourceId || ''), unit: usage.unit || '', minTransfer: usage.minTransfer || 0, productFamily: usage.productFamily || '', maxValue: usage.remain || 0 })}>转</button> : null}
+                              {usage.canTransfer ? <button className="trans-btn" onClick={(event) => onOpenTransfer(event, { userOfferId: offer.offerId, balanceResourceId: String(usage.balanceResourceId || ''), unit: usage.unit || '', minTransfer: usage.minTransfer || 0, productFamily: usage.productFamily || '', maxValue: usage.remain || 0 })}>转移</button> : null}
                             </div>
                           </div>
                           <div className="usage-track"><div className={barClass} style={{ width: `${percent}%` }}></div></div>
                         </div>
                       )
-                    })}
-                  </div>
-                ) : null}
-                <div className="detail-desc">{offer.desc ? stripHtml(offer.desc) : ''}</div>
+                      })}
+                    </div>
+                  ) : null}
+                  <div className="detail-desc">{offer.desc ? stripHtml(offer.desc) : ''}</div>
+                </div>
               </div>
             </div>
           )

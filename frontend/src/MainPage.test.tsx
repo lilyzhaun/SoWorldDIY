@@ -21,7 +21,7 @@ describe('MainPage rendered contract', () => {
     const html = renderMainPage()
     const orderedMarkers = [
       'id="current-account-id-ref"',
-      'id="global-loader" class="global-loader "',
+      'id="global-loader" class="global-loader entered"',
       'class="fixed-header-wrapper"',
       'class="mini-user-card"',
       'class="toolbar"',
@@ -45,14 +45,16 @@ describe('MainPage rendered contract', () => {
   it('preserves exact initial visible text and category ordering', () => {
     const html = renderMainPage()
 
-    expect(html).toContain('正在同步账户信息...')
-    expect(html).toContain('<span id="u_mobile">加载中...</span>')
+    expect(html).toContain('正在同步账户信息…')
+    expect(html).toContain('<span id="u_mobile">加载中…</span>')
     expect(html).toContain('placeholder="搜索套餐..."')
-    expect(html).toContain('正在加载套餐...')
+    expect(html).toContain('正在加载套餐…')
+    expect(html).not.toContain('正在加载套餐...')
     expect(html).toContain('仅供个人学习使用，高净值账号请勿使用本网站。')
     expect(html).toContain('如使用密码登录请于24h内更改密码。<br/>发生一切损失于本网站无关。')
 
-    const categoryText = [...html.matchAll(/class="cat-tab(?: active)? ?"[^>]*>([^<]+)<\/div>/g)].map((match) => match[1])
+    expect(html.match(/<button type="button" class="cat-tab/g)).toHaveLength(6)
+    const categoryText = [...html.matchAll(/class="cat-tab(?: active)? ?"[^>]*>([^<]+)<\/button>/g)].map((match) => match[1])
     expect(categoryText).toEqual(['全部', '本地', '外遊', '已订购', '其他', '更换号码'])
   })
 
@@ -66,7 +68,7 @@ describe('MainPage rendered contract', () => {
     expect(html).toContain('href="https://example.invalid/support"')
     expect(html).toContain('target="_blank"')
     expect(html).toContain('rel="noopener noreferrer"')
-    expect(html).toContain('id="cartFab" class="cart-fab" style="display:none"')
+    expect(html).toContain('<button type="button" id="cartFab" class="cart-fab" style="display:none"')
     expect(html).toContain('id="activeOffersContainer" style="display:none"')
     expect(html).toContain('id="cmnContainer" style="display:none"')
   })

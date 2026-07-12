@@ -14,11 +14,13 @@ import { MainFooter } from './components/MainFooter'
 import { MainHeader } from './components/MainHeader'
 import { PlanList } from './components/PlanList'
 import { PurchaseModalContent } from './components/PurchaseModalContent'
+import { StatusMessage, type StatusTone } from './components/StatusMessage'
 import { TransferModalContent } from './components/TransferModalContent'
 import { useBodyScrollLock } from './hooks/useBodyScrollLock'
 import { useCmn } from './hooks/useCmn'
 import { useHistory } from './hooks/useHistory'
 import { useInbox } from './hooks/useInbox'
+import { isRootOpacityTransition, usePresenceValue } from './hooks/usePresenceValue'
 import { usePurchaseCart } from './hooks/usePurchaseCart'
 import { useServiceWorker } from './hooks/useServiceWorker'
 import { useTransfer } from './hooks/useTransfer'
@@ -31,6 +33,8 @@ const SVG_SPRITE = `
   <symbol id="icon-history" viewBox="0 0 1024 1024"><path d="M512 64C264.6 64 64 264.6 64 512s200.6 448 448 448 448-200.6 448-448S759.4 64 512 64zm0 820c-205.4 0-372-166.6-372-372s166.6-372 372-372 372 166.6 372 372-166.6 372-372 372z" fill="currentColor"/><path d="M686.7 638.6L544.1 535.5V288c0-4.4-3.6-8-8-8H488c-4.4 0-8 3.6-8 8v275.4c0 2.6 1.2 5 3.3 6.5l165.4 120.6c3.6 2.6 8.6 1.8 11.2-1.7l28.6-39c2.6-3.7 1.8-8.7-1.8-11.2z" fill="currentColor"/></symbol>
   <symbol id="icon-cart" viewBox="0 0 1024 1024"><path d="M922.9 277.3l-59.5 329.4c-4.4 24.2-25.5 41.8-50.1 41.8H311.2c-23.7 0-44.4-16.3-49.6-39.2L164.7 186H64c-17.7 0-32-14.3-32-32s14.3-32 32-32h120.4c24.6 0 46 17.6 50.3 41.9l12.4 69.4H900c21.6 0 37.1 20.8 30.2 41.3zM375.6 746c-31.1 0-56.4 25.3-56.4 56.4s25.3 56.4 56.4 56.4 56.4-25.3 56.4-56.4-25.3-56.4-56.4-56.4zm398.8 0c-31.1 0-56.4 25.3-56.4 56.4s25.3 56.4 56.4 56.4 56.4-25.3 56.4-56.4-25.3-56.4-56.4-56.4z" fill="currentColor"/></symbol>
 </svg>`
+
+type AlertState = { readonly text: string; readonly tone?: StatusTone }
 
 export function MainPage(): JSX.Element {
   const accountId = getAccountIdFromPathname(window.location.pathname)
@@ -49,6 +53,8 @@ export function MainPage(): JSX.Element {
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
 
   const { cart, cartCount, cartQtyDraft, cartTotal, confirmAddToCart, openAddToCart, openPurchaseModal, purchaseDraft, removeCartItem, resetCart, setCartQtyDraft, setPurchaseDraft, submitCheckout, submitCmnPurchase, updateCartItem } = usePurchaseCart(accountId, currentSubId, balance)
+  const loaderPresence = usePresenceValue(loading ? true : null)
+  const cartQtyPresence = usePresenceValue(cartQtyDraft)
 
   const { activeInboxIndex, fetchInbox, inboxLoading, inboxMessages, inboxOpen, openInbox, setActiveInboxIndex, setInboxOpen } = useInbox(accountId)
 
@@ -58,7 +64,7 @@ export function MainPage(): JSX.Element {
   const [modalTitle, setModalTitle] = useState('标题')
   const [modalMode, setModalMode] = useState<ModalMode>('center')
   const [modalKind, setModalKind] = useState<'alert' | 'switch' | 'cart' | 'purchase' | 'transfer' | null>(null)
-  const [alertText, setAlertText] = useState('')
+  const [alert, setAlert] = useState<AlertState>({ text: '' })
 
   const { openTransferModal, resetTransfer, setTransferAmount, setTransferTarget, submitTransfer, transferAmount, transferDraft, transferError, transferSubmitting, transferTarget } = useTransfer(accountId, currentSubId)
 
@@ -84,7 +90,7 @@ export function MainPage(): JSX.Element {
   }, [plans, search, category, showFreePlans])
 
   useServiceWorker(BUILD_VERSION)
-  useBodyScrollLock(inboxOpen || historyOpen || showModal)
+  useBodyScrollLock(inboxOpen || historyOpen || showModal || cartQtyDraft !== null)
 
   useEffect(() => {
     let cancelled = false
@@ -174,11 +180,11 @@ export function MainPage(): JSX.Element {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId, category, currentSubId, noNumberMode])
 
-  const showAlert = (text: string, title = '提示'): void => {
+  const showAlert = (text: string, title = '提示', tone?: StatusTone): void => {
     setModalKind('alert')
     setModalTitle(title)
     setModalMode('center')
-    setAlertText(text)
+    setAlert(tone ? { text, tone } : { text })
     setShowModal(true)
   }
 
@@ -252,7 +258,7 @@ export function MainPage(): JSX.Element {
     const target = await submitTransfer(currentSub)
     if (!target) return
     closeCustomModal()
-    showAlert(`✅ 资源已成功转移给 ${target}`, '办理成功')
+    showAlert(`资源已成功转移给 ${target}`, '办理成功', 'success')
     void refreshProfileData()
   }
 
@@ -303,7 +309,7 @@ export function MainPage(): JSX.Element {
               else void submitCmnPurchase(cmnData, selectedNumber, showAlert)
             }}
           >
-            {purchaseDraft?.submitting ? '提交中...' : '确认'}
+            {purchaseDraft?.submitting ? '提交中…' : '确认'}
           </button>
         </>
       )
@@ -312,7 +318,7 @@ export function MainPage(): JSX.Element {
       return (
         <>
           <button className="modal-btn cancel" onClick={closeCustomModal}>取消</button>
-          <button className="modal-btn confirm" disabled={transferSubmitting} onClick={() => void handleSubmitTransfer()}>{transferSubmitting ? '处理中...' : '确认转移'}</button>
+          <button className="modal-btn confirm" disabled={transferSubmitting} onClick={() => void handleSubmitTransfer()}>{transferSubmitting ? '处理中…' : '确认转移'}</button>
         </>
       )
     }
@@ -323,9 +329,17 @@ export function MainPage(): JSX.Element {
     <>
       <div style={{ display: 'none' }} dangerouslySetInnerHTML={{ __html: SVG_SPRITE }} />
       <input type="hidden" id="current-account-id-ref" defaultValue={accountId} />
-      <div id="global-loader" className={`global-loader ${loading ? '' : 'fade-out'}`} style={loading ? undefined : { display: 'none' }}>
-        <div className="loader-content"><div className="spinner"></div><div className="loader-text">正在同步账户信息...</div></div>
-      </div>
+      {loaderPresence.value !== null ? (
+        <div
+          id="global-loader"
+          className={`global-loader ${loaderPresence.phase}`}
+          onTransitionEnd={(event) => {
+            if (isRootOpacityTransition(event)) loaderPresence.completeExit()
+          }}
+        >
+          <div className="loader-content"><div className="spinner"></div><div className="loader-text">正在同步账户信息…</div></div>
+        </div>
+      ) : null}
 
       <MainHeader availableAccounts={availableAccounts} balance={balance} category={category} currentSub={currentSub} noNumberMode={noNumberMode} onLogout={handleLogout} onOpenHistory={() => void openHistory(showAlert)} onOpenInbox={() => void openInbox(showAlert)} onOpenSwitch={openSwitchModal} onSearchChange={setSearch} onShowAlert={showAlert} onSwitchCategory={switchCategory} search={search} />
 
@@ -365,20 +379,22 @@ export function MainPage(): JSX.Element {
       />
 
       <CustomModal actions={renderModalActions()} mode={modalMode} onClose={closeCustomModal} open={showModal} title={modalTitle}>
-        {modalKind === 'alert' ? alertText : null}
+        {modalKind === 'alert' ? (alert.tone ? <StatusMessage message={alert.text} tone={alert.tone} /> : alert.text) : null}
         {modalKind === 'switch' ? <AccountSwitchModalContent availableAccounts={availableAccounts} currentSubId={currentSubId} onAddAccount={addAccount} onSwitchAccount={switchAccount} onSwitchSubscription={performSwitch} subscriptions={subscriptions} /> : null}
         {modalKind === 'cart' ? <CartModalContent cart={cart} onRemove={removeCartItem} onUpdateQuantity={updateCartItem} total={cartTotal} /> : null}
         {modalKind === 'purchase' && purchaseDraft ? <PurchaseModalContent balance={balance} draft={purchaseDraft} onChangeDraft={setPurchaseDraft} showNewLineOption={showFreePlans && purchaseDraft.source === 'cart'} /> : null}
         {modalKind === 'transfer' && transferDraft ? <TransferModalContent amount={transferAmount} draft={transferDraft} error={transferError} onChangeAmount={setTransferAmount} onChangeTarget={setTransferTarget} target={transferTarget} /> : null}
       </CustomModal>
 
-      {cartQtyDraft ? (
+      {cartQtyPresence.value !== null ? (
         <CartQuantityModal
           cart={cart}
-          draft={cartQtyDraft}
+          draft={cartQtyPresence.value}
           onCancel={() => setCartQtyDraft(null)}
           onConfirm={() => confirmAddToCart(showAlert)}
+          onExitComplete={cartQtyPresence.completeExit}
           onUpdateDraft={setCartQtyDraft}
+          phase={cartQtyPresence.phase}
         />
       ) : null}
     </>

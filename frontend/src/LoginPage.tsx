@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 
 import { apiFetch, apiPostJson } from './api/client'
 import { LoginSuccessStatus } from './components/LoginSuccessStatus'
+import { StatusMessage, type StatusTone } from './components/StatusMessage'
 import { toErrorMessage } from './utils'
 
 type TabType = 'password' | 'otp'
+type ToastState = { readonly message: string; readonly tone: StatusTone }
 const LOGIN_REDIRECT_DELAY_MS = 800
 
 export function LoginPage(): JSX.Element {
@@ -14,7 +16,8 @@ export function LoginPage(): JSX.Element {
   const [password, setPassword] = useState('')
   const [otp, setOtp] = useState('')
   const [authCode, setAuthCode] = useState('')
-  const [toast, setToast] = useState('')
+  const [toast, setToast] = useState<ToastState | null>(null)
+  const [retainedToast, setRetainedToast] = useState<ToastState | null>(null)
   const [otpBusy, setOtpBusy] = useState(false)
   const [otpLabel, setOtpLabel] = useState('获取验证码')
   const [submitBusy, setSubmitBusy] = useState(false)
@@ -28,30 +31,35 @@ export function LoginPage(): JSX.Element {
   useEffect(() => {
     if (!toast) return
     const timer = window.setTimeout(() => {
-      setToast('')
+      setToast(null)
     }, 3000)
     return () => window.clearTimeout(timer)
   }, [toast])
 
+  const presentToast = (nextToast: ToastState): void => {
+    setRetainedToast(nextToast)
+    setToast(nextToast)
+  }
+
   const handleSendOtp = async (): Promise<void> => {
     if (!identifier.trim()) {
-      setToast('请先输入账号')
+      presentToast({ message: '请先输入账号', tone: 'warning' })
       return
     }
     if (!authCode.trim()) {
-      setToast('请先输入鉴权码')
+      presentToast({ message: '请先输入鉴权码', tone: 'warning' })
       return
     }
 
     setOtpBusy(true)
-    setOtpLabel('发送中...')
+    setOtpLabel('发送中…')
     try {
       const data = await apiPostJson<{ status?: string; message?: string }>('/api/send-otp', { identifier: identifier.trim(), auth_code: authCode.trim() })
       if (data.status !== 'success') {
         throw new Error(data.message ?? '验证码发送失败')
       }
 
-      setToast('✅ 验证码已发送')
+      presentToast({ message: '验证码已发送', tone: 'success' })
       let countdown = 60
       setOtpLabel(`${countdown}s 后重试`)
       const timer = window.setInterval(() => {
@@ -67,7 +75,7 @@ export function LoginPage(): JSX.Element {
     } catch (error: unknown) {
       setOtpBusy(false)
       setOtpLabel('获取验证码')
-      setToast(`❌ ${toErrorMessage(error)}`)
+      presentToast({ message: toErrorMessage(error), tone: 'error' })
     }
   }
 
@@ -97,13 +105,13 @@ export function LoginPage(): JSX.Element {
         throw new Error(data.message ?? '登录失败')
       }
 
-      setToast('')
+      setToast(null)
       setLoginSucceeded(true)
       window.setTimeout(() => {
         window.location.href = data.redirect ?? '/main'
       }, LOGIN_REDIRECT_DELAY_MS)
     } catch (error: unknown) {
-      setToast(`⚠️ ${toErrorMessage(error)}`)
+      presentToast({ message: toErrorMessage(error), tone: 'warning' })
       setSubmitBusy(false)
     }
   }
@@ -131,18 +139,22 @@ export function LoginPage(): JSX.Element {
           </div>
 
           <div className="tabs">
-            <div
+            <button
+              type="button"
               className={`tab${tab === 'password' ? ' active' : ''}`}
+              aria-pressed={tab === 'password'}
               onClick={() => setTab('password')}
             >
               密码登录
-            </div>
-            <div
+            </button>
+            <button
+              type="button"
               className={`tab${tab === 'otp' ? ' active' : ''}`}
+              aria-pressed={tab === 'otp'}
               onClick={() => setTab('otp')}
             >
               验证码登录
-            </div>
+            </button>
           </div>
 
           <form id="loginForm" onSubmit={(event) => void handleSubmit(event)}>
@@ -220,7 +232,7 @@ export function LoginPage(): JSX.Element {
             </div>
 
             <button type="submit" className="submit-btn" id="submitBtn" disabled={submitBusy}>
-              {submitBusy ? '正在登录...' : isAddMode ? '登录并添加' : '立即登录'}
+              {submitBusy ? '正在登录…' : isAddMode ? '登录并添加' : '立即登录'}
             </button>
           </form>
         </div>
@@ -246,7 +258,9 @@ export function LoginPage(): JSX.Element {
         </a>
       </div>
 
-      <div className={`toast${toast ? ' show' : ''}`} id="toast">{toast}</div>
+      <div className={`toast${toast ? ' show' : ''}`} id="toast" onTransitionEnd={(event) => { if (!toast && event.propertyName === 'opacity') setRetainedToast(null) }}>
+        {retainedToast ? <StatusMessage message={retainedToast.message} tone={retainedToast.tone} /> : null}
+      </div>
       {loginSucceeded ? <LoginSuccessStatus durationMs={LOGIN_REDIRECT_DELAY_MS} /> : null}
     </>
   )

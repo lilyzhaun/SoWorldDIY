@@ -4,7 +4,7 @@ import { apiPostJson } from '../api/client'
 import type { CartItem, CmnCheckResponse, Plan } from '../types'
 import { getApiUrl } from '../utils/mainPage'
 
-type CartQuantityDraft = {
+export type CartQuantityDraft = {
   readonly offerId: string
   readonly name: string
   readonly price: number

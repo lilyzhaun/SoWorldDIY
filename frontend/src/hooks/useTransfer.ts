@@ -29,10 +29,10 @@ export function useTransfer(accountId: string, currentSubId: string) {
     if (!transferDraft || !currentSub) return null
     const target = transferTarget.trim()
     const amount = Number.parseFloat(transferAmount)
-    if (!target || target.length < 8) { setTransferError('❌ 请输入有效的手机号码'); return null }
-    if (!amount || Number.isNaN(amount)) { setTransferError('❌ 请输入转移数量'); return null }
-    if (amount < transferDraft.minTransfer) { setTransferError(`❌ 转移数量不能少于 ${transferDraft.minTransfer}`); return null }
-    if (amount > transferDraft.maxValue) { setTransferError('❌ 余额不足'); return null }
+    if (!target || target.length < 8) { setTransferError('请输入有效的手机号码'); return null }
+    if (!amount || Number.isNaN(amount)) { setTransferError('请输入转移数量'); return null }
+    if (amount < transferDraft.minTransfer) { setTransferError(`转移数量不能少于 ${transferDraft.minTransfer}`); return null }
+    if (amount > transferDraft.maxValue) { setTransferError('余额不足'); return null }
     setTransferSubmitting(true)
     setTransferError('')
     try {
@@ -42,11 +42,11 @@ export function useTransfer(accountId: string, currentSubId: string) {
         return target
       } else {
         setTransferSubmitting(false)
-        setTransferError(`❌ ${data.message || '转移失败'}`)
+        setTransferError(data.message || '转移失败')
       }
     } catch {
       setTransferSubmitting(false)
-      setTransferError('❌ 网络请求失败')
+      setTransferError('网络请求失败')
     }
     return null
   }
