@@ -6,7 +6,7 @@
 [![Backend: FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
 [![Frontend: React](https://img.shields.io/badge/Frontend-React-61DAFB.svg)](https://react.dev/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB.svg)](https://www.python.org/)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-339933.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20.19+-339933.svg)](https://nodejs.org/)
 
 面向 3HK / SoSIM / SIMWorld 储值卡账号的自托管管理工具
 
@@ -43,7 +43,7 @@
 | 依赖 | 最低版本 | 说明 |
 | --- | --- | --- |
 | Python | 3.11 | 后端运行时 |
-| Node.js | 18 | 前端构建 |
+| Node.js | 20.19 | 前端构建 |
 | Redis | 6 | session 和鉴权码存储 |
 
 ### 1. 克隆仓库
@@ -122,6 +122,7 @@ cd backend
 .venv/bin/python -m compileall -q app
 PYTHONWARNINGS=error .venv/bin/python -c "from app.main import create_app; create_app().openapi()"
 basedpyright --project pyrightconfig.json
+.venv/bin/ruff format --check app tests
 .venv/bin/ruff check app tests
 .venv/bin/pytest
 ```
@@ -130,7 +131,10 @@ basedpyright --project pyrightconfig.json
 
 ```bash
 cd frontend
+npm audit --audit-level=moderate
+npm run format:check
 npm run lint
+npm run typecheck
 npm test
 npm run build
 ```

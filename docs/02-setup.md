@@ -9,7 +9,7 @@
 需要安装：
 
 - Python 3.11 或更新版本
-- Node.js 18 或更新版本
+- Node.js 20.19 或更新版本
 - Redis 6 或更新版本
 - Git
 
@@ -45,7 +45,7 @@ pip install -r requirements.txt
 
 ```bash
 cd ../frontend
-npm install
+npm ci
 npm run build
 ```
 

@@ -55,6 +55,7 @@ cd backend
 .venv/bin/python -m compileall -q app
 PYTHONWARNINGS=error .venv/bin/python -c "from app.main import create_app; create_app().openapi()"
 basedpyright --project pyrightconfig.json
+.venv/bin/ruff format --check app tests
 .venv/bin/ruff check app tests
 .venv/bin/pytest
 ```
@@ -64,19 +65,23 @@ basedpyright --project pyrightconfig.json
 1. `compileall` 确认 `app/` 下所有 Python 文件可编译，无语法错误。
 2. OpenAPI warnings-as-errors 以 `PYTHONWARNINGS=error` 调用 `create_app().openapi()`，确保 FastAPI 路由注册不产生 deprecation warning，OpenAPI schema 可正常生成。
 3. `basedpyright` 类型检查，配置在 `backend/pyrightconfig.json`，`typeCheckingMode` 为 `basic`，include 范围 `app`，排除 `tests` 和 `.venv`。`basedpyright` 安装在 `requirements-dev.txt` 中。
-4. `ruff check app tests` lint，配置在 `backend/pyproject.toml`。当前规则选择 `E`、`F`、`I`、`UP`、`B`，忽略 `E501`。
-5. `pytest` 运行全部后端测试。
+4. `ruff format --check app tests` 验证 Python 格式，配置在 `backend/pyproject.toml`。
+5. `ruff check app tests` lint，当前规则选择 `E`、`F`、`I`、`UP`、`B`，忽略 `E501`。
+6. `pytest` 运行全部后端测试。
 
 前端 CI gates：
 
 ```bash
 cd frontend
+npm audit --audit-level=moderate
+npm run format:check
 npm run lint
+npm run typecheck
 npm test
 npm run build
 ```
 
-`npm run lint` 执行 `eslint . --max-warnings 0`，零 warning 门槛。`npm run build` 先运行 `tsc` 类型检查，再运行 Vite 构建。
+`npm audit --audit-level=moderate` 阻止已知中高危依赖进入分支；`npm run format:check` 验证 Prettier 格式；`npm run lint` 执行 `eslint . --max-warnings 0`；`npm run typecheck` 执行 `tsc --noEmit`。`npm run build` 会再次运行类型检查后执行 Vite 构建。
 
 通用检查：
 
@@ -84,8 +89,6 @@ npm run build
 git diff --check
 git status --short
 ```
-
-> 格式化 gate（Ruff format、Prettier）将在后续专门提交中加入，目前 CI 尚未强制执行格式检查。提交前请保持代码风格与周边代码一致。
 
 ## 工作区要求
 

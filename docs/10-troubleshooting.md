@@ -83,8 +83,11 @@ pip install -r requirements.txt
 
 ```bash
 cd frontend
-npm install
+npm ci
+npm audit --audit-level=moderate
+npm run format:check
 npm run lint
+npm run typecheck
 npm test
 npm run build
 ```
@@ -98,6 +101,7 @@ npm run build
 ```bash
 cd backend
 .venv/bin/pytest
+.venv/bin/ruff format --check app tests
 .venv/bin/ruff check app tests
 ```
 
