@@ -54,7 +54,9 @@ describe('MainPage rendered contract', () => {
     expect(html).toContain('如使用密码登录请于24h内更改密码。<br/>发生一切损失于本网站无关。')
 
     expect(html.match(/<button type="button" class="cat-tab/g)).toHaveLength(6)
-    const categoryText = [...html.matchAll(/class="cat-tab(?: active)? ?"[^>]*>([^<]+)<\/button>/g)].map((match) => match[1])
+    const categoryText = [...html.matchAll(/class="cat-tab(?: active)? ?"[^>]*>([^<]+)<\/button>/g)].map(
+      (match) => match[1],
+    )
     expect(categoryText).toEqual(['全部', '本地', '外遊', '已订购', '其他', '更换号码'])
   })
 

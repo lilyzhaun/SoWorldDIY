@@ -29,17 +29,43 @@ export function Harness(): JSX.Element {
 
   return (
     <main id="harness" data-refreshes={refreshes} data-starts={starts} data-cancels={cancels}>
-      <button id="set-empty" type="button" onClick={() => setPattern('')}>empty</button>
-      <button id="set-invalid" type="button" onClick={() => setPattern('[')}>invalid</button>
-      <button id="set-valid" type="button" onClick={() => setPattern('666')}>valid</button>
-      <button id="set-hidden" type="button" onClick={() => setVisible(false)}>hidden</button>
-      <button id="set-visible" type="button" onClick={() => setVisible(true)}>visible</button>
-      <button id="set-cannot-refresh" type="button" onClick={() => setCanRefresh(false)}>cannot refresh</button>
-      <button id="set-can-refresh" type="button" onClick={() => setCanRefresh(true)}>can refresh</button>
-      <button id="set-loaded" type="button" onClick={() => setNumbersLoading(false)}>loaded</button>
-      <button id="set-running" type="button" onClick={() => setAutoRefresh({ kind: 'running', attempt: 1, message: 'external running' })}>running</button>
-      <button id="set-idle" type="button" onClick={() => setAutoRefresh({ kind: 'idle', message: '' })}>idle</button>
-      <button id="change-callback" type="button" onClick={() => setCallbackVersion((value) => value + 1)}>callback</button>
+      <button id="set-empty" type="button" onClick={() => setPattern('')}>
+        empty
+      </button>
+      <button id="set-invalid" type="button" onClick={() => setPattern('[')}>
+        invalid
+      </button>
+      <button id="set-valid" type="button" onClick={() => setPattern('666')}>
+        valid
+      </button>
+      <button id="set-hidden" type="button" onClick={() => setVisible(false)}>
+        hidden
+      </button>
+      <button id="set-visible" type="button" onClick={() => setVisible(true)}>
+        visible
+      </button>
+      <button id="set-cannot-refresh" type="button" onClick={() => setCanRefresh(false)}>
+        cannot refresh
+      </button>
+      <button id="set-can-refresh" type="button" onClick={() => setCanRefresh(true)}>
+        can refresh
+      </button>
+      <button id="set-loaded" type="button" onClick={() => setNumbersLoading(false)}>
+        loaded
+      </button>
+      <button
+        id="set-running"
+        type="button"
+        onClick={() => setAutoRefresh({ kind: 'running', attempt: 1, message: 'external running' })}
+      >
+        running
+      </button>
+      <button id="set-idle" type="button" onClick={() => setAutoRefresh({ kind: 'idle', message: '' })}>
+        idle
+      </button>
+      <button id="change-callback" type="button" onClick={() => setCallbackVersion((value) => value + 1)}>
+        callback
+      </button>
       <CmnSection
         autoRefresh={autoRefresh}
         canRefresh={canRefresh}
@@ -49,7 +75,11 @@ export function Harness(): JSX.Element {
         loading={false}
         numbers={numbers}
         numbersLoading={numbersLoading}
-        onAutoRefreshCancel={() => { setCancels((value) => value + 1); setNumbersLoading(false); setAutoRefresh({ kind: 'idle', message: '已取消自动查找' }) }}
+        onAutoRefreshCancel={() => {
+          setCancels((value) => value + 1)
+          setNumbersLoading(false)
+          setAutoRefresh({ kind: 'idle', message: '已取消自动查找' })
+        }}
         onAutoRefreshStart={handleAutoRefreshStart}
         onPatternChange={setPattern}
         onRefresh={() => setRefreshes((value) => value + 1)}
@@ -175,11 +205,17 @@ async function run(): Promise<void> {
   harness?.setAttribute('data-armed-contextmenu-prevented', String(armedContextMenuPrevented))
   harness?.setAttribute('data-stale-arms-started', String(Number(startsAfterStaleArms) - Number(startsBeforeStaleArms)))
   harness?.setAttribute('data-keyboard-focused', String(keyboardFocused))
-  harness?.setAttribute('data-keyboard-started', String(Number(startsAfterKeyboard) === Number(startsBeforeKeyboard) + 1))
+  harness?.setAttribute(
+    'data-keyboard-started',
+    String(Number(startsAfterKeyboard) === Number(startsBeforeKeyboard) + 1),
+  )
   harness?.setAttribute('data-grid-shift-ok', String(Math.abs(runningGridTop - idleGridTop) <= 2))
   harness?.setAttribute('data-actions-shift-ok', String(Math.abs(runningActionsTop - idleActionsTop) <= 2))
   harness?.setAttribute('data-button-height-shift-ok', String(Math.abs(runningButtonHeight - idleButtonHeight) <= 2))
-  harness?.setAttribute('data-viewport-width', String(document.getElementById('root')?.getBoundingClientRect().width ?? 0))
+  harness?.setAttribute(
+    'data-viewport-width',
+    String(document.getElementById('root')?.getBoundingClientRect().width ?? 0),
+  )
   harness?.setAttribute('data-complete', 'true')
 }
 

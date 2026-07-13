@@ -99,9 +99,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                     return deps._json_success({"status": "success"})
                 return deps._upstream_error(r, "验证码发送失败，请稍后重试", 400)
         except Exception as exc:
-            logger.exception(
-                "send_otp failed identifier=%s brand=%s", ident, sub_brand
-            )
+            logger.exception("send_otp failed identifier=%s brand=%s", ident, sub_brand)
             return JSONResponse(
                 status_code=500, content={"status": "error", "message": str(exc)}
             )

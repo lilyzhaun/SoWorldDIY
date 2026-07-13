@@ -30,7 +30,9 @@ from app.session_store import SessionContext
 
 
 def _ctx_with_accounts(accounts: dict[str, Any]) -> SessionContext:
-    return SessionContext(sid="sid-test", data={"accounts": accounts, "csrf_token": "tok"})
+    return SessionContext(
+        sid="sid-test", data={"accounts": accounts, "csrf_token": "tok"}
+    )
 
 
 class FakeResponse:
@@ -142,7 +144,9 @@ def test_make_3hk_request_401_triggers_silent_relogin_then_retries(
             pass
 
         def request(self, method, url, **kwargs):
-            calls.append({"url": url, "is_retry": kwargs.get("json", {}).get("__retry")})
+            calls.append(
+                {"url": url, "is_retry": kwargs.get("json", {}).get("__retry")}
+            )
             # First call returns 401, subsequent calls return 200.
             if len(calls) == 1:
                 return FakeResponse(401, {})
@@ -160,7 +164,13 @@ def test_make_3hk_request_401_triggers_silent_relogin_then_retries(
     )
 
     ctx = _ctx_with_accounts(
-        {"a@b.com": {"cookies": {}, "login_type": "password", "stored_password_encrypted": "x"}}
+        {
+            "a@b.com": {
+                "cookies": {},
+                "login_type": "password",
+                "stored_password_encrypted": "x",
+            }
+        }
     )
     acct = ctx.data["accounts"]["a@b.com"]
     result = main.make_3hk_request(
@@ -333,18 +343,32 @@ def test_attempt_silent_relogin_skips_otp_accounts(monkeypatch: MonkeyPatch) -> 
     from app import main
 
     ctx = _ctx_with_accounts({"a@b.com": {"login_type": "otp"}})
-    assert main.attempt_silent_relogin(object(), ctx, "a@b.com", ctx.data["accounts"]["a@b.com"]) is False
+    assert (
+        main.attempt_silent_relogin(
+            object(), ctx, "a@b.com", ctx.data["accounts"]["a@b.com"]
+        )
+        is False
+    )
 
 
-def test_attempt_silent_relogin_skips_when_no_stored_password(monkeypatch: MonkeyPatch) -> None:
+def test_attempt_silent_relogin_skips_when_no_stored_password(
+    monkeypatch: MonkeyPatch,
+) -> None:
     monkeypatch.setenv("SESSION_SECRET", "test-secret")
     from app import main
 
     ctx = _ctx_with_accounts({"a@b.com": {"login_type": "password"}})
-    assert main.attempt_silent_relogin(object(), ctx, "a@b.com", ctx.data["accounts"]["a@b.com"]) is False
+    assert (
+        main.attempt_silent_relogin(
+            object(), ctx, "a@b.com", ctx.data["accounts"]["a@b.com"]
+        )
+        is False
+    )
 
 
-def test_attempt_silent_relogin_success_updates_cookies(monkeypatch: MonkeyPatch) -> None:
+def test_attempt_silent_relogin_success_updates_cookies(
+    monkeypatch: MonkeyPatch,
+) -> None:
     monkeypatch.setenv("SESSION_SECRET", "test-secret")
     from app import main
 
@@ -370,7 +394,13 @@ def test_attempt_silent_relogin_success_updates_cookies(monkeypatch: MonkeyPatch
     monkeypatch.setattr(main, "get_isolated_session", lambda: FakeSession())
 
     ctx = _ctx_with_accounts(
-        {"a@b.com": {"login_type": "password", "stored_password_encrypted": "enc", "sub_brand": "SOSIM"}}
+        {
+            "a@b.com": {
+                "login_type": "password",
+                "stored_password_encrypted": "enc",
+                "sub_brand": "SOSIM",
+            }
+        }
     )
     ok = main.attempt_silent_relogin(
         _make_request("POST", ua="UA"), ctx, "a@b.com", ctx.data["accounts"]["a@b.com"]
@@ -401,7 +431,9 @@ def test_attempt_silent_relogin_non_204_returns_false(monkeypatch: MonkeyPatch) 
             return FakeResponse(401, {})
 
     monkeypatch.setattr(main, "get_isolated_session", lambda: FakeSession())
-    ctx = _ctx_with_accounts({"a@b.com": {"login_type": "password", "stored_password_encrypted": "enc"}})
+    ctx = _ctx_with_accounts(
+        {"a@b.com": {"login_type": "password", "stored_password_encrypted": "enc"}}
+    )
     ok = main.attempt_silent_relogin(
         _make_request("POST", ua="UA"), ctx, "a@b.com", ctx.data["accounts"]["a@b.com"]
     )
@@ -411,29 +443,35 @@ def test_attempt_silent_relogin_non_204_returns_false(monkeypatch: MonkeyPatch) 
 # ===== get_brand_by_sub_id contracts =====
 
 
-def test_brand_by_sub_id_uses_cached_profile_subscription(monkeypatch: MonkeyPatch) -> None:
+def test_brand_by_sub_id_uses_cached_profile_subscription(
+    monkeypatch: MonkeyPatch,
+) -> None:
     monkeypatch.setenv("SESSION_SECRET", "test-secret")
     from app import main
 
     monkeypatch.setattr(
         main,
         "get_cache",
-        lambda key: {
-            "data": {
-                "subscriptions": [
-                    {"subscriptionId": "sub-1", "brand": "SOSIM"},
-                    {"subscriptionId": "sub-2", "brand": "HAHA"},
-                ]
+        lambda key: (
+            {
+                "data": {
+                    "subscriptions": [
+                        {"subscriptionId": "sub-1", "brand": "SOSIM"},
+                        {"subscriptionId": "sub-2", "brand": "HAHA"},
+                    ]
+                }
             }
-        }
-        if key == "profile_acct"
-        else None,
+            if key == "profile_acct"
+            else None
+        ),
     )
     ctx = _ctx_with_accounts({"acct": {"sub_brand": "THREE"}})
     assert main.get_brand_by_sub_id(ctx, "sub-2", "acct") == "HAHA"
 
 
-def test_brand_by_sub_id_falls_back_to_account_sub_brand(monkeypatch: MonkeyPatch) -> None:
+def test_brand_by_sub_id_falls_back_to_account_sub_brand(
+    monkeypatch: MonkeyPatch,
+) -> None:
     monkeypatch.setenv("SESSION_SECRET", "test-secret")
     from app import main
 
@@ -442,7 +480,9 @@ def test_brand_by_sub_id_falls_back_to_account_sub_brand(monkeypatch: MonkeyPatc
     assert main.get_brand_by_sub_id(ctx, "sub-9", "acct") == "TRADER"
 
 
-def test_brand_by_sub_id_defaults_to_three_when_no_account(monkeypatch: MonkeyPatch) -> None:
+def test_brand_by_sub_id_defaults_to_three_when_no_account(
+    monkeypatch: MonkeyPatch,
+) -> None:
     monkeypatch.setenv("SESSION_SECRET", "test-secret")
     from app import main
 
@@ -469,7 +509,9 @@ def test_get_account_context_returns_account_for_known_id() -> None:
 # ===== internal_logout_account contracts =====
 
 
-def test_internal_logout_account_clears_session_when_last_account(monkeypatch: MonkeyPatch) -> None:
+def test_internal_logout_account_clears_session_when_last_account(
+    monkeypatch: MonkeyPatch,
+) -> None:
     monkeypatch.setenv("SESSION_SECRET", "test-secret")
     from app import main
 
@@ -484,7 +526,9 @@ def test_internal_logout_account_clears_session_when_last_account(monkeypatch: M
     assert cleared == ["profile_a@b.com"]
 
 
-def test_internal_logout_account_keeps_session_with_remaining(monkeypatch: MonkeyPatch) -> None:
+def test_internal_logout_account_keeps_session_with_remaining(
+    monkeypatch: MonkeyPatch,
+) -> None:
     monkeypatch.setenv("SESSION_SECRET", "test-secret")
     from app import main
 
@@ -535,7 +579,9 @@ def test_upstream_error_with_none_response(monkeypatch: MonkeyPatch) -> None:
 
 
 def test_upstream_error_with_response(monkeypatch: MonkeyPatch) -> None:
-    resp = _upstream_error(FakeResponse(500, text="srv-err"), public_message="pub", status_code=400)
+    resp = _upstream_error(
+        FakeResponse(500, text="srv-err"), public_message="pub", status_code=400
+    )
     assert resp.status_code == 400
     assert _json.loads(bytes(resp.body)) == {"status": "error", "message": "pub"}
 

@@ -22,7 +22,9 @@ describe('browser executable resolver', () => {
     await Promise.all([writeFile(explicitBrowser, ''), writeFile(pathBrowser, '')])
     await Promise.all([chmod(explicitBrowser, 0o755), chmod(pathBrowser, 0o755)])
 
-    await expect(resolveBrowserExecutable({ THREEHK_CHROME_BIN: explicitBrowser, PATH: directory }, 'linux')).resolves.toBe(explicitBrowser)
+    await expect(
+      resolveBrowserExecutable({ THREEHK_CHROME_BIN: explicitBrowser, PATH: directory }, 'linux'),
+    ).resolves.toBe(explicitBrowser)
     await rm(directory, { recursive: true, force: true })
   })
 
@@ -39,7 +41,9 @@ describe('browser executable resolver', () => {
   it('fails actionably when no accepted browser executable exists', async () => {
     const directory = await mkdtemp(join(tmpdir(), '3hk-browser-resolver-'))
 
-    await expect(resolveBrowserExecutable({ PATH: directory }, 'linux')).rejects.toThrow(/CHROME_BIN.*PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.*THREEHK_CHROME_BIN.*chromium.*google-chrome-stable/s)
+    await expect(resolveBrowserExecutable({ PATH: directory }, 'linux')).rejects.toThrow(
+      /CHROME_BIN.*PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH.*THREEHK_CHROME_BIN.*chromium.*google-chrome-stable/s,
+    )
     await rm(directory, { recursive: true, force: true })
   })
 })

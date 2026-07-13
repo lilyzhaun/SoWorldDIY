@@ -3,10 +3,7 @@ import { describe, expect, it } from 'vitest'
 import type { Plan, Subscription } from '@/types'
 import { selectProfileSubscription, sortPlansByPrice } from '@/utils/profileBootstrap'
 
-const subscriptions: readonly Subscription[] = [
-  { subscriptionId: 'first' },
-  { subscriptionId: 'selected' },
-]
+const subscriptions: readonly Subscription[] = [{ subscriptionId: 'first' }, { subscriptionId: 'selected' }]
 
 describe('selectProfileSubscription', () => {
   it('uses the current subscription ID when it matches an available subscription', () => {
@@ -40,7 +37,14 @@ describe('selectProfileSubscription', () => {
 
 describe('sortPlansByPrice', () => {
   it('returns plans in ascending price order without mutating the input', () => {
-    const expensive: Plan = { offerId: 'expensive', name: 'Expensive', price: 30, validity: '', desc: '', category: 'OTHER' }
+    const expensive: Plan = {
+      offerId: 'expensive',
+      name: 'Expensive',
+      price: 30,
+      validity: '',
+      desc: '',
+      category: 'OTHER',
+    }
     const cheap: Plan = { offerId: 'cheap', name: 'Cheap', price: 10, validity: '', desc: '', category: 'OTHER' }
     const plans = [expensive, cheap]
 

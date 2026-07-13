@@ -10,6 +10,7 @@ from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
 
+
 def register_account_page_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.get("/main")
     async def main_page_default(request: Request) -> RedirectResponse:
@@ -29,4 +30,6 @@ def register_account_page_routes(app: FastAPI, deps: RouteDeps) -> None:
         accounts = ctx.data.get("accounts", {})
         if account_id not in accounts:
             return RedirectResponse(url="/", status_code=302)
-        return FileResponse(deps.FRONTEND_DIST_DIR / "index.html", media_type="text/html")
+        return FileResponse(
+            deps.FRONTEND_DIST_DIR / "index.html", media_type="text/html"
+        )

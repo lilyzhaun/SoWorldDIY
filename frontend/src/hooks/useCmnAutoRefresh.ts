@@ -18,7 +18,11 @@ type CmnLifecycle = {
 type CmnAutoRefreshNumbers = {
   readonly canStartAutoRefresh: () => boolean
   readonly releaseAutoRequestAfterCancel: () => void
-  readonly requestCmnNumbers: (showAlert: ShowAlert, mode: 'manual' | 'auto', signal?: AbortSignal) => Promise<CmnRefreshOutcome>
+  readonly requestCmnNumbers: (
+    showAlert: ShowAlert,
+    mode: 'manual' | 'auto',
+    signal?: AbortSignal,
+  ) => Promise<CmnRefreshOutcome>
 }
 
 type CmnAutoRefreshOptions = {
@@ -59,14 +63,17 @@ export function useCmnAutoRefresh({ accountId, currentSubId, lifecycle, numbers,
   const autoRunIdRef = useRef(0)
   const autoAbortRef = useRef<AbortController | null>(null)
 
-  const cancelCmnAutoRefresh = useCallback((announce = true): void => {
-    autoRunIdRef.current += 1
-    const controller = autoAbortRef.current
-    controller?.abort()
-    autoAbortRef.current = null
-    if (controller) releaseAutoRequestAfterCancel()
-    if (mountedRef.current) setCmnAutoRefresh({ kind: 'idle', message: announce ? '已取消自动查找' : '' })
-  }, [mountedRef, releaseAutoRequestAfterCancel])
+  const cancelCmnAutoRefresh = useCallback(
+    (announce = true): void => {
+      autoRunIdRef.current += 1
+      const controller = autoAbortRef.current
+      controller?.abort()
+      autoAbortRef.current = null
+      if (controller) releaseAutoRequestAfterCancel()
+      if (mountedRef.current) setCmnAutoRefresh({ kind: 'idle', message: announce ? '已取消自动查找' : '' })
+    },
+    [mountedRef, releaseAutoRequestAfterCancel],
+  )
 
   useEffect(() => () => cancelCmnAutoRefresh(false), [cancelCmnAutoRefresh])
 
@@ -78,37 +85,53 @@ export function useCmnAutoRefresh({ accountId, currentSubId, lifecycle, numbers,
     if (!visible) cancelCmnAutoRefresh(false)
   }, [cancelCmnAutoRefresh, visible])
 
-  const startCmnAutoRefresh = useCallback((showAlert: ShowAlert): void => {
-    if (cmnAutoRefresh.kind === 'running' || parsedCmnPattern.kind === 'empty' || parsedCmnPattern.kind === 'invalid') return
-    if (!canStartAutoRefresh() || !currentSubId) return
+  const startCmnAutoRefresh = useCallback(
+    (showAlert: ShowAlert): void => {
+      if (cmnAutoRefresh.kind === 'running' || parsedCmnPattern.kind === 'empty' || parsedCmnPattern.kind === 'invalid')
+        return
+      if (!canStartAutoRefresh() || !currentSubId) return
 
-    const controller = new AbortController()
-    const runId = autoRunIdRef.current + 1
-    const scope = scopeGenerationRef.current
-    autoRunIdRef.current = runId
-    autoAbortRef.current = controller
-    setCmnAutoRefresh({ kind: 'running', attempt: 0, message: '自动查找已开始' })
+      const controller = new AbortController()
+      const runId = autoRunIdRef.current + 1
+      const scope = scopeGenerationRef.current
+      autoRunIdRef.current = runId
+      autoAbortRef.current = controller
+      setCmnAutoRefresh({ kind: 'running', attempt: 0, message: '自动查找已开始' })
 
-    void runCmnAutoRefresh({
-      pattern: cmnPattern,
-      signal: controller.signal,
-      request: (signal) => requestCmnNumbers(showAlert, 'auto', signal),
-      onAttemptStart: (attempt) => {
-        if (mountedRef.current && runId === autoRunIdRef.current && scope === scopeGenerationRef.current) {
-          setCmnAutoRefresh({ kind: 'running', attempt, message: `正在自动查找第 ${attempt} 批号码` })
-        }
-      },
-    }).then((result) => {
-      if (!mountedRef.current || runId !== autoRunIdRef.current || scope !== scopeGenerationRef.current) return
-      autoAbortRef.current = null
-      setCmnAutoRefresh({ kind: 'idle', message: cmnAutoRefreshResultMessage(result) })
-    })
-  }, [canStartAutoRefresh, cmnAutoRefresh.kind, cmnPattern, currentSubId, mountedRef, parsedCmnPattern.kind, requestCmnNumbers, scopeGenerationRef])
+      void runCmnAutoRefresh({
+        pattern: cmnPattern,
+        signal: controller.signal,
+        request: (signal) => requestCmnNumbers(showAlert, 'auto', signal),
+        onAttemptStart: (attempt) => {
+          if (mountedRef.current && runId === autoRunIdRef.current && scope === scopeGenerationRef.current) {
+            setCmnAutoRefresh({ kind: 'running', attempt, message: `正在自动查找第 ${attempt} 批号码` })
+          }
+        },
+      }).then((result) => {
+        if (!mountedRef.current || runId !== autoRunIdRef.current || scope !== scopeGenerationRef.current) return
+        autoAbortRef.current = null
+        setCmnAutoRefresh({ kind: 'idle', message: cmnAutoRefreshResultMessage(result) })
+      })
+    },
+    [
+      canStartAutoRefresh,
+      cmnAutoRefresh.kind,
+      cmnPattern,
+      currentSubId,
+      mountedRef,
+      parsedCmnPattern.kind,
+      requestCmnNumbers,
+      scopeGenerationRef,
+    ],
+  )
 
-  const changeCmnPattern = useCallback((pattern: string): void => {
-    cancelCmnAutoRefresh(false)
-    setCmnPattern(pattern)
-  }, [cancelCmnAutoRefresh])
+  const changeCmnPattern = useCallback(
+    (pattern: string): void => {
+      cancelCmnAutoRefresh(false)
+      setCmnPattern(pattern)
+    },
+    [cancelCmnAutoRefresh],
+  )
 
   return {
     cancelCmnAutoRefresh,

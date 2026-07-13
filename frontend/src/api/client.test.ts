@@ -58,7 +58,10 @@ describe('api client helpers', () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(Response.json({ status: 'success', balance: '8.0' }))
     vi.stubGlobal('fetch', fetchMock)
 
-    await expect(apiGet<{ status: string; balance: string }>('/api/balance')).resolves.toEqual({ status: 'success', balance: '8.0' })
+    await expect(apiGet<{ status: string; balance: string }>('/api/balance')).resolves.toEqual({
+      status: 'success',
+      balance: '8.0',
+    })
   })
 
   it('forwards AbortSignal through init', async () => {
@@ -72,9 +75,11 @@ describe('api client helpers', () => {
   })
 
   it('throws ApiHttpError with status and body on non-OK GET', async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockImplementation(async () =>
-      new Response(JSON.stringify({ message: 'nope' }), { status: 403, statusText: 'Forbidden' }),
-    )
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockImplementation(
+        async () => new Response(JSON.stringify({ message: 'nope' }), { status: 403, statusText: 'Forbidden' }),
+      )
     vi.stubGlobal('fetch', fetchMock)
 
     await expect(apiGet('/api/balance')).rejects.toBeInstanceOf(ApiHttpError)

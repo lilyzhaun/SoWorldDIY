@@ -118,9 +118,7 @@ def test_plans_serves_cached_brand_file(
     tmp_path: Path,
 ) -> None:
     (tmp_path / "plans_THREE.json").write_text(
-        json.dumps(
-            {"status": "success", "plans": [{"offerId": "fixture-plan"}]}
-        ),
+        json.dumps({"status": "success", "plans": [{"offerId": "fixture-plan"}]}),
         encoding="utf-8",
     )
     monkeypatch.setattr(main, "PLANS_CACHE_DIR", tmp_path)

@@ -358,7 +358,20 @@ def test_assemble_transfer_payload_shape() -> None:
     offer = payload["tranferOrder"]["orderSubscription"]["offers"][0]
     assert offer["offerId"] == "DTO1"
     assert offer["offerProduct"]["productData"] == {"unit": "MB", "volume": 500.0}
-    assert assemble_transfer_payload([], product_family="DATA", source_msisdn="1", subscription_id="s", target_msisdn="2", user_offer_id="u", balance_resource_id=1, unit="MB", amount=1.0) is None
+    assert (
+        assemble_transfer_payload(
+            [],
+            product_family="DATA",
+            source_msisdn="1",
+            subscription_id="s",
+            target_msisdn="2",
+            user_offer_id="u",
+            balance_resource_id=1,
+            unit="MB",
+            amount=1.0,
+        )
+        is None
+    )
 
 
 def test_build_active_offers_vas_usage() -> None:

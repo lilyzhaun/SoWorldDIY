@@ -58,55 +58,64 @@ export function useCmnNumbers({ accountId, currentSubId, lifecycle }: CmnNumbers
     return () => window.clearInterval(timer)
   }, [cmnCooldown])
 
-  const requestCmnNumbers = useCallback(async (showAlert: ShowAlert, mode: RefreshMode, signal?: AbortSignal): Promise<CmnRefreshOutcome> => {
-    if (!currentSubId || inFlightRef.current || Date.now() < canRefreshAtRef.current) return { kind: 'unavailable' }
+  const requestCmnNumbers = useCallback(
+    async (showAlert: ShowAlert, mode: RefreshMode, signal?: AbortSignal): Promise<CmnRefreshOutcome> => {
+      if (!currentSubId || inFlightRef.current || Date.now() < canRefreshAtRef.current) return { kind: 'unavailable' }
 
-    const controller = signal ? null : new AbortController()
-    const requestSignal = signal ?? controller?.signal
-    if (!requestSignal) return { kind: 'unavailable' }
-    refreshAbortRef.current = controller
-    inFlightRef.current = true
-    const requestId = requestIdRef.current + 1
-    requestIdRef.current = requestId
-    const scope = scopeGenerationRef.current
-    const isCurrent = (): boolean => mountedRef.current && !requestSignal.aborted && requestId === requestIdRef.current && scope === scopeGenerationRef.current
+      const controller = signal ? null : new AbortController()
+      const requestSignal = signal ?? controller?.signal
+      if (!requestSignal) return { kind: 'unavailable' }
+      refreshAbortRef.current = controller
+      inFlightRef.current = true
+      const requestId = requestIdRef.current + 1
+      requestIdRef.current = requestId
+      const scope = scopeGenerationRef.current
+      const isCurrent = (): boolean =>
+        mountedRef.current &&
+        !requestSignal.aborted &&
+        requestId === requestIdRef.current &&
+        scope === scopeGenerationRef.current
 
-    setCmnCanRefresh(false)
-    setCmnNumbersLoading(true)
-    if (mode === 'manual') setCmnNumbers([])
+      setCmnCanRefresh(false)
+      setCmnNumbersLoading(true)
+      if (mode === 'manual') setCmnNumbers([])
 
-    try {
-      const url = getApiUrl(`/api/cmn/numbers?subscriptionId=${currentSubId}`, accountId)
-      const data = await apiGet<{ status?: string; numbers?: string[]; message?: string }>(url, { signal: requestSignal })
-      if (!isCurrent()) return { kind: 'unavailable' }
-      if (data.status !== 'success') {
-        setCmnCanRefresh(true)
-        if (mode === 'manual') showAlert(data.message || '获取号码失败')
-        return { kind: 'error' }
+      try {
+        const url = getApiUrl(`/api/cmn/numbers?subscriptionId=${currentSubId}`, accountId)
+        const data = await apiGet<{ status?: string; numbers?: string[]; message?: string }>(url, {
+          signal: requestSignal,
+        })
+        if (!isCurrent()) return { kind: 'unavailable' }
+        if (data.status !== 'success') {
+          setCmnCanRefresh(true)
+          if (mode === 'manual') showAlert(data.message || '获取号码失败')
+          return { kind: 'error' }
+        }
+
+        const numbers = data.numbers || []
+        setSelectedNumber(null)
+        setCmnNumbers(numbers)
+        canRefreshAtRef.current = Date.now() + CMN_REFRESH_COOLDOWN_SECONDS * 1000
+        setCmnCooldown(CMN_REFRESH_COOLDOWN_SECONDS)
+        return { kind: 'success', numbers }
+      } catch (error: unknown) {
+        if (requestSignal.aborted) return { kind: 'unavailable' }
+        if (isCurrent()) {
+          setCmnCanRefresh(true)
+          if (mode === 'manual') showAlert(toUserFacingApiError(error, '请求失败'))
+          return { kind: 'error' }
+        }
+        return { kind: 'unavailable' }
+      } finally {
+        if (requestId === requestIdRef.current) {
+          inFlightRef.current = false
+          refreshAbortRef.current = null
+          if (isCurrent()) setCmnNumbersLoading(false)
+        }
       }
-
-      const numbers = data.numbers || []
-      setSelectedNumber(null)
-      setCmnNumbers(numbers)
-      canRefreshAtRef.current = Date.now() + (CMN_REFRESH_COOLDOWN_SECONDS * 1000)
-      setCmnCooldown(CMN_REFRESH_COOLDOWN_SECONDS)
-      return { kind: 'success', numbers }
-    } catch (error: unknown) {
-      if (requestSignal.aborted) return { kind: 'unavailable' }
-      if (isCurrent()) {
-        setCmnCanRefresh(true)
-        if (mode === 'manual') showAlert(toUserFacingApiError(error, '请求失败'))
-        return { kind: 'error' }
-      }
-      return { kind: 'unavailable' }
-    } finally {
-      if (requestId === requestIdRef.current) {
-        inFlightRef.current = false
-        refreshAbortRef.current = null
-        if (isCurrent()) setCmnNumbersLoading(false)
-      }
-    }
-  }, [accountId, currentSubId, mountedRef, scopeGenerationRef])
+    },
+    [accountId, currentSubId, mountedRef, scopeGenerationRef],
+  )
 
   const refreshCmnNumbers = useCallback(
     async (showAlert: ShowAlert): Promise<CmnRefreshOutcome> => requestCmnNumbers(showAlert, 'manual'),

@@ -1,9 +1,7 @@
 const MAX_CAPTURE_GROUPS = 4
 const MAX_ATOMS_PER_BRANCH = 8
 
-export type BranchValidation =
-  | { readonly valid: true }
-  | { readonly valid: false; readonly message: string }
+export type BranchValidation = { readonly valid: true } | { readonly valid: false; readonly message: string }
 
 export function parseBackreference(source: string, index: number): number | null {
   if (source[index] !== '\\') return null

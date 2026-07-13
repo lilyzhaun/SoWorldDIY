@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 
-const FOCUSABLE_SELECTOR = 'a[href], area[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), iframe, object, embed, [contenteditable="true"], [tabindex]:not([tabindex="-1"])'
+const FOCUSABLE_SELECTOR =
+  'a[href], area[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), iframe, object, embed, [contenteditable="true"], [tabindex]:not([tabindex="-1"])'
 
 export function getNextDialogFocusIndex(currentIndex: number, focusableCount: number, backwards: boolean): number {
   if (focusableCount === 0) return -1
@@ -29,7 +30,8 @@ export function useDialogAccessibility(open: boolean, onClose: () => void): Reac
     const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
     const dialog = dialogRef.current
     if (!dialog) return
-    const initialFocus = dialog.querySelector<HTMLElement>('[data-dialog-initial-focus]') ?? getVisibleFocusableElements(dialog)[0]
+    const initialFocus =
+      dialog.querySelector<HTMLElement>('[data-dialog-initial-focus]') ?? getVisibleFocusableElements(dialog)[0]
     initialFocus?.focus()
 
     const handleKeyDown = (event: KeyboardEvent): void => {
@@ -39,7 +41,9 @@ export function useDialogAccessibility(open: boolean, onClose: () => void): Reac
       }
       if (event.key !== 'Tab') return
       const focusableElements = getVisibleFocusableElements(dialog)
-      const currentIndex = focusableElements.indexOf(document.activeElement instanceof HTMLElement ? document.activeElement : dialog)
+      const currentIndex = focusableElements.indexOf(
+        document.activeElement instanceof HTMLElement ? document.activeElement : dialog,
+      )
       const nextIndex = getNextDialogFocusIndex(currentIndex, focusableElements.length, event.shiftKey)
       event.preventDefault()
       if (nextIndex < 0) dialog.focus()

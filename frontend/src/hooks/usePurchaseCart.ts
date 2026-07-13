@@ -50,7 +50,10 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
         next[index] = { ...next[index], quantity }
         return next
       }
-      return [...previous, { offerId: cartQtyDraft.offerId, name: cartQtyDraft.name, price: cartQtyDraft.price, quantity }]
+      return [
+        ...previous,
+        { offerId: cartQtyDraft.offerId, name: cartQtyDraft.name, price: cartQtyDraft.price, quantity },
+      ]
     })
     setCartQtyDraft(null)
     showAlert(`已加入: ${cartQtyDraft.name} x ${quantity}`, '成功')
@@ -81,7 +84,15 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
     setPurchaseDraft((previous) => (previous ? { ...previous, submitting: true } : null))
     try {
       const url = getApiUrl('/api/purchase', accountId)
-      const data = await apiPostJson<{ status?: string; message?: string; paymentUrl?: string }>(url, { items: cart, subscriptionId: currentSubId, price: purchaseDraft.price, paymentType: purchaseDraft.paymentType, txnAmount: purchaseDraft.txnAmount, new_line: purchaseDraft.newLine, account_id: accountId })
+      const data = await apiPostJson<{ status?: string; message?: string; paymentUrl?: string }>(url, {
+        items: cart,
+        subscriptionId: currentSubId,
+        price: purchaseDraft.price,
+        paymentType: purchaseDraft.paymentType,
+        txnAmount: purchaseDraft.txnAmount,
+        new_line: purchaseDraft.newLine,
+        account_id: accountId,
+      })
       if (data.status === 'success' && data.paymentUrl) {
         setCart([])
         window.location.href = data.paymentUrl
@@ -95,12 +106,25 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
     }
   }
 
-  const submitCmnPurchase = async (cmnData: CmnCheckResponse['data'] | null, selectedNumber: string | null, showAlert: ShowAlert): Promise<void> => {
+  const submitCmnPurchase = async (
+    cmnData: CmnCheckResponse['data'] | null,
+    selectedNumber: string | null,
+    showAlert: ShowAlert,
+  ): Promise<void> => {
     if (!purchaseDraft || purchaseDraft.source !== 'cmn' || !cmnData || !selectedNumber) return
     setPurchaseDraft((previous) => (previous ? { ...previous, submitting: true } : null))
     try {
       const url = getApiUrl('/api/cmn/purchase', accountId)
-      const data = await apiPostJson<{ status?: string; paymentUrl?: string; message?: string }>(url, { offerId: cmnData.offerId, offerSubType: cmnData.offerSubType, price: cmnData.price, subscriptionId: currentSubId, selectedNumber, paymentType: purchaseDraft.paymentType, txnAmount: purchaseDraft.txnAmount, account_id: accountId })
+      const data = await apiPostJson<{ status?: string; paymentUrl?: string; message?: string }>(url, {
+        offerId: cmnData.offerId,
+        offerSubType: cmnData.offerSubType,
+        price: cmnData.price,
+        subscriptionId: currentSubId,
+        selectedNumber,
+        paymentType: purchaseDraft.paymentType,
+        txnAmount: purchaseDraft.txnAmount,
+        account_id: accountId,
+      })
       if (data.status === 'success' && data.paymentUrl) {
         window.location.href = data.paymentUrl
       } else {
@@ -113,5 +137,21 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
     }
   }
 
-  return { cart, cartCount, cartQtyDraft, cartTotal, confirmAddToCart, openAddToCart, openPurchaseModal, purchaseDraft, removeCartItem, resetCart: () => setCart([]), setCartQtyDraft, setPurchaseDraft, submitCheckout, submitCmnPurchase, updateCartItem }
+  return {
+    cart,
+    cartCount,
+    cartQtyDraft,
+    cartTotal,
+    confirmAddToCart,
+    openAddToCart,
+    openPurchaseModal,
+    purchaseDraft,
+    removeCartItem,
+    resetCart: () => setCart([]),
+    setCartQtyDraft,
+    setPurchaseDraft,
+    submitCheckout,
+    submitCmnPurchase,
+    updateCartItem,
+  }
 }

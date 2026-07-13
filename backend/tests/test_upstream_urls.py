@@ -18,8 +18,7 @@ def test_simworld_url_joins_brand_and_path() -> None:
 
 def test_simworld_url_preserves_trailing_slash_segment() -> None:
     assert (
-        simworld_url("THREE", "user/login/")
-        == f"{SIMWORLD_API_BASE}/THREE/user/login/"
+        simworld_url("THREE", "user/login/") == f"{SIMWORLD_API_BASE}/THREE/user/login/"
     )
     assert (
         simworld_url("SOSIM", "pmt/purchase/createPurchase/")

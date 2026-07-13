@@ -25,11 +25,16 @@ window.fetch = async (input, init): Promise<Response> => {
     eligibilityRequestCount += 1
     if (eligibilityRequestCount === 1) {
       return new Promise((resolve, reject) => {
-        resolveOldEligibility = () => resolve(Response.json({ status: 'success', data: { offerId: 'old-offer', price: 1 } }))
-        init?.signal?.addEventListener('abort', () => {
-          oldEligibilityAborted = true
-          reject(new DOMException('Aborted', 'AbortError'))
-        }, { once: true })
+        resolveOldEligibility = () =>
+          resolve(Response.json({ status: 'success', data: { offerId: 'old-offer', price: 1 } }))
+        init?.signal?.addEventListener(
+          'abort',
+          () => {
+            oldEligibilityAborted = true
+            reject(new DOMException('Aborted', 'AbortError'))
+          },
+          { once: true },
+        )
       })
     }
     return Response.json({ status: 'success', data: { offerId: 'new-offer', price: 28 } })
@@ -40,18 +45,26 @@ window.fetch = async (input, init): Promise<Response> => {
   if (numbersRequestCount === 2) {
     return new Promise((resolve, reject) => {
       resolveOldNumbers = () => resolve(Response.json({ status: 'success', numbers: ['99999999'] }))
-      init?.signal?.addEventListener('abort', () => {
-        oldNumbersAborted = true
-        reject(new DOMException('Aborted', 'AbortError'))
-      }, { once: true })
+      init?.signal?.addEventListener(
+        'abort',
+        () => {
+          oldNumbersAborted = true
+          reject(new DOMException('Aborted', 'AbortError'))
+        },
+        { once: true },
+      )
     })
   }
   if (numbersRequestCount === 3) return Response.json({ status: 'success', numbers: ['22222222'] })
   return new Promise((_, reject) => {
-    init?.signal?.addEventListener('abort', () => {
-      autoRequestAborted = true
-      reject(new DOMException('Aborted', 'AbortError'))
-    }, { once: true })
+    init?.signal?.addEventListener(
+      'abort',
+      () => {
+        autoRequestAborted = true
+        reject(new DOMException('Aborted', 'AbortError'))
+      },
+      { once: true },
+    )
   })
 }
 
@@ -88,7 +101,10 @@ export function Harness(): JSX.Element {
       setScope({ accountId: 'account-2', subscriptionId: 'subscription-2' })
       await wait(0)
       await wait(0)
-      const scopeReset = harness().dataset.numbers === '' && harness().dataset.numbersLoading === 'false' && harness().dataset.selected === ''
+      const scopeReset =
+        harness().dataset.numbers === '' &&
+        harness().dataset.numbersLoading === 'false' &&
+        harness().dataset.selected === ''
 
       resolveOldEligibility?.()
       resolveOldNumbers?.()
@@ -99,7 +115,10 @@ export function Harness(): JSX.Element {
       await cmnRef.current.checkCmnEligibility()
       const newNumbers = await cmnRef.current.refreshCmnNumbers(() => undefined)
       await wait(0)
-      const newScopeApplied = newNumbers.kind === 'success' && harness().dataset.offer === 'new-offer' && harness().dataset.numbers === '22222222'
+      const newScopeApplied =
+        newNumbers.kind === 'success' &&
+        harness().dataset.offer === 'new-offer' &&
+        harness().dataset.numbers === '22222222'
       const exactCooldown = harness().dataset.cooldown === '3' && harness().dataset.canRefresh === 'false'
 
       clockOffset += 3000
@@ -113,7 +132,8 @@ export function Harness(): JSX.Element {
       const autoLoading = harness().dataset.numbersLoading === 'true'
       cmnRef.current.cancelCmnAutoRefresh()
       await wait(0)
-      const cancelReset = harness().dataset.numbersLoading === 'false' && harness().dataset.autoMessage === '已取消自动查找'
+      const cancelReset =
+        harness().dataset.numbersLoading === 'false' && harness().dataset.autoMessage === '已取消自动查找'
 
       const target = harness()
       target.setAttribute('data-manual-cleared', String(manualCleared))

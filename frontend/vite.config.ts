@@ -22,6 +22,6 @@ export default defineConfig({
         login: resolve(__dirname, 'login.html'),
         main: resolve(__dirname, 'index.html'),
       },
-    }
+    },
   },
 })

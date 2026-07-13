@@ -21,7 +21,11 @@ export function MainModalActions({
   onConfirmTransfer,
 }: MainModalActionsProps): JSX.Element {
   if (modalKind === 'alert') {
-    return <button className="modal-btn confirm alert-ok" onClick={onClose}>关闭</button>
+    return (
+      <button className="modal-btn confirm alert-ok" onClick={onClose}>
+        关闭
+      </button>
+    )
   }
   if (modalKind === 'switch') {
     return <></>
@@ -29,15 +33,21 @@ export function MainModalActions({
   if (modalKind === 'cart') {
     return (
       <>
-        <button className="modal-btn cancel" onClick={onClose}>取消</button>
-        <button className="modal-btn confirm" onClick={onCheckout}>去结算</button>
+        <button className="modal-btn cancel" onClick={onClose}>
+          取消
+        </button>
+        <button className="modal-btn confirm" onClick={onCheckout}>
+          去结算
+        </button>
       </>
     )
   }
   if (modalKind === 'purchase') {
     return (
       <>
-        <button className="modal-btn cancel" onClick={onClose}>取消</button>
+        <button className="modal-btn cancel" onClick={onClose}>
+          取消
+        </button>
         <button className="modal-btn confirm" disabled={purchaseDraft?.submitting} onClick={onConfirmPurchase}>
           {purchaseDraft?.submitting ? '提交中…' : '确认'}
         </button>
@@ -47,7 +57,9 @@ export function MainModalActions({
   if (modalKind === 'transfer') {
     return (
       <>
-        <button className="modal-btn cancel" onClick={onClose}>取消</button>
+        <button className="modal-btn cancel" onClick={onClose}>
+          取消
+        </button>
         <button className="modal-btn confirm" disabled={transferSubmitting} onClick={onConfirmTransfer}>
           {transferSubmitting ? '处理中…' : '确认转移'}
         </button>

@@ -45,7 +45,10 @@ export function useHistory(accountId: string, currentSubId: string): HistoryStat
     }
     if (!silent) setHistoryLoading(true)
     try {
-      const url = getApiUrl(`/api/history?subscriptionId=${currentSubId}&startDate=${startStr}&endDate=${endStr}&_t=${Date.now()}`, accountId)
+      const url = getApiUrl(
+        `/api/history?subscriptionId=${currentSubId}&startDate=${startStr}&endDate=${endStr}&_t=${Date.now()}`,
+        accountId,
+      )
       const data = await apiGet<{ status?: string; data?: HistoryItem[]; message?: string }>(url)
       if (data.status === 'success') {
         const next = data.data || []

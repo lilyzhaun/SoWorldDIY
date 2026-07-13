@@ -107,7 +107,9 @@ def test_api_route_topology_order_methods_and_names() -> None:
         for route in _api_routes()
     ]
     assert observed == EXPECTED_API_ROUTES
-    for route, (_, _, expected_name) in zip(_api_routes(), EXPECTED_API_ROUTES, strict=True):
+    for route, (_, _, expected_name) in zip(
+        _api_routes(), EXPECTED_API_ROUTES, strict=True
+    ):
         assert route.endpoint.__name__ == expected_name
 
 
@@ -136,9 +138,7 @@ def test_middleware_includes_session_middleware() -> None:
 
 def test_static_mounts_present() -> None:
     mounts = {
-        route.path: route.name
-        for route in main.app.routes
-        if isinstance(route, Mount)
+        route.path: route.name for route in main.app.routes if isinstance(route, Mount)
     }
     if main.FRONTEND_DIST_DIR.exists():
         assert mounts.get("/assets") == "assets"
@@ -166,9 +166,7 @@ def test_static_mounts_present_on_fresh_app_with_created_frontend_dirs(
 
     fresh = create_app()
     mounts = {
-        route.path: route.name
-        for route in fresh.routes
-        if isinstance(route, Mount)
+        route.path: route.name for route in fresh.routes if isinstance(route, Mount)
     }
     assert mounts.get("/assets") == "assets"
     assert mounts.get("/static") == "static"
@@ -194,9 +192,7 @@ def test_create_app_skips_assets_mount_when_missing_frontend_dist(
 
     fresh = create_app()
     mounts = {
-        route.path: route.name
-        for route in fresh.routes
-        if isinstance(route, Mount)
+        route.path: route.name for route in fresh.routes if isinstance(route, Mount)
     }
     assert "/assets" not in mounts
     assert mounts.get("/static") is None
@@ -224,9 +220,7 @@ def test_app_identity_and_create_app_factory() -> None:
     assert callable(create_app)
     fresh = create_app()
     assert fresh is not main.app
-    fresh_paths = [
-        route.path for route in fresh.routes if isinstance(route, APIRoute)
-    ]
+    fresh_paths = [route.path for route in fresh.routes if isinstance(route, APIRoute)]
     assert fresh_paths == [path for path, _, _ in EXPECTED_API_ROUTES]
 
 

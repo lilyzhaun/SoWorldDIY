@@ -40,7 +40,12 @@ function waitForCooldown(signal: AbortSignal): Promise<boolean> {
   })
 }
 
-export async function runCmnAutoRefresh({ pattern, request, signal, onAttemptStart }: CmnAutoRefreshOptions): Promise<CmnAutoRefreshResult> {
+export async function runCmnAutoRefresh({
+  pattern,
+  request,
+  signal,
+  onAttemptStart,
+}: CmnAutoRefreshOptions): Promise<CmnAutoRefreshResult> {
   let attempts = 0
 
   while (attempts < CMN_AUTO_REFRESH_MAX_ATTEMPTS) {
@@ -72,7 +77,7 @@ export async function runCmnAutoRefresh({ pattern, request, signal, onAttemptSta
     }
 
     if (attempts === CMN_AUTO_REFRESH_MAX_ATTEMPTS) break
-    if (!await waitForCooldown(signal)) return { kind: 'aborted', attempts }
+    if (!(await waitForCooldown(signal))) return { kind: 'aborted', attempts }
   }
 
   return { kind: 'exhausted', attempts }

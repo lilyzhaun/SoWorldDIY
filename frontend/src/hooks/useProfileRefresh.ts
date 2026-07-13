@@ -15,7 +15,12 @@ type ProfileRefreshOptions = {
 
 export const PROFILE_REFRESH_COMPLETION_DELAY_MS = 500
 
-export function useProfileRefresh({ accountId, setAvailableAccounts, setSubscriptions, showAlert }: ProfileRefreshOptions) {
+export function useProfileRefresh({
+  accountId,
+  setAvailableAccounts,
+  setSubscriptions,
+  showAlert,
+}: ProfileRefreshOptions) {
   const [refreshingUsage, setRefreshingUsage] = useState(false)
 
   const refreshProfileData = async (): Promise<void> => {

@@ -30,15 +30,37 @@ export function useTransfer(accountId: string, currentSubId: string) {
     if (!transferDraft || !currentSub) return null
     const target = transferTarget.trim()
     const amount = Number.parseFloat(transferAmount)
-    if (!target || target.length < 8) { setTransferError('请输入有效的手机号码'); return null }
-    if (!amount || Number.isNaN(amount)) { setTransferError('请输入转移数量'); return null }
-    if (amount < transferDraft.minTransfer) { setTransferError(`转移数量不能少于 ${transferDraft.minTransfer}`); return null }
-    if (amount > transferDraft.maxValue) { setTransferError('余额不足'); return null }
+    if (!target || target.length < 8) {
+      setTransferError('请输入有效的手机号码')
+      return null
+    }
+    if (!amount || Number.isNaN(amount)) {
+      setTransferError('请输入转移数量')
+      return null
+    }
+    if (amount < transferDraft.minTransfer) {
+      setTransferError(`转移数量不能少于 ${transferDraft.minTransfer}`)
+      return null
+    }
+    if (amount > transferDraft.maxValue) {
+      setTransferError('余额不足')
+      return null
+    }
     setTransferSubmitting(true)
     setTransferError('')
     try {
       const url = getApiUrl('/api/sim/transfer', accountId)
-      const data = await apiPostJson<{ status?: string; message?: string }>(url, { subscriptionId: currentSubId, sourceMsisdn: currentSub.mobile, targetMsisdn: target, amount, userOfferId: transferDraft.userOfferId, balanceResourceId: transferDraft.balanceResourceId, unit: transferDraft.unit, productFamily: transferDraft.productFamily, account_id: accountId })
+      const data = await apiPostJson<{ status?: string; message?: string }>(url, {
+        subscriptionId: currentSubId,
+        sourceMsisdn: currentSub.mobile,
+        targetMsisdn: target,
+        amount,
+        userOfferId: transferDraft.userOfferId,
+        balanceResourceId: transferDraft.balanceResourceId,
+        unit: transferDraft.unit,
+        productFamily: transferDraft.productFamily,
+        account_id: accountId,
+      })
       if (data.status === 'success') {
         return target
       } else {
@@ -52,5 +74,16 @@ export function useTransfer(accountId: string, currentSubId: string) {
     return null
   }
 
-  return { openTransferModal, resetTransfer, setTransferAmount, setTransferTarget, submitTransfer, transferAmount, transferDraft, transferError, transferSubmitting, transferTarget }
+  return {
+    openTransferModal,
+    resetTransfer,
+    setTransferAmount,
+    setTransferTarget,
+    submitTransfer,
+    transferAmount,
+    transferDraft,
+    transferError,
+    transferSubmitting,
+    transferTarget,
+  }
 }

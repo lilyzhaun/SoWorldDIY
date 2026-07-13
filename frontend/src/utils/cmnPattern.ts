@@ -1,8 +1,5 @@
 import type { BranchValidation } from './cmnPatternCapture'
-import {
-  parseBackreference,
-  validateCapture,
-} from './cmnPatternCapture'
+import { parseBackreference, validateCapture } from './cmnPatternCapture'
 
 const MAX_PATTERN_LENGTH = 32
 const MAX_BRANCHES = 4
@@ -140,9 +137,7 @@ function validateBranch(source: string, hasTopLevelAlternation = false): BranchV
     index = quantifiedIndex
   }
 
-  return atoms > 0
-    ? { valid: true }
-    : { valid: false, message: '每个分支至少需要一个数字匹配项' }
+  return atoms > 0 ? { valid: true } : { valid: false, message: '每个分支至少需要一个数字匹配项' }
 }
 
 export function parseCmnPattern(input: string): CmnPattern {
@@ -215,7 +210,10 @@ export function findCmnPatternRanges(candidate: string, input: string): readonly
   }
 }
 
-export function segmentCmnCandidate(candidate: string, ranges: readonly CmnMatchRange[]): readonly CmnCandidateSegment[] {
+export function segmentCmnCandidate(
+  candidate: string,
+  ranges: readonly CmnMatchRange[],
+): readonly CmnCandidateSegment[] {
   if (ranges.length === 0) return [{ text: candidate, highlighted: false }]
 
   const segments: CmnCandidateSegment[] = []

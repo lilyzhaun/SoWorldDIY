@@ -21,7 +21,7 @@ async function isExecutable(filePath, platform) {
 export async function resolveBrowserExecutable(environment = process.env, platform = process.platform) {
   for (const variableName of browserEnvironmentVariables) {
     const configuredPath = environment[variableName]
-    if (configuredPath && await isExecutable(configuredPath, platform)) return configuredPath
+    if (configuredPath && (await isExecutable(configuredPath, platform))) return configuredPath
   }
 
   const pathSeparator = platform === 'win32' ? ';' : ':'
@@ -37,7 +37,9 @@ export async function resolveBrowserExecutable(environment = process.env, platfo
     }
   }
 
-  throw new Error(`Chromium browser executable not found. Set one of ${browserEnvironmentVariables.join(', ')} to an executable path, or install one of these PATH candidates: ${browserPathCandidates.join(', ')}.`)
+  throw new Error(
+    `Chromium browser executable not found. Set one of ${browserEnvironmentVariables.join(', ')} to an executable path, or install one of these PATH candidates: ${browserPathCandidates.join(', ')}.`,
+  )
 }
 
 export async function dumpBrowserDom(browserExecutable, browserProfile, testUrl, virtualTimeBudget = 1000, windowSize) {

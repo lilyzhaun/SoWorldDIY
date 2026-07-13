@@ -11,6 +11,7 @@ from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
 
+
 def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.get("/_health")
     async def healthcheck() -> dict[str, str]:
@@ -43,7 +44,8 @@ def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.get("/manifest.json")
     async def manifest() -> FileResponse:
         return FileResponse(
-            deps.FRONTEND_DIST_DIR / "manifest.json", media_type="application/manifest+json"
+            deps.FRONTEND_DIST_DIR / "manifest.json",
+            media_type="application/manifest+json",
         )
 
     @app.get("/sw.js")
@@ -64,4 +66,6 @@ def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
         if isinstance(accounts, dict) and accounts:
             first_id = list(accounts.keys())[0]
             return RedirectResponse(url=f"/main/{first_id}", status_code=302)
-        return FileResponse(deps.FRONTEND_DIST_DIR / "login.html", media_type="text/html")
+        return FileResponse(
+            deps.FRONTEND_DIST_DIR / "login.html", media_type="text/html"
+        )

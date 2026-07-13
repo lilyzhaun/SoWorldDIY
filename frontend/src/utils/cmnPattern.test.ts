@@ -17,17 +17,14 @@ describe('parseCmnPattern', () => {
     expect(parsed.kind).toBe('regex')
   })
 
-  it.each([
-    '([0-9])\\1{2}',
-    '([0-9])\\1{3}',
-    '([0-9]{2})\\1',
-    '^([0-9])\\1{2}',
-    '([0-9])\\1{2}$',
-  ])('accepts safe capture/backreference patterns %s', (source) => {
-    const parsed = parseCmnPattern(source)
+  it.each(['([0-9])\\1{2}', '([0-9])\\1{3}', '([0-9]{2})\\1', '^([0-9])\\1{2}', '([0-9])\\1{2}$'])(
+    'accepts safe capture/backreference patterns %s',
+    (source) => {
+      const parsed = parseCmnPattern(source)
 
-    expect(parsed.kind).toBe('regex')
-  })
+      expect(parsed.kind).toBe('regex')
+    },
+  )
 
   it.each([
     '[',
@@ -112,10 +109,13 @@ describe('findCmnPatternRanges', () => {
     expect(findCmnPatternRanges('６６６６６６６６', '6')).toEqual([])
   })
 
-  it.each(['(\\d+)+', '', '<img src=x onerror=alert(1)>', '['])('returns no ranges and does not throw for unsafe raw input %s', (pattern) => {
-    expect(() => findCmnPatternRanges('66666666', pattern)).not.toThrow()
-    expect(findCmnPatternRanges('66666666', pattern)).toEqual([])
-  })
+  it.each(['(\\d+)+', '', '<img src=x onerror=alert(1)>', '['])(
+    'returns no ranges and does not throw for unsafe raw input %s',
+    (pattern) => {
+      expect(() => findCmnPatternRanges('66666666', pattern)).not.toThrow()
+      expect(findCmnPatternRanges('66666666', pattern)).toEqual([])
+    },
+  )
 
   it('matches full repeated sequence and highlights backreference captures', () => {
     const pattern = '([0-9])\\1{2}'

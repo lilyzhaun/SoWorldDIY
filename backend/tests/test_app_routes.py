@@ -77,7 +77,16 @@ def test_cmn_numbers_holds_nine_numbers_for_three_by_three_grid(
         account_context: dict[str, dict[str, str]] | None = None,
         _is_retry: bool = False,
     ) -> UpstreamResponse:
-        _ = (request, ctx, method, json_data, params, account_id, account_context, _is_retry)
+        _ = (
+            request,
+            ctx,
+            method,
+            json_data,
+            params,
+            account_id,
+            account_context,
+            _is_retry,
+        )
         captured_urls.append(url)
         return UpstreamResponse()
 

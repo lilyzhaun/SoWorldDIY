@@ -15,7 +15,9 @@ class _ResolveProxiesFn(Protocol):
 
 def _load_resolver() -> _ResolveProxiesFn | None:
     try:
-        local_overrides = importlib.import_module(".request_overrides_local", __package__)
+        local_overrides = importlib.import_module(
+            ".request_overrides_local", __package__
+        )
     except ModuleNotFoundError as exc:
         if exc.name != f"{__package__}.request_overrides_local":
             raise

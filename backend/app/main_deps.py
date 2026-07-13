@@ -46,9 +46,7 @@ class MainModuleSource(Protocol):
     attempt_silent_relogin: Callable[
         [Request, SessionContext, str, dict[str, Any]], bool
     ]
-    get_account_context: Callable[
-        [SessionContext, str | None], dict[str, Any] | None
-    ]
+    get_account_context: Callable[[SessionContext, str | None], dict[str, Any] | None]
     make_3hk_request: Make3hkRequestFn
     get_cache: Callable[[str], Any | None]
     set_cache: SetCacheFn

@@ -86,9 +86,12 @@ describe('runCmnAutoRefresh', () => {
 
   it('aborts while a request is pending and ignores its late resolution', async () => {
     let resolveRequest: ((value: typeof nonMatch) => void) | undefined
-    const request = vi.fn<CmnAutoRefreshRequest>().mockImplementation(() => new Promise((resolve) => {
-      resolveRequest = resolve
-    }))
+    const request = vi.fn<CmnAutoRefreshRequest>().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveRequest = resolve
+        }),
+    )
     const controller = new AbortController()
 
     const running = runCmnAutoRefresh({ pattern: '666', request, signal: controller.signal })
@@ -120,13 +123,17 @@ describe('runCmnAutoRefresh', () => {
   ])('stops when a request returns %s', async (outcome, expected) => {
     const request = vi.fn<CmnAutoRefreshRequest>().mockResolvedValue(outcome)
 
-    await expect(runCmnAutoRefresh({ pattern: '666', request, signal: new AbortController().signal })).resolves.toEqual(expected)
+    await expect(runCmnAutoRefresh({ pattern: '666', request, signal: new AbortController().signal })).resolves.toEqual(
+      expected,
+    )
     expect(request).toHaveBeenCalledTimes(1)
   })
 
   it('converts a rejected request into an error result', async () => {
     const request = vi.fn<CmnAutoRefreshRequest>().mockRejectedValue(new TypeError('network failed'))
 
-    await expect(runCmnAutoRefresh({ pattern: '666', request, signal: new AbortController().signal })).resolves.toEqual({ kind: 'error', attempts: 1 })
+    await expect(runCmnAutoRefresh({ pattern: '666', request, signal: new AbortController().signal })).resolves.toEqual(
+      { kind: 'error', attempts: 1 },
+    )
   })
 })

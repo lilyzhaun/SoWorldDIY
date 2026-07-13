@@ -44,9 +44,7 @@ class TransferPayload(TypedDict):
 def require_mapping_list(value: object) -> list[Mapping[str, object]]:
     """Require a list of mappings; malformed containers raise TypeError."""
     if not isinstance(value, list):
-        raise TypeError(
-            f"expected list of mappings, got {type(value).__name__}"
-        )
+        raise TypeError(f"expected list of mappings, got {type(value).__name__}")
     result: list[Mapping[str, object]] = []
     for index, item in enumerate(value):
         if not isinstance(item, Mapping):
@@ -90,11 +88,7 @@ def select_transfer_product_id(
     """Pick productId matching productFamily, else first product."""
     products = require_mapping_list(dto["products"])
     return next(
-        (
-            p["productId"]
-            for p in products
-            if p.get("productFamily") == product_family
-        ),
+        (p["productId"] for p in products if p.get("productFamily") == product_family),
         products[0]["productId"],
     )
 

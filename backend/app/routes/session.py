@@ -10,6 +10,7 @@ from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
 
+
 def register_session_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.get("/logout")
     async def logout(request: Request) -> RedirectResponse:

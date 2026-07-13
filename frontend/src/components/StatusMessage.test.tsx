@@ -22,22 +22,25 @@ const toneCases = [
 }[]
 
 describe('StatusMessage', () => {
-  it.each(toneCases)('renders the $tone tone with its semantic icon and announcement behavior', ({ tone, icon, role, live }) => {
-    const html = renderToStaticMarkup(<StatusMessage message={`${tone} message`} tone={tone} />)
+  it.each(toneCases)(
+    'renders the $tone tone with its semantic icon and announcement behavior',
+    ({ tone, icon, role, live }) => {
+      const html = renderToStaticMarkup(<StatusMessage message={`${tone} message`} tone={tone} />)
 
-    expect(html).toContain(`class="status-message status-message--${tone}"`)
-    expect(html).toContain(`role="${role}"`)
-    expect(html).toContain('aria-atomic="true"')
-    expect(html).toContain(`data-icon="${icon}"`)
-    expect(html).toContain('width="18"')
-    expect(html).toContain('height="18"')
-    expect(html).toContain(`<span>${tone} message</span>`)
-    if (live === null) {
-      expect(html).not.toContain('aria-live=')
-    } else {
-      expect(html).toContain(`aria-live="${live}"`)
-    }
-  })
+      expect(html).toContain(`class="status-message status-message--${tone}"`)
+      expect(html).toContain(`role="${role}"`)
+      expect(html).toContain('aria-atomic="true"')
+      expect(html).toContain(`data-icon="${icon}"`)
+      expect(html).toContain('width="18"')
+      expect(html).toContain('height="18"')
+      expect(html).toContain(`<span>${tone} message</span>`)
+      if (live === null) {
+        expect(html).not.toContain('aria-live=')
+      } else {
+        expect(html).toContain(`aria-live="${live}"`)
+      }
+    },
+  )
 
   it('preserves the exact message and appends an optional class without emoji', () => {
     const message = 'Account details updated.'

@@ -30,7 +30,9 @@ const loginStyles = readCssBundle(new globalThis.URL('./styles/login.css', impor
 
 describe('visual QA blocking contracts', () => {
   it('uses the accessible theme focus-ring token without changing focus geometry', () => {
-    expect(mainStyles).toMatch(/\*:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--focus-ring\)[^}]*outline-offset:\s*2px/s)
+    expect(mainStyles).toMatch(
+      /\*:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--focus-ring\)[^}]*outline-offset:\s*2px/s,
+    )
     expect(mainStyles).not.toMatch(/\*:focus-visible\s*\{[^}]*outline:[^;}]*var\(--primary\)/s)
   })
 
@@ -51,8 +53,12 @@ describe('visual QA blocking contracts', () => {
   })
 
   it('disables spinner rotation and completes progress under reduced motion', () => {
-    expect(mainStyles).toMatch(/@media \(prefers-reduced-motion: reduce\)[\s\S]*\.spinner\s*\{[^}]*animation:\s*none !important/s)
-    expect(loginStyles).toMatch(/\.login-success-progress-fill\s*\{[^}]*animation:\s*none[^}]*transform:\s*scaleX\(1\)/s)
+    expect(mainStyles).toMatch(
+      /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.spinner\s*\{[^}]*animation:\s*none !important/s,
+    )
+    expect(loginStyles).toMatch(
+      /\.login-success-progress-fill\s*\{[^}]*animation:\s*none[^}]*transform:\s*scaleX\(1\)/s,
+    )
   })
 
   it('uses one 240ms generic modal exit contract and calm record/cart motion', () => {
@@ -60,7 +66,9 @@ describe('visual QA blocking contracts', () => {
     expect(mainStyles).toContain('transform var(--motion-slow)')
     expect(mainStyles).toContain('--motion-calm: 150ms')
     expect(mainStyles).toMatch(/\.records-modal-box\s*\{[^}]*transition:\s*opacity var\(--motion-calm\)/s)
-    expect(mainStyles).toMatch(/#cartQuantityModal \.modal-box\s*\{[^}]*transform:\s*none[^}]*transition:\s*opacity var\(--motion-fast\)/s)
+    expect(mainStyles).toMatch(
+      /#cartQuantityModal \.modal-box\s*\{[^}]*transform:\s*none[^}]*transition:\s*opacity var\(--motion-fast\)/s,
+    )
     expect(mainStyles).not.toContain('transform 220ms')
     expect(mainStyles).not.toContain('0.2s')
     expect(loginStyles).toContain('animation: loginSuccessEnter var(--motion-base)')
@@ -89,12 +97,18 @@ describe('visual QA blocking contracts', () => {
   })
 
   it('keeps record detail prose readable for CJK and constrains rich media', () => {
-    expect(mainStyles).toMatch(/\.inbox-detail\s*\{[^}]*text-wrap:\s*pretty[^}]*line-break:\s*strict[^}]*overflow-wrap:\s*break-word/s)
+    expect(mainStyles).toMatch(
+      /\.inbox-detail\s*\{[^}]*text-wrap:\s*pretty[^}]*line-break:\s*strict[^}]*overflow-wrap:\s*break-word/s,
+    )
     expect(mainStyles).toMatch(/\.inbox-detail\s+(?:a|code)[^}]*\{[^}]*overflow-wrap:\s*anywhere/s)
     expect(mainStyles).toMatch(/\.inbox-detail\s+img\s*\{[^}]*max-width:\s*100%[^}]*height:\s*auto/s)
     expect(mainStyles).not.toMatch(/\.inbox-detail\s*\{[^}]*overflow-wrap:\s*anywhere/s)
-    expect(mainStyles).toMatch(/\.inbox-detail\s*\{[^}]*word-break:\s*normal[^}]*line-break:\s*strict[^}]*overflow-wrap:\s*break-word/s)
-    expect(mainStyles).toMatch(/@supports \(word-break: auto-phrase\)\s*\{[^}]*\.inbox-detail\s*\{[^}]*word-break:\s*auto-phrase/s)
+    expect(mainStyles).toMatch(
+      /\.inbox-detail\s*\{[^}]*word-break:\s*normal[^}]*line-break:\s*strict[^}]*overflow-wrap:\s*break-word/s,
+    )
+    expect(mainStyles).toMatch(
+      /@supports \(word-break: auto-phrase\)\s*\{[^}]*\.inbox-detail\s*\{[^}]*word-break:\s*auto-phrase/s,
+    )
   })
 
   it('wraps sanitized inbox time tokens through text-node traversal only', () => {
@@ -106,30 +120,44 @@ describe('visual QA blocking contracts', () => {
   })
 
   it('reserves anywhere wrapping for technical history tokens', () => {
-    expect(mainStyles).toMatch(/\.records-detail-list dd\s*\{[^}]*overflow-wrap:\s*break-word[^}]*line-break:\s*strict[^}]*word-break:\s*normal/s)
+    expect(mainStyles).toMatch(
+      /\.records-detail-list dd\s*\{[^}]*overflow-wrap:\s*break-word[^}]*line-break:\s*strict[^}]*word-break:\s*normal/s,
+    )
     expect(mainStyles).not.toMatch(/\.records-detail-list dd\s*\{[^}]*overflow-wrap:\s*anywhere/s)
     expect(mainStyles).toMatch(/\.records-technical-token\s*\{[^}]*overflow-wrap:\s*anywhere/s)
     expect(historyModalSource).toContain('<dd className="records-technical-token">{detailOrder}</dd>')
   })
 
   it('stacks mobile record details and balances inbox prose without overflow', () => {
-    expect(mainStyles).toMatch(/@media \(max-width: 480px\)[\s\S]*\.records-detail-list > div\s*\{[^}]*grid-template-columns:\s*1fr/s)
-    expect(mainStyles).toMatch(/@media \(max-width: 480px\)[\s\S]*\.records-detail-list dd\s*\{[^}]*text-align:\s*left/s)
+    expect(mainStyles).toMatch(
+      /@media \(max-width: 480px\)[\s\S]*\.records-detail-list > div\s*\{[^}]*grid-template-columns:\s*1fr/s,
+    )
+    expect(mainStyles).toMatch(
+      /@media \(max-width: 480px\)[\s\S]*\.records-detail-list dd\s*\{[^}]*text-align:\s*left/s,
+    )
     expect(mainStyles).toMatch(/@media \(max-width: 480px\)[\s\S]*\.records-detail-content\s*\{[^}]*padding:\s*8px/s)
-    expect(mainStyles).toMatch(/@media \(max-width: 480px\)[\s\S]*\.records-detail-surface\s*\{[^}]*max-width:\s*100%[^}]*padding:\s*12px/s)
-    expect(mainStyles).toMatch(/@media \(max-width: 480px\)[\s\S]*\.inbox-detail (?:p|li)[^}]*\{[^}]*text-wrap:\s*balance/s)
+    expect(mainStyles).toMatch(
+      /@media \(max-width: 480px\)[\s\S]*\.records-detail-surface\s*\{[^}]*max-width:\s*100%[^}]*padding:\s*12px/s,
+    )
+    expect(mainStyles).toMatch(
+      /@media \(max-width: 480px\)[\s\S]*\.inbox-detail (?:p|li)[^}]*\{[^}]*text-wrap:\s*balance/s,
+    )
   })
 
   it('uses a scoped accessible history query treatment without disabled opacity', () => {
-    expect(mainStyles).toContain('--records-query-bg: #C05200')
+    expect(mainStyles).toMatch(/--records-query-bg:\s*#c05200/i)
     expect(mainStyles).toMatch(/\.filter-btn\s*\{[^}]*background:\s*var\(--records-query-bg\)[^}]*color:\s*white/s)
-    expect(mainStyles).toMatch(/\.filter-btn:disabled\s*\{[^}]*background:\s*var\(--bg-secondary\)[^}]*color:\s*var\(--text-sub\)/s)
+    expect(mainStyles).toMatch(
+      /\.filter-btn:disabled\s*\{[^}]*background:\s*var\(--bg-secondary\)[^}]*color:\s*var\(--text-sub\)/s,
+    )
     expect(mainStyles).not.toMatch(/\.filter-btn:disabled\s*\{[^}]*opacity:/s)
   })
 
   it('uses symmetric desktop scrollbars and vertically fills record states', () => {
     expect(mainStyles).toMatch(/\.records-modal-content\s*\{[^}]*scrollbar-gutter:\s*auto/s)
-    expect(mainStyles).toMatch(/@media \(min-width: (?:560|768)px\)[\s\S]*\.records-modal-content\s*\{[^}]*scrollbar-gutter:\s*stable both-edges/s)
+    expect(mainStyles).toMatch(
+      /@media \(min-width: (?:560|768)px\)[\s\S]*\.records-modal-content\s*\{[^}]*scrollbar-gutter:\s*stable both-edges/s,
+    )
     expect(mainStyles).toMatch(/\.records-state\s*\{[^}]*min-height:\s*100%[^}]*height:\s*100%/s)
     expect(mainStyles).not.toMatch(/\.records-state\s*\{[^}]*min-height:\s*240px/s)
   })
@@ -149,7 +177,7 @@ describe('visual QA blocking contracts', () => {
   })
 
   it('keeps required labels and avoids legacy transfer abbreviation', () => {
-    expect(activeOffersSource).toContain('>转移</button>')
-    expect(activeOffersSource).not.toContain('>转</button>')
+    expect(activeOffersSource).toMatch(/>\s*转移\s*<\/button>/)
+    expect(activeOffersSource).not.toMatch(/>\s*转\s*<\/button>/)
   })
 })

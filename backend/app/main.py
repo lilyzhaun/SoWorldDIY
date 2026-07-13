@@ -81,6 +81,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
 def _bind_main_deps(module: object) -> MainDepsAdapter:
     return MainDepsAdapter(source=cast(MainModuleSource, module))
 

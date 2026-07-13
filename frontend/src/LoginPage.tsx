@@ -29,13 +29,25 @@ export function LoginPage(): JSX.Element {
   return (
     <>
       <div className="login-brand-panel">
-        <h1>Welcome to<br /><span>3HK</span> Assistant</h1>
+        <h1>
+          Welcome to
+          <br />
+          <span>3HK</span> Assistant
+        </h1>
         <p>DIY / SoSIM / SIMWorld / 3國際萬能卡 / HAHA SIM 套餐管理工具</p>
         <div className="login-brand-features">
-          <div className="feat"><div className="feat-dot"></div>多品牌账号统一管理</div>
-          <div className="feat"><div className="feat-dot"></div>套餐浏览与一键购买</div>
-          <div className="feat"><div className="feat-dot"></div>余额查询与充值跳转</div>
-          <div className="feat"><div className="feat-dot"></div>资源互转与换号服务</div>
+          <div className="feat">
+            <div className="feat-dot"></div>多品牌账号统一管理
+          </div>
+          <div className="feat">
+            <div className="feat-dot"></div>套餐浏览与一键购买
+          </div>
+          <div className="feat">
+            <div className="feat-dot"></div>余额查询与充值跳转
+          </div>
+          <div className="feat">
+            <div className="feat-dot"></div>资源互转与换号服务
+          </div>
         </div>
       </div>
       <div className="main-wrapper">
@@ -43,7 +55,8 @@ export function LoginPage(): JSX.Element {
           <div className="header">
             <h2>{isAddMode ? '添加新账号' : '3HK 助手'}</h2>
             <p>
-              支持 DIY / SoSIM / SIMWorld<br />
+              支持 DIY / SoSIM / SIMWorld
+              <br />
               3國際萬能卡 / HAHA SIM
             </p>
           </div>
@@ -101,11 +114,7 @@ export function LoginPage(): JSX.Element {
               />
             </div>
 
-            <div
-              className="form-group"
-              id="otp-group"
-              style={{ display: tab === 'otp' ? undefined : 'none' }}
-            >
+            <div className="form-group" id="otp-group" style={{ display: tab === 'otp' ? undefined : 'none' }}>
               <label className="input-label">验证码</label>
               <div className="otp-group">
                 <input
@@ -149,9 +158,11 @@ export function LoginPage(): JSX.Element {
       </div>
 
       <div className="footer-note">
-        仅供个人学习使用，高净值账号请勿使用本网站。<br />
+        仅供个人学习使用，高净值账号请勿使用本网站。
+        <br />
         <span>
-          如使用密码登录请于24h内更改密码。<br />
+          如使用密码登录请于24h内更改密码。
+          <br />
           发生一切损失于本网站无关。
         </span>
         <br />

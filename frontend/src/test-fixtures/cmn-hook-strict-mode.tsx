@@ -59,7 +59,8 @@ export function Harness(): JSX.Element {
       await wait(0)
       cmnRef.current.cancelCmnAutoRefresh()
       await wait(0)
-      const firstRequestCancelRestored = getHarness().dataset.canRefresh === 'true' && getHarness().dataset.cooldown === '0'
+      const firstRequestCancelRestored =
+        getHarness().dataset.canRefresh === 'true' && getHarness().dataset.cooldown === '0'
 
       cmnRef.current.startCmnAutoRefresh(() => undefined)
       await wait(20)
@@ -67,7 +68,10 @@ export function Harness(): JSX.Element {
       cmnRef.current.cancelCmnAutoRefresh()
       await wait(0)
       const cooldownAfterCancel = getHarness().dataset.cooldown
-      const cooldownPreserved = cooldownBeforeCancel === cooldownAfterCancel && cooldownAfterCancel !== '0' && getHarness().dataset.canRefresh === 'false'
+      const cooldownPreserved =
+        cooldownBeforeCancel === cooldownAfterCancel &&
+        cooldownAfterCancel !== '0' &&
+        getHarness().dataset.canRefresh === 'false'
 
       clockOffset += 3000
       await wait(300)
@@ -84,10 +88,20 @@ export function Harness(): JSX.Element {
   }, [cmn])
 
   return (
-    <main id="hook-harness" data-can-refresh={cmn.cmnCanRefresh} data-cooldown={cmn.cmnCooldown} data-data-ready={cmn.cmnData !== null} data-numbers={cmn.cmnNumbers.join(',')}>
+    <main
+      id="hook-harness"
+      data-can-refresh={cmn.cmnCanRefresh}
+      data-cooldown={cmn.cmnCooldown}
+      data-data-ready={cmn.cmnData !== null}
+      data-numbers={cmn.cmnNumbers.join(',')}
+    >
       StrictMode CMN hook harness
     </main>
   )
 }
 
-createRoot(document.getElementById('root') as HTMLElement).render(<StrictMode><Harness /></StrictMode>)
+createRoot(document.getElementById('root') as HTMLElement).render(
+  <StrictMode>
+    <Harness />
+  </StrictMode>,
+)

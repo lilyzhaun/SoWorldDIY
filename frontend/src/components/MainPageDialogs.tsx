@@ -3,7 +3,15 @@ import type { Dispatch, SetStateAction } from 'react'
 import type { AlertState, ModalKind } from '@/hooks/useAppModal'
 import type { PresenceValue } from '@/hooks/usePresenceValue'
 import type { CartQuantityDraft, PurchaseDraft } from '@/hooks/usePurchaseCart'
-import type { AvailableAccount, CartItem, HistoryItem, InboxMessage, ModalMode, Subscription, TransferDraft } from '@/types'
+import type {
+  AvailableAccount,
+  CartItem,
+  HistoryItem,
+  InboxMessage,
+  ModalMode,
+  Subscription,
+  TransferDraft,
+} from '@/types'
 import { AccountSwitchModalContent } from './AccountSwitchModalContent'
 import { CartFab } from './CartFab'
 import { CartModalContent } from './CartModalContent'
@@ -113,7 +121,18 @@ type MainPageDialogsProps = {
   readonly transfer: TransferContent
 }
 
-export function MainPageDialogs({ accountSwitch, actions, cart, cartFab, frame, history, inbox, purchase, quantity, transfer }: MainPageDialogsProps): JSX.Element {
+export function MainPageDialogs({
+  accountSwitch,
+  actions,
+  cart,
+  cartFab,
+  frame,
+  history,
+  inbox,
+  purchase,
+  quantity,
+  transfer,
+}: MainPageDialogsProps): JSX.Element {
   return (
     <>
       <CartFab {...cartFab} />
@@ -123,21 +142,77 @@ export function MainPageDialogs({ accountSwitch, actions, cart, cartFab, frame, 
       <HistoryModal {...history} />
 
       <CustomModal
-        actions={<MainModalActions modalKind={frame.modalKind} purchaseDraft={actions.purchaseDraft} transferSubmitting={actions.transferSubmitting} onClose={frame.onClose} onCheckout={actions.onCheckout} onConfirmPurchase={actions.onConfirmPurchase} onConfirmTransfer={actions.onConfirmTransfer} />}
+        actions={
+          <MainModalActions
+            modalKind={frame.modalKind}
+            purchaseDraft={actions.purchaseDraft}
+            transferSubmitting={actions.transferSubmitting}
+            onClose={frame.onClose}
+            onCheckout={actions.onCheckout}
+            onConfirmPurchase={actions.onConfirmPurchase}
+            onConfirmTransfer={actions.onConfirmTransfer}
+          />
+        }
         mode={frame.modalMode}
         onClose={frame.onClose}
         open={frame.open}
         title={frame.modalTitle}
       >
-        {frame.modalKind === 'alert' ? (frame.alert.tone ? <StatusMessage message={frame.alert.text} tone={frame.alert.tone} /> : frame.alert.text) : null}
-        {frame.modalKind === 'switch' ? <AccountSwitchModalContent availableAccounts={accountSwitch.availableAccounts} currentSubId={accountSwitch.currentSubId} onAddAccount={accountSwitch.onAddAccount} onSwitchAccount={accountSwitch.onSwitchAccount} onSwitchSubscription={accountSwitch.onSwitchSubscription} subscriptions={accountSwitch.subscriptions} /> : null}
-        {frame.modalKind === 'cart' ? <CartModalContent cart={cart.cart} onRemove={cart.onRemoveCartItem} onUpdateQuantity={cart.onUpdateCartItem} total={cart.total} /> : null}
-        {frame.modalKind === 'purchase' && purchase.purchaseDraft ? <PurchaseModalContent balance={purchase.balance} draft={purchase.purchaseDraft} onChangeDraft={purchase.onChangePurchaseDraft} showNewLineOption={purchase.showFreePlans && purchase.purchaseDraft.source === 'cart'} /> : null}
-        {frame.modalKind === 'transfer' && transfer.transferDraft ? <TransferModalContent amount={transfer.transferAmount} draft={transfer.transferDraft} error={transfer.transferError} onChangeAmount={transfer.onChangeTransferAmount} onChangeTarget={transfer.onChangeTransferTarget} target={transfer.transferTarget} /> : null}
+        {frame.modalKind === 'alert' ? (
+          frame.alert.tone ? (
+            <StatusMessage message={frame.alert.text} tone={frame.alert.tone} />
+          ) : (
+            frame.alert.text
+          )
+        ) : null}
+        {frame.modalKind === 'switch' ? (
+          <AccountSwitchModalContent
+            availableAccounts={accountSwitch.availableAccounts}
+            currentSubId={accountSwitch.currentSubId}
+            onAddAccount={accountSwitch.onAddAccount}
+            onSwitchAccount={accountSwitch.onSwitchAccount}
+            onSwitchSubscription={accountSwitch.onSwitchSubscription}
+            subscriptions={accountSwitch.subscriptions}
+          />
+        ) : null}
+        {frame.modalKind === 'cart' ? (
+          <CartModalContent
+            cart={cart.cart}
+            onRemove={cart.onRemoveCartItem}
+            onUpdateQuantity={cart.onUpdateCartItem}
+            total={cart.total}
+          />
+        ) : null}
+        {frame.modalKind === 'purchase' && purchase.purchaseDraft ? (
+          <PurchaseModalContent
+            balance={purchase.balance}
+            draft={purchase.purchaseDraft}
+            onChangeDraft={purchase.onChangePurchaseDraft}
+            showNewLineOption={purchase.showFreePlans && purchase.purchaseDraft.source === 'cart'}
+          />
+        ) : null}
+        {frame.modalKind === 'transfer' && transfer.transferDraft ? (
+          <TransferModalContent
+            amount={transfer.transferAmount}
+            draft={transfer.transferDraft}
+            error={transfer.transferError}
+            onChangeAmount={transfer.onChangeTransferAmount}
+            onChangeTarget={transfer.onChangeTransferTarget}
+            target={transfer.transferTarget}
+          />
+        ) : null}
       </CustomModal>
 
       {quantity.presence.value !== null ? (
-        <CartQuantityModal cart={quantity.cart} draft={quantity.presence.value} onCancel={quantity.onCancel} onConfirm={quantity.onConfirm} onExitComplete={quantity.presence.completeExit} onUpdateDraft={quantity.onUpdateDraft} phase={quantity.presence.phase} />
+        <CartQuantityModal
+          cart={quantity.cart}
+          draft={quantity.presence.value}
+          onCancel={quantity.onCancel}
+          onConfirm={quantity.onConfirm}
+          onExitComplete={quantity.presence.completeExit}
+          onUpdateDraft={quantity.onUpdateDraft}
+          phase={quantity.presence.phase}
+        />
       ) : null}
     </>
   )

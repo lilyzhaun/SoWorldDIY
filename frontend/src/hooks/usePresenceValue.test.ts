@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createPresenceState, isRootOpacityTransition, presenceReducer, subscribeToReducedMotion } from './usePresenceValue'
+import {
+  createPresenceState,
+  isRootOpacityTransition,
+  presenceReducer,
+  subscribeToReducedMotion,
+} from './usePresenceValue'
 
 describe('presenceReducer', () => {
   it('starts unmounted when the source value is null', () => {

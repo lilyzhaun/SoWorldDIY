@@ -12,7 +12,9 @@ describe('MainPage utilities', () => {
   it('appends account identifiers without changing existing query ordering', () => {
     expect(getApiUrl('api/profile', '')).toBe('/api/profile')
     expect(getApiUrl('/api/profile', 'account-42')).toBe('/api/profile?account_id=account-42')
-    expect(getApiUrl('/api/profile?refresh=true&_t=7', 'account-42')).toBe('/api/profile?refresh=true&_t=7&account_id=account-42')
+    expect(getApiUrl('/api/profile?refresh=true&_t=7', 'account-42')).toBe(
+      '/api/profile?refresh=true&_t=7&account_id=account-42',
+    )
   })
 
   it('strips markup while preserving text content', () => {

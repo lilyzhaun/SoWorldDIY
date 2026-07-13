@@ -51,9 +51,7 @@ def fuzzy_time_key(val: object) -> object:
 def require_mapping_list(value: object) -> list[Mapping[str, object]]:
     """Require a list of mappings; malformed containers raise TypeError."""
     if not isinstance(value, list):
-        raise TypeError(
-            f"expected list of mappings, got {type(value).__name__}"
-        )
+        raise TypeError(f"expected list of mappings, got {type(value).__name__}")
     result: list[Mapping[str, object]] = []
     for index, item in enumerate(value):
         if not isinstance(item, Mapping):
@@ -207,7 +205,9 @@ def build_active_offers(
                 "name": "轉入的分鐘",
                 "desc": "來自好友互傳的語音資源聚合",
                 "price": 0,
-                "endDate": max(dto_voice_agg["dates"]) if dto_voice_agg["dates"] else "",
+                "endDate": max(dto_voice_agg["dates"])
+                if dto_voice_agg["dates"]
+                else "",
                 "isVoWifi": dto_voice_agg["is_vowifi"],
                 "planStatus": "ACTIVE",
                 "usage": dto_voice_agg["usages"],
