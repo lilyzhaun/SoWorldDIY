@@ -174,18 +174,17 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                     except RuntimeError as exc:
                         return deps._json_error(str(exc), 503)
                     cookies = requests.utils.dict_from_cookiejar(r.cookies)
-                    credential = password if login_type == "password" else f"OTP: {otp}"
                     accounts = ctx.data.get("accounts", {})
-                    accounts[str(identifier)] = {
+                    account_payload: dict[str, Any] = {
                         "cookies": cookies,
                         "sub_brand": sub_brand,
-                        "auth_code": auth_code,
-                        "credential": credential,
                         "login_type": login_type,
-                        "stored_password_encrypted": deps.encrypt_password(password)
-                        if login_type == "password"
-                        else None,
                     }
+                    if login_type == "password":
+                        account_payload["stored_password_encrypted"] = (
+                            deps.encrypt_password(password)
+                        )
+                    accounts[str(identifier)] = account_payload
                     ctx.data["accounts"] = accounts
                     ctx.data["last_session_refresh"] = time.time()
                     try:

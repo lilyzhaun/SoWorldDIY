@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable
-from typing import Any, Protocol, runtime_checkable
+from collections.abc import Callable, Mapping, MutableMapping
+from typing import Any, Final, Protocol, runtime_checkable
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -25,6 +25,24 @@ from .security import csrf_token_matches, new_csrf_token
 from .session_store import SessionContext
 
 logger = logging.getLogger(__name__)
+
+_LEGACY_ACCOUNT_SECRET_KEYS: Final[tuple[str, ...]] = ("credential", "auth_code")
+
+
+def scrub_legacy_account_secrets(session_data: MutableMapping[str, Any]) -> bool:
+    accounts = session_data.get("accounts")
+    if not isinstance(accounts, Mapping):
+        return False
+
+    changed = False
+    for account in accounts.values():
+        if not isinstance(account, MutableMapping):
+            continue
+        for key in _LEGACY_ACCOUNT_SECRET_KEYS:
+            if key in account:
+                del account[key]
+                changed = True
+    return changed
 
 
 @runtime_checkable
@@ -64,8 +82,11 @@ def _get_session_if_exists(request: Request) -> SessionContext | None:
     if not sid:
         return None
 
-    redis_data = _store().load(sid)
+    store = _store()
+    redis_data = store.load(sid)
     if redis_data is not None:
+        if scrub_legacy_account_secrets(redis_data):
+            store.save(sid, redis_data)
         return SessionContext(sid=sid, data=redis_data)
 
     return None

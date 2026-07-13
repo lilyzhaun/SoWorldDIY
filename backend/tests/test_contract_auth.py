@@ -154,8 +154,12 @@ def test_password_login_success_sets_session_and_redirect(
     acct = data["accounts"]["a@b.com"]
     assert acct["sub_brand"] == "THREE"
     assert acct["login_type"] == "password"
-    assert acct["stored_password_encrypted"] is not None
-    assert acct["credential"] == "secret"
+    assert "credential" not in acct
+    assert "auth_code" not in acct
+    encrypted = acct["stored_password_encrypted"]
+    assert encrypted is not None
+    assert encrypted != "secret"
+    assert main.decrypt_password(encrypted) == "secret"
     cookies = " ".join(resp.header("set-cookie"))
     assert "session=" in cookies and "csrf_token=" in cookies
 
@@ -195,10 +199,13 @@ def test_password_login_success_saves_session_once(monkeypatch: MonkeyPatch) -> 
     account = data["accounts"]["a@b.com"]
     assert account["cookies"] == {}
     assert account["sub_brand"] == "THREE"
-    assert account["auth_code"] == "C"
-    assert account["credential"] == "secret"
+    assert "auth_code" not in account
+    assert "credential" not in account
     assert account["login_type"] == "password"
-    assert account["stored_password_encrypted"] is not None
+    encrypted = account["stored_password_encrypted"]
+    assert encrypted is not None
+    assert encrypted != "secret"
+    assert main.decrypt_password(encrypted) == "secret"
     assert data["last_session_refresh"] > 0
     assert "csrf_token" in data
 
@@ -223,8 +230,15 @@ def test_otp_login_success_uses_dipping_subbrand(monkeypatch: MonkeyPatch) -> No
     assert resp.status == 200
     assert resp.json == {"status": "success", "redirect": "/main/a@b.com"}
     _, data = next(iter(store.sessions.items()))
-    assert data["accounts"]["a@b.com"]["sub_brand"] == "SOSIM"
-    assert data["accounts"]["a@b.com"]["credential"] == "OTP: 123456"
+    acct = data["accounts"]["a@b.com"]
+    assert acct["sub_brand"] == "SOSIM"
+    assert acct["login_type"] == "otp"
+    assert "credential" not in acct
+    assert "auth_code" not in acct
+    assert "stored_password_encrypted" not in acct
+    assert "password" not in acct
+    assert "otp" not in acct
+    assert "123456" not in str(acct)
 
 
 def test_login_upstream_non_204_returns_401(monkeypatch: MonkeyPatch) -> None:
