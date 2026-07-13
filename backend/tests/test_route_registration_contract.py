@@ -6,9 +6,12 @@ app identity, and main-module seams that tests monkeypatch against.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
+import anyio
 from fastapi.routing import APIRoute
 from starlette.routing import Mount
 
@@ -137,10 +140,80 @@ def test_static_mounts_present() -> None:
         for route in main.app.routes
         if isinstance(route, Mount)
     }
-    assert mounts.get("/assets") == "assets"
-    # /static is conditional on FRONTEND_STATIC_DIR existing in the environment
+    if main.FRONTEND_DIST_DIR.exists():
+        assert mounts.get("/assets") == "assets"
+    else:
+        assert mounts.get("/assets") is None
     if main.FRONTEND_STATIC_DIR.exists():
         assert mounts.get("/static") == "static"
+    else:
+        assert mounts.get("/static") is None
+
+
+def test_static_mounts_present_on_fresh_app_with_created_frontend_dirs(
+    monkeypatch: Any,
+    tmp_path: Path,
+) -> None:
+    dist = tmp_path / "frontend-dist"
+    static_dir = dist / "static"
+    assets_dir = dist / "assets"
+    dist.mkdir()
+    static_dir.mkdir(parents=True)
+    assets_dir.mkdir()
+
+    monkeypatch.setattr(main, "FRONTEND_DIST_DIR", dist)
+    monkeypatch.setattr(main, "FRONTEND_STATIC_DIR", static_dir)
+
+    fresh = create_app()
+    mounts = {
+        route.path: route.name
+        for route in fresh.routes
+        if isinstance(route, Mount)
+    }
+    assert mounts.get("/assets") == "assets"
+    assert mounts.get("/static") == "static"
+
+
+def test_create_app_skips_assets_mount_when_missing_frontend_dist(
+    monkeypatch: Any,
+    tmp_path: Path,
+) -> None:
+    dist = tmp_path / "missing-dist"
+    plans_cache = tmp_path / "plans-cache"
+    plans_cache.mkdir()
+
+    monkeypatch.setattr(main, "FRONTEND_DIST_DIR", dist)
+    monkeypatch.setattr(main, "FRONTEND_STATIC_DIR", dist / "static")
+    monkeypatch.setattr(main, "PLANS_CACHE_DIR", plans_cache)
+
+    class FakeRedis:
+        def ping(self) -> bool:
+            return True
+
+    monkeypatch.setattr(main, "redis_client", FakeRedis())
+
+    fresh = create_app()
+    mounts = {
+        route.path: route.name
+        for route in fresh.routes
+        if isinstance(route, Mount)
+    }
+    assert "/assets" not in mounts
+    assert mounts.get("/static") is None
+
+    endpoint: Callable[..., Any] | None = None
+    for route in fresh.routes:
+        if isinstance(route, APIRoute) and route.path == "/_ready":
+            endpoint = route.endpoint
+            break
+    assert endpoint is not None
+
+    response = anyio.run(endpoint)
+    assert response.status_code == 503
+    payload = json.loads(response.body)
+    assert payload["status"] == "error"
+    assert payload["checks"]["frontend_assets"] is False
+    assert payload["checks"]["frontend_index"] is False
 
 
 def test_app_identity_and_create_app_factory() -> None:

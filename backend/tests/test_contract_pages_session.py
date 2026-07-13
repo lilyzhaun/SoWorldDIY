@@ -31,10 +31,18 @@ def test_index_redirects_to_first_account_when_logged_in(
     assert resp.header("location") == ["/main/first@x.com"]
 
 
-def test_index_serves_login_html_for_add_query() -> None:
+def test_index_serves_login_html_for_add_query(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    login_html = tmp_path / "login.html"
+    login_html.write_text("<html>fixture login</html>", encoding="utf-8")
+    monkeypatch.setattr(main, "FRONTEND_DIST_DIR", tmp_path)
+
     resp = invoke("/?add=1")
     assert resp.status == 200
     assert resp.header("content-type") and "text/html" in resp.header("content-type")[0]
+    assert bytes(resp.body) == b"<html>fixture login</html>"
 
 
 def test_main_redirects_to_first_account(monkeypatch: MonkeyPatch) -> None:

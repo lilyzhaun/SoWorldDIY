@@ -131,9 +131,12 @@ def create_app() -> FastAPI:
 
     if FRONTEND_STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=FRONTEND_STATIC_DIR), name="static")
-    app.mount(
-        "/assets", StaticFiles(directory=FRONTEND_DIST_DIR / "assets"), name="assets"
-    )
+    if (FRONTEND_DIST_DIR / "assets").exists():
+        app.mount(
+            "/assets",
+            StaticFiles(directory=FRONTEND_DIST_DIR / "assets"),
+            name="assets",
+        )
 
     # Reuse the module-level adapter; do not reconfigure global providers.
     deps = _main_deps
