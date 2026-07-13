@@ -18,9 +18,9 @@ logger = logging.getLogger(__name__)
 class UpstreamDepsProtocol(Protocol):
     """Read-only dependency surface for upstream request helpers.
 
-    Members are ``@property`` so adapters like ``_MainDeps`` (which re-read
-    live ``main`` globals for monkeypatch seams) structurally satisfy this
-    protocol without mutable attribute assignment.
+    Members are ``@property`` so adapters like ``MainDepsAdapter`` (which
+    re-read live ``main`` seams for monkeypatch targets) structurally satisfy
+    this protocol without mutable attribute assignment.
     """
 
     @property

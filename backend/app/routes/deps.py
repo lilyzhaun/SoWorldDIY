@@ -17,8 +17,8 @@ from ..session_store import SessionContext
 class RouteDeps(Protocol):
     """Late-bound dependency surface for route handlers.
 
-    Members are ``@property`` so adapters re-read live ``app.main`` globals and
-    monkeypatch seams stay visible after registration.
+    Members are ``@property`` so adapters re-read live ``app.main`` seams and
+    monkeypatch targets stay visible after registration.
     """
 
     @property

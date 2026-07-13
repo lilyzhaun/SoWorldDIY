@@ -1,16 +1,14 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, MutableMapping, Sequence
+import sys
 from contextlib import asynccontextmanager
-from pathlib import Path
-from typing import Any
+from typing import cast
 
-import redis
-import requests
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from .main_deps import MainDepsAdapter, MainModuleSource
 from .delivery_extension import send as notify  # noqa: F401 — re-exported for monkeypatch seam
 from .request_overrides import (
     resolve_proxies,  # noqa: F401 — re-exported for monkeypatch seam
@@ -83,176 +81,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-
-class _MainDeps:
-    """Adapter exposing main-module seam values to service and route modules.
-
-    Each property reads the current value from ``main`` globals so that
-    ``monkeypatch.setattr(main, 'session_store', fake)`` (and other seams)
-    are immediately visible to session_utils, upstream, services, and routes.
-    """
-
-    @property
-    def session_store(self) -> SessionStoreProtocol:  # noqa: F811
-        return globals()["session_store"]
-
-    @property
-    def decrypt_password(self) -> Callable[[str | None], str | None]:  # noqa: F811
-        return globals()["decrypt_password"]
-
-    @property
-    def get_isolated_session(self) -> Callable[[], requests.Session]:  # noqa: F811
-        return globals()["get_isolated_session"]
-
-    @property
-    def _save_session(self) -> Callable[[SessionContext], None]:  # noqa: F811
-        return globals()["_save_session"]
-
-    @property
-    def resolve_proxies(  # noqa: F811
-        self,
-    ) -> Callable[
-        [str, MutableMapping[str, str] | None], MutableMapping[str, str] | None
-    ]:
-        return globals()["resolve_proxies"]
-
-    @property
-    def attempt_silent_relogin(  # noqa: F811
-        self,
-    ) -> Callable[[Request, SessionContext, str, dict[str, Any]], bool]:
-        return globals()["attempt_silent_relogin"]
-
-    @property
-    def get_account_context(  # noqa: F811
-        self,
-    ) -> Callable[[SessionContext, str | None], dict[str, Any] | None]:
-        return globals()["get_account_context"]
-
-    @property
-    def make_3hk_request(self) -> Callable[..., requests.Response | None]:  # noqa: F811
-        return globals()["make_3hk_request"]
-
-    @property
-    def get_cache(self) -> Callable[[str], Any | None]:  # noqa: F811
-        return globals()["get_cache"]
-
-    @property
-    def set_cache(self) -> Callable[..., None]:  # noqa: F811
-        return globals()["set_cache"]
-
-    @property
-    def delete_cache(self) -> Callable[[str], None]:  # noqa: F811
-        return globals()["delete_cache"]
-
-    @property
-    def notify(self) -> Callable[[str], None]:  # noqa: F811
-        return globals()["notify"]
-
-    @property
-    def plans_refreshing(self) -> set[str]:  # noqa: F811
-        return globals()["plans_refreshing"]
-
-    @property
-    def verify_auth_code(self) -> Callable[[Any, bool], tuple[bool, str]]:  # noqa: F811
-        return globals()["verify_auth_code"]
-
-    @property
-    def _json_success(self) -> Callable[..., Any]:  # noqa: F811
-        return globals()["_json_success"]
-
-    @property
-    def _json_error(self) -> Callable[..., Any]:  # noqa: F811
-        return globals()["_json_error"]
-
-    @property
-    def _upstream_error(self) -> Callable[..., Any]:  # noqa: F811
-        return globals()["_upstream_error"]
-
-    @property
-    def _create_session(self) -> Callable[[], SessionContext]:  # noqa: F811
-        return globals()["_create_session"]
-
-    @property
-    def encrypt_password(self) -> Callable[[str | None], str | None]:  # noqa: F811
-        return globals()["encrypt_password"]
-
-    @property
-    def _require_login(self) -> Callable[[Request], SessionContext | None]:  # noqa: F811
-        return globals()["_require_login"]
-
-    @property
-    def get_brand_by_sub_id(  # noqa: F811
-        self,
-    ) -> Callable[[SessionContext, str | None, str | None], str]:
-        return globals()["get_brand_by_sub_id"]
-
-    @property
-    def fetch_and_save_plans_background(self) -> Callable[..., None]:  # noqa: F811
-        return globals()["fetch_and_save_plans_background"]
-
-    @property
-    def _redirect_to_login(self) -> Callable[..., Any]:  # noqa: F811
-        return globals()["_redirect_to_login"]
-
-    @property
-    def _validate_csrf(self) -> Callable[..., Any]:  # noqa: F811
-        return globals()["_validate_csrf"]
-
-    @property
-    def handle_purchase_event(self) -> Callable[..., None]:  # noqa: F811
-        return globals()["handle_purchase_event"]
-
-    @property
-    def internal_logout_account(  # noqa: F811
-        self,
-    ) -> Callable[[SessionContext, str], bool]:
-        return globals()["internal_logout_account"]
-
-    @property
-    def _mark_session_cookie_for_deletion(  # noqa: F811
-        self,
-    ) -> Callable[[Request], None]:
-        return globals()["_mark_session_cookie_for_deletion"]
-
-    @property
-    def _clear_session(self) -> Callable[[SessionContext], None]:  # noqa: F811
-        return globals()["_clear_session"]
+def _bind_main_deps(module: object) -> MainDepsAdapter:
+    return MainDepsAdapter(source=cast(MainModuleSource, module))
 
 
-    @property
-    def BASE_HEADERS(self) -> MutableMapping[str, str]:  # noqa: F811
-        return globals()["BASE_HEADERS"]
-
-    @property
-    def PROXIES(self) -> MutableMapping[str, str] | None:  # noqa: F811
-        return globals()["PROXIES"]
-
-    @property
-    def SUB_BRANDS(self) -> Sequence[str]:  # noqa: F811
-        return globals()["SUB_BRANDS"]
-
-    @property
-    def FRONTEND_DIST_DIR(self) -> Path:  # noqa: F811
-        return globals()["FRONTEND_DIST_DIR"]
-
-    @property
-    def PLANS_CACHE_DIR(self) -> Path:  # noqa: F811
-        return globals()["PLANS_CACHE_DIR"]
-
-    @property
-    def SESSION_SECRET(self) -> str:  # noqa: F811
-        return globals()["SESSION_SECRET"]
-
-    @property
-    def redis_client(self) -> redis.Redis:  # noqa: F811
-        return globals()["redis_client"]
-
-
-_main_deps = _MainDeps()
+_main_deps = _bind_main_deps(sys.modules[__name__])
+_MainDeps = MainDepsAdapter
 
 
 def _live_session_store() -> SessionStoreProtocol:
-    return globals()["session_store"]
+    return _main_deps.session_store
 
 
 configure_session_store(_live_session_store)
@@ -297,6 +135,7 @@ def create_app() -> FastAPI:
         "/assets", StaticFiles(directory=FRONTEND_DIST_DIR / "assets"), name="assets"
     )
 
+    # Reuse the module-level adapter; do not reconfigure global providers.
     deps = _main_deps
     register_system_routes(app, deps)
     register_auth_routes(app, deps)
