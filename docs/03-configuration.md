@@ -13,6 +13,9 @@
 | `REDIS_URL` | 否 | `redis://127.0.0.1:6379/0` | Redis 连接地址。生产环境建议使用受控网络和密码。 |
 | `REDIS_SESSION_PREFIX` | 否 | `session:` | Redis session key 前缀。多环境共享 Redis 时需要区分。 |
 | `PROXY_URL` | 否 | 空 | 访问 3HK/SIMWorld 上游接口时使用的 HTTP/HTTPS 代理。 |
+| `CMN_PROXY_URL` | 否 | 空 | CMN 换号接口 (`/mnms/holdAvailableNumbersFor15m/`) 专用代理。仅在该路径的请求上覆盖 `PROXY_URL`，留空则回退到 `PROXY_URL`。 |
+| `external_delivery_token` | 否 | 空 | 本地通知扩展 external_delivery Bot Token。仅在 `delivery_extension_local.py` 存在时生效。 |
+| `external_delivery_target` | 否 | 空 | 本地通知扩展接收消息的 Chat ID。 |
 
 ## `.env` 文件位置
 
@@ -51,9 +54,17 @@ PROXY_URL=http://127.0.0.1:7890
 
 该代理会同时用于 HTTP 和 HTTPS 请求。
 
+CMN 换号接口（`/mnms/holdAvailableNumbersFor15m/`）可能需要与通用上游不同的代理（例如地域锁定的住宅代理）。设置 `CMN_PROXY_URL` 即可让该路径的请求使用独立代理：
+
+```text
+CMN_PROXY_URL=http://user:pass@proxy.example.com:12321
+```
+
+留空时 CMN 请求回退到 `PROXY_URL`。该值仅在本地 `request_overrides_local.py` 存在时生效（参考 `request_overrides_local.example.py` 模板）。
+
 ## 通知扩展
 
-通知模块 `backend/app/delivery_extension.py` 默认为 no-op。如需启用本地通知，可在 `backend/app/` 下创建 `delivery_extension_local.py` 并在 `backend/.env` 中配置所需凭据。`delivery_extension_local.py` 已被 `.gitignore` 忽略，不会进入公开仓库。
+通知模块 `backend/app/delivery_extension.py` 默认为 no-op。如需启用本地通知，复制 `backend/app/delivery_extension_local.example.py` 为 `delivery_extension_local.py`，并在 `backend/.env` 中配置 `external_delivery_token` 和 `external_delivery_target`。`delivery_extension_local.py` 已被 `.gitignore` 忽略，不会进入公开仓库。该扩展需要 `external_delivery_client`（见 `requirements-local.txt`）。
 
 ---
 

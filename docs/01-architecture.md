@@ -39,7 +39,20 @@ FastAPI 后端
 后端位于 `backend/`，使用 FastAPI。
 
 - `backend/run.py` 暴露 `app`，供 Uvicorn 加载。
-- `backend/app/main.py` 创建应用、注册路由、托管前端构建产物、代理上游接口。
+- `backend/app/main.py` 是应用工厂（`create_app`），负责路由注册、前端构建产物托管和上游接口代理。路由本身不在 `main.py` 中定义，而是拆分到 `backend/app/routes/` 模块：
+  - `routes/system.py` — 健康检查、就绪检查和内部维护入口。
+  - `routes/auth.py` — 登录、OTP、登出。
+  - `routes/account_pages.py` — 页面路由（`/`、`/main`、`/logout`）。
+  - `routes/profile.py` — 资料与套餐用量。
+  - `routes/commerce.py` — 套餐购买。
+  - `routes/cmn.py` — CMN 换号。
+  - `routes/transfer.py` — 资源转移。
+  - `routes/messages.py` — 收件箱。
+  - `routes/session.py` — 会话管理。
+  - `routes/deps.py` — 路由层依赖装配（`RouteDeps`）。
+- `backend/app/services.py` 封装 3HK 品牌、套餐缓存和购买通知等服务逻辑。
+- `backend/app/upstream.py` 封装上游请求构造和静默重登。
+- `backend/app/runtime.py` 在模块导入期装配运行时依赖（Redis、缓存、会话存储等）。
 - `backend/app/config.py` 从环境变量和 `backend/.env` 加载配置。
 - `backend/app/session_store.py` 使用 Redis 存储 session 数据。
 - `backend/app/auth_codes.py` 使用 Redis 存储鉴权码，并可从 `backend/auth_codes.json` 导入初始数据。

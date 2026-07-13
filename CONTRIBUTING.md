@@ -57,6 +57,8 @@ git status --short
 ## 代码风格
 
 - 后端使用 Python 3.11+、FastAPI、Ruff。
+路由按功能拆分到 `backend/app/routes/*.py`，`main.py` 是应用工厂与路由注册入口，不直接定义路由处理逻辑。
+开发依赖见 `backend/requirements-dev.txt`（ruff、pytest）。
 - 前端使用 React、TypeScript、Vite、ESLint、Prettier。
 - 保持改动最小，避免把无关重构混入修复。
 - 修改 API 行为时同步更新 `docs/05-api-reference.md`。

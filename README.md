@@ -129,7 +129,11 @@ cd frontend && npm test && npm run lint && npm run build
 .
 ├── backend/                 # FastAPI 后端
 │   ├── app/                 # 应用代码、配置、会话、鉴权码和安全工具
-│   │   ├── main.py          # 应用入口与全部路由
+│   │   ├── main.py          # 应用工厂与路由注册入口
+│   │   ├── routes/          # 路由模块 (auth, profile, cmn, commerce, ...)
+│   │   ├── services.py      # 3HK/品牌/套餐服务逻辑
+│   │   ├── upstream.py      # 上游请求与静默重登
+│   │   ├── runtime.py       # 运行时依赖装配
 │   │   ├── config.py        # 配置加载
 │   │   ├── session_store.py # Redis 会话存储
 │   │   ├── auth_codes.py    # 鉴权码存储
@@ -137,6 +141,7 @@ cd frontend && npm test && npm run lint && npm run build
 │   │   └── auth_cli.py      # 鉴权码 CLI
 │   ├── plans_cache/         # 运行时套餐缓存（仅 .gitkeep）
 │   ├── requirements.txt
+│   ├── requirements-dev.txt # 开发依赖 (ruff, pytest)
 │   ├── run.py               # ASGI 入口
 │   └── start.sh             # 启动脚本
 ├── frontend/                # React + Vite 前端
@@ -145,8 +150,9 @@ cd frontend && npm test && npm run lint && npm run build
 │   ├── index.html           # 主控制台入口
 │   └── login.html           # 登录页入口
 ├── deploy/bt/               # 宝塔/虚拟主机遗留部署示例
+│   └── static/              # 404/502 自定义错误页
 ├── docs/                    # 详细文档
-├── .github/                 # Issue 模板、PR 模板
+├── .github/                 # Issue 模板、PR 模板、CI workflow
 ├── .env.example             # 环境变量模板
 ├── CONTRIBUTING.md           # 贡献指南
 ├── SECURITY.md              # 安全政策
