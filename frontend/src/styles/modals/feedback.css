@@ -1,0 +1,56 @@
+
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.modal-icon-btn {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color var(--motion-fast) var(--motion-ease-standard),
+    color var(--motion-fast) var(--motion-ease-standard),
+    transform var(--motion-fast) var(--motion-ease-standard);
+}
+.modal-icon-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-main);
+}
+.modal-icon-btn:active {
+  transform: scale(0.97);
+}
+
+.status-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.status-message--info {
+  background: var(--status-info-bg);
+  color: var(--status-info-text);
+}
+.status-message--success {
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+.status-message--warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-text);
+}
+.status-message--error {
+  background: var(--status-error-bg);
+  color: var(--status-error-text);
+}

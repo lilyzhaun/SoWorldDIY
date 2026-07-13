@@ -1,0 +1,132 @@
+
+.account-switch-option {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  padding: 14px;
+  border-radius: 16px;
+  cursor: pointer;
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  transition:
+    background-color var(--motion-fast) var(--motion-ease-standard),
+    border-color var(--motion-fast) var(--motion-ease-standard),
+    color var(--motion-fast) var(--motion-ease-standard),
+    transform var(--motion-fast) var(--motion-ease-standard);
+}
+.account-switch-option:hover {
+  background: var(--bg-secondary);
+}
+.account-switch-option:active {
+  transform: scale(0.97);
+}
+.account-switch-option.current {
+  border-color: var(--primary);
+  background: rgba(255, 123, 0, 0.05);
+  color: var(--primary);
+}
+.account-status-circle {
+  color: currentColor;
+}
+.account-status-circle.tone-active {
+  color: var(--account-active);
+}
+.account-status-circle.tone-preactive {
+  color: var(--account-preactive);
+}
+.account-status-circle.tone-suspended {
+  color: var(--account-suspended);
+}
+.account-status-circle.tone-unknown {
+  color: var(--account-unknown);
+}
+.account-switch-primary,
+.account-switch-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.account-switch-primary {
+  font-size: 17px;
+  font-weight: 700;
+}
+.account-switch-meta {
+  margin-top: 6px;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.account-switch-iccid {
+  font-family: monospace;
+}
+.account-switch-account,
+.account-add-button {
+  width: 100%;
+  font: inherit;
+  border-radius: 14px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--motion-ease-standard),
+    border-color var(--motion-fast) var(--motion-ease-standard),
+    color var(--motion-fast) var(--motion-ease-standard),
+    opacity var(--motion-fast) var(--motion-ease-standard),
+    transform var(--motion-fast) var(--motion-ease-standard);
+}
+.account-switch-account {
+  text-align: left;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+.account-switch-account:hover:not(:disabled) {
+  background: var(--bg-secondary);
+}
+.account-switch-account:active:not(:disabled),
+.account-add-button:active {
+  transform: scale(0.97);
+}
+.account-switch-account:disabled {
+  background: var(--bg-secondary);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.account-switch-identifier {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.account-switch-brand {
+  display: block;
+  margin-top: 2px;
+  color: var(--text-sub);
+  font-size: 11px;
+}
+.account-switch-current {
+  padding: 2px 8px;
+  background: var(--border-color);
+  border-radius: 6px;
+  font-size: 10px;
+}
+.account-add-button {
+  padding: 14px;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  color: var(--text-sub);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.account-add-button:hover {
+  border-color: var(--text-sub);
+  color: var(--text-main);
+}

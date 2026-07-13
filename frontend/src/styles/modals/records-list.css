@@ -1,0 +1,198 @@
+
+.records-modal-overlay {
+  padding: calc(12px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right))
+    calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+}
+.records-modal-box {
+  width: calc(100vw - 24px);
+  max-width: 600px;
+  height: min(84dvh, 720px);
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  transform: none;
+  opacity: 0;
+  transition: opacity var(--motion-calm) var(--motion-ease-standard);
+}
+.records-modal-overlay.show .records-modal-box {
+  transform: none;
+  opacity: 1;
+}
+.records-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  min-height: 72px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.records-header-copy {
+  min-width: 0;
+  flex: 1;
+}
+.records-modal-title {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 18px;
+  font-weight: 750;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.records-modal-subtitle {
+  margin: 3px 0 0;
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+.records-modal-content {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: auto;
+}
+.records-list {
+  margin: 0;
+  padding: 8px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.records-list-item {
+  margin: 0;
+  padding: 0;
+}
+.records-row {
+  appearance: none;
+  width: 100%;
+  min-height: 56px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition:
+    background-color var(--motion-calm) var(--motion-ease-standard),
+    border-color var(--motion-calm) var(--motion-ease-standard),
+    color var(--motion-calm) var(--motion-ease-standard),
+    opacity var(--motion-calm) var(--motion-ease-standard);
+}
+.records-row:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+.records-row-copy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.records-row-heading,
+.records-row-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.records-row-title {
+  min-width: 0;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.records-row-meta {
+  color: var(--text-sub);
+  font-size: 11px;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+}
+.records-row-meta > span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.records-row-meta time {
+  flex: 0 0 auto;
+}
+.records-row-amount {
+  flex: 0 0 auto;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.records-row-chevron {
+  color: var(--text-sub);
+  opacity: 0.72;
+}
+.records-state {
+  min-height: 100%;
+  height: 100%;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-sub);
+  text-align: center;
+}
+.records-detail-header {
+  min-height: 76px;
+}
+.records-detail-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-wrap: nowrap;
+}
+.records-back-btn {
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-main);
+  font: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  transition:
+    background-color var(--motion-calm) var(--motion-ease-standard),
+    color var(--motion-calm) var(--motion-ease-standard),
+    opacity var(--motion-calm) var(--motion-ease-standard);
+}
+.records-back-btn:hover {
+  background: var(--bg-secondary);
+}

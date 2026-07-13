@@ -1,0 +1,21 @@
+
+#cartQuantityModal .modal-box {
+  transform: none;
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--motion-ease-standard);
+}
+#cartQuantityModal.show .modal-box {
+  transform: none;
+  opacity: 1;
+}
+#cartQuantityModal .modal-btn {
+  transition:
+    background-color var(--motion-fast) var(--motion-ease-standard),
+    border-color var(--motion-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-fast) var(--motion-ease-standard),
+    color var(--motion-fast) var(--motion-ease-standard),
+    opacity var(--motion-fast) var(--motion-ease-standard);
+}
+#cartQuantityModal .modal-btn:active:not(:disabled) {
+  transform: none;
+}

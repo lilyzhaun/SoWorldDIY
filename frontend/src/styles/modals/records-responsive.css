@@ -1,0 +1,48 @@
+@media (prefers-color-scheme: dark) {
+  .date-input {
+    color-scheme: dark;
+  }
+}
+@media (max-width: 480px) {
+  .records-detail-content {
+    padding: 8px;
+  }
+  .records-detail-surface {
+    max-width: 100%;
+    padding: 12px;
+    overflow-x: hidden;
+  }
+  .records-detail-list {
+    padding: 0 8px;
+  }
+  .records-detail-list > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+  .records-detail-list dd {
+    width: 100%;
+    text-align: left;
+  }
+  .inbox-detail p,
+  .inbox-detail li {
+    text-wrap: balance;
+  }
+}
+@media (min-width: 560px) {
+  .records-modal-content {
+    scrollbar-gutter: stable both-edges;
+  }
+}
+@media (min-width: 768px) {
+  .records-modal-box {
+    height: min(82dvh, 760px);
+  }
+  .records-filter {
+    grid-template-columns: 1fr 1fr auto;
+    align-items: end;
+  }
+  .records-filter .filter-btn {
+    grid-column: auto;
+    min-width: 88px;
+  }
+}

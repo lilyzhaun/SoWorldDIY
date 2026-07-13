@@ -1,0 +1,43 @@
+.ui-icon,
+[data-ui-icon] {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: currentColor;
+  vertical-align: -0.15em;
+}
+.validity-badge,
+.refresh-text-btn,
+.account-switch-primary span,
+.account-switch-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.refresh-text-btn,
+.trans-btn,
+.filter-btn,
+.modal-btn {
+  transition:
+    background-color var(--motion-fast) var(--motion-ease-standard),
+    border-color var(--motion-fast) var(--motion-ease-standard),
+    color var(--motion-fast) var(--motion-ease-standard),
+    opacity var(--motion-fast) var(--motion-ease-standard),
+    transform var(--motion-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-fast) var(--motion-ease-standard);
+}
+.refresh-text-btn:hover:not(:disabled),
+.modal-btn.cancel:hover {
+  background: var(--bg-secondary);
+}
+.refresh-text-btn:active:not(:disabled),
+.trans-btn:active,
+.filter-btn:active:not(:disabled),
+.modal-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.refresh-text-btn:disabled,
+.modal-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
