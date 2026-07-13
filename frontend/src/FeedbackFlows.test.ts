@@ -5,6 +5,7 @@ import loginFlowSource from './hooks/useLoginFlow.ts?raw'
 import mainPageSource from './MainPage.tsx?raw'
 import appModalSource from './hooks/useAppModal.ts?raw'
 import modalActionsSource from './components/MainModalActions.tsx?raw'
+import mainPageDialogsSource from './components/MainPageDialogs.tsx?raw'
 import transferSource from './hooks/useTransfer.ts?raw'
 
 describe('semantic feedback flow contracts', () => {
@@ -45,7 +46,7 @@ describe('semantic feedback flow contracts', () => {
     expect(appModalSource).toContain('readonly text: string')
     expect(appModalSource).toContain('readonly tone?: StatusTone')
     expect(mainPageSource).toContain("showAlert(`资源已成功转移给 ${target}`, '办理成功', 'success')")
-    expect(mainPageSource).toContain('<StatusMessage message={alert.text} tone={alert.tone} />')
+    expect(mainPageDialogsSource).toContain('<StatusMessage message={frame.alert.text} tone={frame.alert.tone} />')
     expect(mainPageSource).not.toContain('✅ 资源已成功转移给')
   })
 

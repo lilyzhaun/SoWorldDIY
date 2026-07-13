@@ -1,23 +1,9 @@
 import { useMemo, useState } from 'react'
 
-import { apiGet } from '@/api/client'
 import { BUILD_VERSION } from '@/build'
-import { AccountSwitchModalContent } from '@/components/AccountSwitchModalContent'
-import { ActiveOffersSection } from '@/components/ActiveOffersSection'
-import { CartFab } from '@/components/CartFab'
-import { CartModalContent } from '@/components/CartModalContent'
-import { CartQuantityModal } from '@/components/CartQuantityModal'
-import { CmnSection } from '@/components/CmnSection'
-import { CustomModal } from '@/components/CustomModal'
-import { HistoryModal } from '@/components/HistoryModal'
-import { InboxModal } from '@/components/InboxModal'
-import { MainFooter } from '@/components/MainFooter'
 import { MainHeader } from '@/components/MainHeader'
-import { MainModalActions } from '@/components/MainModalActions'
-import { PlanList } from '@/components/PlanList'
-import { PurchaseModalContent } from '@/components/PurchaseModalContent'
-import { StatusMessage } from '@/components/StatusMessage'
-import { TransferModalContent } from '@/components/TransferModalContent'
+import { MainPageContent } from '@/components/MainPageContent'
+import { MainPageDialogs } from '@/components/MainPageDialogs'
 import { useAppModal } from '@/hooks/useAppModal'
 import { useBodyScrollLock } from '@/hooks/useBodyScrollLock'
 import { useCmn } from '@/hooks/useCmn'
@@ -25,12 +11,13 @@ import { useHistory } from '@/hooks/useHistory'
 import { useInbox } from '@/hooks/useInbox'
 import { isRootOpacityTransition, usePresenceValue } from '@/hooks/usePresenceValue'
 import { useProfileBootstrap } from '@/hooks/useProfileBootstrap'
+import { useProfileRefresh } from '@/hooks/useProfileRefresh'
 import { usePurchaseCart } from '@/hooks/usePurchaseCart'
 import { useServiceWorker } from '@/hooks/useServiceWorker'
 import { useSubscriptionBootstrap } from '@/hooks/useSubscriptionBootstrap'
 import { useTransfer } from '@/hooks/useTransfer'
-import type { AvailableAccount, Category, Plan, ProfileResponse, Subscription } from '@/types'
-import { getAccountIdFromPathname, getApiUrl } from '@/utils/mainPage'
+import type { AvailableAccount, Category, Plan, Subscription } from '@/types'
+import { getAccountIdFromPathname } from '@/utils/mainPage'
 import { SVG_SPRITE } from '@/assets/svgSprite'
 
 
@@ -64,9 +51,8 @@ export function MainPage(): JSX.Element {
     onAfterClose: resetTransfer,
   })
 
-  const [refreshingUsage, setRefreshingUsage] = useState(false)
-
   const { cancelCmnAutoRefresh, changeCmnPattern, checkCmnEligibility, cmnAutoRefresh, cmnCanRefresh, cmnCooldown, cmnData, cmnError, cmnLoading, cmnNumbers, cmnNumbersLoading, cmnPattern, parsedCmnPattern, refreshCmnNumbers, selectedNumber, setSelectedNumber, startCmnAutoRefresh, submitChangeNumber } = useCmn(accountId, currentSubId, category === 'CMN')
+  const { refreshingUsage, refreshProfileData } = useProfileRefresh({ accountId, setAvailableAccounts, setSubscriptions, showAlert })
 
   const currentSub = useMemo(
     () => subscriptions.find((item) => item.subscriptionId === currentSubId) ?? null,
@@ -135,25 +121,6 @@ export function MainPage(): JSX.Element {
     })
   }
 
-  const refreshProfileData = async (): Promise<void> => {
-    setRefreshingUsage(true)
-    try {
-      const url = getApiUrl(`/api/profile?refresh=true&_t=${Date.now()}`, accountId)
-      const d = await apiGet<ProfileResponse>(url)
-      if (d.status === 'success') {
-        const nextSubs = d.data.subscriptions || []
-        setSubscriptions(nextSubs)
-        setAvailableAccounts(d.data.available_accounts || [])
-      } else {
-        showAlert('刷新失败')
-      }
-    } catch {
-      showAlert('网络连接失败')
-    } finally {
-      window.setTimeout(() => setRefreshingUsage(false), 500)
-    }
-  }
-
   const handleSubmitTransfer = async (): Promise<void> => {
     const target = await submitTransfer(currentSub)
     if (!target) return
@@ -199,80 +166,25 @@ export function MainPage(): JSX.Element {
 
       <MainHeader availableAccounts={availableAccounts} balance={balance} category={category} currentSub={currentSub} noNumberMode={noNumberMode} onLogout={handleLogout} onOpenHistory={() => void openHistory(showAlert)} onOpenInbox={() => void openInbox(showAlert)} onOpenSwitch={openSwitchModal} onSearchChange={setSearch} onShowAlert={showAlert} onSwitchCategory={switchCategory} search={search} />
 
-      <div className="content-wrapper">
-        <PlanList filteredPlans={filteredPlans} noNumberMode={noNumberMode} onAddToCart={openAddToCart} onSelectPlan={setSelectedPlanId} plansLoading={plansLoading} selectedPlanId={selectedPlanId} showFreePlans={showFreePlans} visible={category !== 'SUBSCRIBED' && category !== 'CMN'} />
-
-        <ActiveOffersSection currentSub={currentSub} onOpenTransfer={(event, draft) => openTransferModal(event, draft, () => { openKind('transfer', '资源转移', 'center') })} onRefresh={() => void refreshProfileData()} onSelectOffer={setSelectedPlanId} refreshingUsage={refreshingUsage} selectedPlanId={selectedPlanId} visible={category === 'SUBSCRIBED'} />
-        <CmnSection autoRefresh={cmnAutoRefresh} canRefresh={cmnCanRefresh} cooldown={cmnCooldown} data={cmnData} error={cmnError} loading={cmnLoading} numbers={cmnNumbers} numbersLoading={cmnNumbersLoading} onAutoRefreshCancel={cancelCmnAutoRefresh} onAutoRefreshStart={() => startCmnAutoRefresh(showAlert)} onPatternChange={changeCmnPattern} onRefresh={() => void refreshCmnNumbers(showAlert)} onSelectNumber={setSelectedNumber} onSubmit={() => submitChangeNumber(showAlert, showPurchaseModal)} parsedPattern={parsedCmnPattern} pattern={cmnPattern} selectedNumber={selectedNumber} visible={category === 'CMN'} />
-        <MainFooter visible={category === 'ALL' || category === 'CMN'} />
-      </div>
-
-      <CartFab count={cartCount} onOpen={handleOpenCartModal} total={cartTotal} />
-
-      <InboxModal
-        activeInboxIndex={activeInboxIndex}
-        inboxLoading={inboxLoading}
-        inboxMessages={inboxMessages}
-        inboxOpen={inboxOpen}
-        onClose={() => setInboxOpen(false)}
-        onRefresh={() => void fetchInbox(true, showAlert)}
-        onSelectMessage={setActiveInboxIndex}
-        subscriptions={subscriptions}
+      <MainPageContent
+        plans={{ filteredPlans, noNumberMode, onAddToCart: openAddToCart, onSelectPlan: setSelectedPlanId, plansLoading, selectedPlanId, showFreePlans, visible: category !== 'SUBSCRIBED' && category !== 'CMN' }}
+        offers={{ currentSub, onOpenTransfer: (event, draft) => openTransferModal(event, draft, () => { openKind('transfer', '资源转移', 'center') }), onRefresh: () => void refreshProfileData(), onSelectOffer: setSelectedPlanId, refreshingUsage, selectedPlanId, visible: category === 'SUBSCRIBED' }}
+        cmn={{ autoRefresh: cmnAutoRefresh, canRefresh: cmnCanRefresh, cooldown: cmnCooldown, data: cmnData, error: cmnError, loading: cmnLoading, numbers: cmnNumbers, numbersLoading: cmnNumbersLoading, onAutoRefreshCancel: cancelCmnAutoRefresh, onAutoRefreshStart: () => startCmnAutoRefresh(showAlert), onPatternChange: changeCmnPattern, onRefresh: () => void refreshCmnNumbers(showAlert), onSelectNumber: setSelectedNumber, onSubmit: () => submitChangeNumber(showAlert, showPurchaseModal), parsedPattern: parsedCmnPattern, pattern: cmnPattern, selectedNumber, visible: category === 'CMN' }}
+        footerVisible={category === 'ALL' || category === 'CMN'}
       />
 
-      <HistoryModal
-        histEnd={histEnd}
-        histStart={histStart}
-        historyDetailIndex={historyDetailIndex}
-        historyItems={historyItems}
-        historyLoading={historyLoading}
-        historyOpen={historyOpen}
-        onChangeEnd={setHistEnd}
-        onChangeStart={setHistStart}
-        onClose={() => setHistoryOpen(false)}
-        onQuery={() => void fetchHistory(true, false, showAlert)}
-        onSelectDetail={setHistoryDetailIndex}
+      <MainPageDialogs
+        accountSwitch={{ availableAccounts, currentSubId, onAddAccount: addAccount, onSwitchAccount: switchAccount, onSwitchSubscription: performSwitch, subscriptions }}
+        actions={{ onCheckout: () => showPurchaseModal(`购物车共 ${cart.length} 项商品`, cartTotal, 'cart'), onConfirmPurchase: () => { if (!purchaseDraft) return; if (purchaseDraft.source === 'cart') void submitCheckout(showAlert); else void submitCmnPurchase(cmnData, selectedNumber, showAlert) }, onConfirmTransfer: () => void handleSubmitTransfer(), purchaseDraft, transferSubmitting }}
+        cart={{ cart, onRemoveCartItem: removeCartItem, onUpdateCartItem: updateCartItem, total: cartTotal }}
+        cartFab={{ count: cartCount, onOpen: handleOpenCartModal, total: cartTotal }}
+        frame={{ alert, modalKind, modalMode, modalTitle, onClose: closeCustomModal, open: showModal }}
+        inbox={{ activeInboxIndex, inboxLoading, inboxMessages, inboxOpen, onClose: () => setInboxOpen(false), onRefresh: () => void fetchInbox(true, showAlert), onSelectMessage: setActiveInboxIndex, subscriptions }}
+        history={{ histEnd, histStart, historyDetailIndex, historyItems, historyLoading, historyOpen, onChangeEnd: setHistEnd, onChangeStart: setHistStart, onClose: () => setHistoryOpen(false), onQuery: () => void fetchHistory(true, false, showAlert), onSelectDetail: setHistoryDetailIndex }}
+        purchase={{ balance, onChangePurchaseDraft: setPurchaseDraft, purchaseDraft, showFreePlans }}
+        quantity={{ cart, onCancel: () => setCartQtyDraft(null), onConfirm: () => confirmAddToCart(showAlert), onUpdateDraft: setCartQtyDraft, presence: cartQtyPresence }}
+        transfer={{ onChangeTransferAmount: setTransferAmount, onChangeTransferTarget: setTransferTarget, transferAmount, transferDraft, transferError, transferTarget }}
       />
-
-      <CustomModal
-        actions={
-          <MainModalActions
-            modalKind={modalKind}
-            purchaseDraft={purchaseDraft}
-            transferSubmitting={transferSubmitting}
-            onClose={closeCustomModal}
-            onCheckout={() => showPurchaseModal(`购物车共 ${cart.length} 项商品`, cartTotal, 'cart')}
-            onConfirmPurchase={() => {
-              if (!purchaseDraft) return
-              if (purchaseDraft.source === 'cart') void submitCheckout(showAlert)
-              else void submitCmnPurchase(cmnData, selectedNumber, showAlert)
-            }}
-            onConfirmTransfer={() => void handleSubmitTransfer()}
-          />
-        }
-        mode={modalMode}
-        onClose={closeCustomModal}
-        open={showModal}
-        title={modalTitle}
-      >
-        {modalKind === 'alert' ? (alert.tone ? <StatusMessage message={alert.text} tone={alert.tone} /> : alert.text) : null}
-        {modalKind === 'switch' ? <AccountSwitchModalContent availableAccounts={availableAccounts} currentSubId={currentSubId} onAddAccount={addAccount} onSwitchAccount={switchAccount} onSwitchSubscription={performSwitch} subscriptions={subscriptions} /> : null}
-        {modalKind === 'cart' ? <CartModalContent cart={cart} onRemove={removeCartItem} onUpdateQuantity={updateCartItem} total={cartTotal} /> : null}
-        {modalKind === 'purchase' && purchaseDraft ? <PurchaseModalContent balance={balance} draft={purchaseDraft} onChangeDraft={setPurchaseDraft} showNewLineOption={showFreePlans && purchaseDraft.source === 'cart'} /> : null}
-        {modalKind === 'transfer' && transferDraft ? <TransferModalContent amount={transferAmount} draft={transferDraft} error={transferError} onChangeAmount={setTransferAmount} onChangeTarget={setTransferTarget} target={transferTarget} /> : null}
-      </CustomModal>
-
-      {cartQtyPresence.value !== null ? (
-        <CartQuantityModal
-          cart={cart}
-          draft={cartQtyPresence.value}
-          onCancel={() => setCartQtyDraft(null)}
-          onConfirm={() => confirmAddToCart(showAlert)}
-          onExitComplete={cartQtyPresence.completeExit}
-          onUpdateDraft={setCartQtyDraft}
-          phase={cartQtyPresence.phase}
-        />
-      ) : null}
     </>
   )
 }
