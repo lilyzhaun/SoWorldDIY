@@ -19,11 +19,18 @@ from typing import Any, Protocol
 import redis
 import requests
 from fastapi import Request
-from fastapi.responses import JSONResponse
-from starlette.responses import Response
 
+from .responses import (
+    JsonErrorFn,
+    JsonSuccessFn,
+    RedirectToLoginFn,
+    UpstreamErrorFn,
+)
+from .runtime import SetCacheFn
+from .services import FetchPlansBackgroundFn, SendPurchaseeventsFn
 from .session_store import SessionContext
-from .session_utils import SessionStoreProtocol
+from .session_utils import SessionStoreProtocol, ValidateCsrfFn
+from .upstream import Make3hkRequestFn
 
 
 class MainModuleSource(Protocol):
@@ -42,24 +49,24 @@ class MainModuleSource(Protocol):
     get_account_context: Callable[
         [SessionContext, str | None], dict[str, Any] | None
     ]
-    make_3hk_request: Callable[..., requests.Response | None]
+    make_3hk_request: Make3hkRequestFn
     get_cache: Callable[[str], Any | None]
-    set_cache: Callable[..., None]
+    set_cache: SetCacheFn
     delete_cache: Callable[[str], None]
     notify: Callable[[str], None]
     plans_refreshing: set[str]
     verify_auth_code: Callable[[Any, bool], tuple[bool, str]]
-    _json_success: Callable[[Any], JSONResponse]
-    _json_error: Callable[[str, int], JSONResponse]
-    _upstream_error: Callable[..., JSONResponse]
+    _json_success: JsonSuccessFn
+    _json_error: JsonErrorFn
+    _upstream_error: UpstreamErrorFn
     _create_session: Callable[[], SessionContext]
     encrypt_password: Callable[[str | None], str | None]
     _require_login: Callable[[Request], SessionContext | None]
     get_brand_by_sub_id: Callable[[SessionContext, str | None, str | None], str]
-    fetch_and_save_plans_background: Callable[..., None]
-    _redirect_to_login: Callable[[], Response]
-    _validate_csrf: Callable[[Request, SessionContext], JSONResponse | None]
-    handle_purchase_event: Callable[..., None]
+    fetch_and_save_plans_background: FetchPlansBackgroundFn
+    _redirect_to_login: RedirectToLoginFn
+    _validate_csrf: ValidateCsrfFn
+    handle_purchase_event: SendPurchaseeventsFn
     internal_logout_account: Callable[[SessionContext, str], bool]
     _mark_session_cookie_for_deletion: Callable[[Request], None]
     _clear_session: Callable[[SessionContext], None]
@@ -119,7 +126,7 @@ class MainDepsAdapter:
         return self.source.get_account_context
 
     @property
-    def make_3hk_request(self) -> Callable[..., requests.Response | None]:
+    def make_3hk_request(self) -> Make3hkRequestFn:
         return self.source.make_3hk_request
 
     @property
@@ -127,7 +134,7 @@ class MainDepsAdapter:
         return self.source.get_cache
 
     @property
-    def set_cache(self) -> Callable[..., None]:
+    def set_cache(self) -> SetCacheFn:
         return self.source.set_cache
 
     @property
@@ -147,15 +154,15 @@ class MainDepsAdapter:
         return self.source.verify_auth_code
 
     @property
-    def _json_success(self) -> Callable[[Any], JSONResponse]:
+    def _json_success(self) -> JsonSuccessFn:
         return self.source._json_success
 
     @property
-    def _json_error(self) -> Callable[[str, int], JSONResponse]:
+    def _json_error(self) -> JsonErrorFn:
         return self.source._json_error
 
     @property
-    def _upstream_error(self) -> Callable[..., JSONResponse]:
+    def _upstream_error(self) -> UpstreamErrorFn:
         return self.source._upstream_error
 
     @property
@@ -177,21 +184,19 @@ class MainDepsAdapter:
         return self.source.get_brand_by_sub_id
 
     @property
-    def fetch_and_save_plans_background(self) -> Callable[..., None]:
+    def fetch_and_save_plans_background(self) -> FetchPlansBackgroundFn:
         return self.source.fetch_and_save_plans_background
 
     @property
-    def _redirect_to_login(self) -> Callable[[], Response]:
+    def _redirect_to_login(self) -> RedirectToLoginFn:
         return self.source._redirect_to_login
 
     @property
-    def _validate_csrf(
-        self,
-    ) -> Callable[[Request, SessionContext], JSONResponse | None]:
+    def _validate_csrf(self) -> ValidateCsrfFn:
         return self.source._validate_csrf
 
     @property
-    def handle_purchase_event(self) -> Callable[..., None]:
+    def handle_purchase_event(self) -> SendPurchaseeventsFn:
         return self.source.handle_purchase_event
 
     @property

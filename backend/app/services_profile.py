@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, MutableMapping, Sequence
 from typing import Any, TypedDict
 
 from fastapi import Request
 
 from .session_store import SessionContext
+from .upstream import Make3hkRequestFn
 from .upstream_urls import simworld_url
 
 logger = logging.getLogger(__name__)
@@ -275,11 +276,11 @@ def build_profile_from_brand_responses(
 def fetch_and_build_profile(
     *,
     brands: Sequence[str],
-    make_request: Callable[..., Any],
+    make_request: Make3hkRequestFn,
     request: Request,
     ctx: SessionContext,
     req_ident: str,
-    account_ctx: Mapping[str, Any],
+    account_ctx: MutableMapping[str, object],
     accounts: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Fetch getProfile per brand and build the cached profile payload."""

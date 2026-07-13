@@ -1,12 +1,50 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from collections.abc import Mapping
+from typing import Any, Protocol
 
 import requests
 from fastapi.responses import JSONResponse, RedirectResponse
+from starlette.responses import Response
+
+__all__ = [
+    "JsonErrorFn",
+    "JsonSuccessFn",
+    "RedirectToLoginFn",
+    "UpstreamErrorFn",
+    "_json_error",
+    "_json_success",
+    "_redirect_to_login",
+    "_upstream_error",
+    "json_error",
+    "json_success",
+    "redirect_to_login",
+    "upstream_error",
+]
 
 logger = logging.getLogger(__name__)
+
+
+class JsonErrorFn(Protocol):
+    def __call__(self, message: str, status_code: int = 400) -> JSONResponse: ...
+
+
+class JsonSuccessFn(Protocol):
+    def __call__(self, content: Mapping[str, object]) -> JSONResponse: ...
+
+
+class UpstreamErrorFn(Protocol):
+    def __call__(
+        self,
+        response: requests.Response | None,
+        public_message: str = "请求失败，请稍后重试",
+        status_code: int = 400,
+    ) -> JSONResponse: ...
+
+
+class RedirectToLoginFn(Protocol):
+    def __call__(self) -> Response: ...
 
 
 def _json_error(message: str, status_code: int = 400) -> JSONResponse:

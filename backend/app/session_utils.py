@@ -35,6 +35,14 @@ class SessionStoreProtocol(Protocol):
     def delete(self, sid: str) -> None: ...
 
 
+class ValidateCsrfFn(Protocol):
+    def __call__(
+        self,
+        request: Request,
+        ctx: SessionContext | None,
+    ) -> JSONResponse | None: ...
+
+
 def _default_session_store() -> SessionStoreProtocol:
     return _default_store
 

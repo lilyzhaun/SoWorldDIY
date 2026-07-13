@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable, MutableMapping
+from collections.abc import Callable, Mapping, MutableMapping
 from typing import Any, Protocol, runtime_checkable
 
 import requests
@@ -12,6 +12,21 @@ from .session_store import SessionContext
 from .upstream_urls import simworld_url
 
 logger = logging.getLogger(__name__)
+
+
+class Make3hkRequestFn(Protocol):
+    def __call__(
+        self,
+        request: Request,
+        ctx: SessionContext,
+        method: str,
+        url: str,
+        json_data: Mapping[str, object] | None = None,
+        params: Mapping[str, object] | None = None,
+        account_id: str | None = None,
+        account_context: MutableMapping[str, object] | None = None,
+        _is_retry: bool = False,
+    ) -> requests.Response | None: ...
 
 
 @runtime_checkable
@@ -50,7 +65,7 @@ class UpstreamDepsProtocol(Protocol):
     ) -> Callable[[SessionContext, str | None], dict[str, Any] | None]: ...
 
     @property
-    def make_3hk_request(self) -> Callable[..., requests.Response | None]: ...
+    def make_3hk_request(self) -> Make3hkRequestFn: ...
 
 
 _upstream_deps_provider: Callable[[], UpstreamDepsProtocol] | None = None

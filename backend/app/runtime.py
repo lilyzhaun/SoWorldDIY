@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Mapping
 from datetime import timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import redis
 import requests
@@ -23,6 +24,16 @@ from .security import (
     encrypt_password as encrypt_password_value,
 )
 from .session_store import RedisSessionStore
+
+
+class SetCacheFn(Protocol):
+    def __call__(
+        self,
+        key: str,
+        value: Mapping[str, object],
+        timeout: int = 300,
+    ) -> None: ...
+
 
 settings = load_settings()
 

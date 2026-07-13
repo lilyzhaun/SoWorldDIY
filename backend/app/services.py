@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any, Protocol, runtime_checkable
 
 import requests
@@ -12,6 +12,25 @@ from .session_store import SessionContext
 from .upstream_urls import three_offer_url
 
 logger = logging.getLogger(__name__)
+
+
+class FetchPlansBackgroundFn(Protocol):
+    def __call__(
+        self,
+        sub_brand: str,
+        cookies: Mapping[str, object],
+        user_agent: str | None,
+    ) -> None: ...
+
+
+class SendPurchaseeventsFn(Protocol):
+    def __call__(
+        self,
+        payment_url: str,
+        sub_id: str,
+        amount_pay: float,
+        account_id: str,
+    ) -> None: ...
 
 
 @runtime_checkable
