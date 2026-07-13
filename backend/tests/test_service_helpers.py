@@ -5,19 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.schemas import CmnPurchaseRequest, PurchaseItem, PurchaseRequest
-from app.services_auth import (
-    build_account_session_record,
-    build_login_payload,
-    format_login_notify_message,
-    resolve_login_url_and_brand,
-)
-from app.services_commerce import (
-    build_cmn_purchase_payload,
-    build_plan_purchase_payload,
-    load_plans_from_cache,
-    parse_wallet_balance,
-)
+from app.services_commerce import load_plans_from_cache, parse_wallet_balance
 from app.services_profile import (
     build_active_offers,
     build_profile_from_brand_responses,
@@ -42,93 +30,6 @@ def test_fuzzy_time_key_truncates() -> None:
     assert fuzzy_time_key("2024-01-01T12:34:56Z") == "2024-01-01T12:34"
     assert fuzzy_time_key("short") == "short"
     assert fuzzy_time_key(None) is None
-
-
-def test_build_plan_purchase_payload_normal_and_newline() -> None:
-    normal = PurchaseRequest(
-        subscriptionId="sub-1",
-        txnAmount=10,
-        price=28,
-        paymentType="ALCN",
-        items=[PurchaseItem(offerId="OFF1", quantity=2)],
-    )
-    payload = build_plan_purchase_payload(normal, access_key="KEY")
-    assert payload["purchaseType"] == "SOSIM_VAS"
-    assert payload["accessPurchaseKey"] == "KEY"
-    assert payload["order"]["pmt"]["amnt"] == 18.0
-    assert payload["order"]["orderSubscriptions"][0]["walletPayment"]["txnAmount"] == 10
-
-    diy = PurchaseRequest(
-        subscriptionId="sub-1",
-        new_line=True,
-        txnAmount=0,
-        price=50,
-        items=[
-            PurchaseItem(offerId="H3OF00000000001", quantity=1),
-            PurchaseItem(offerId="OFF2", quantity=1),
-        ],
-    )
-    diy_payload = build_plan_purchase_payload(diy, access_key="K2")
-    assert diy_payload["purchaseType"] == "PREPAID_DIY"
-    offers = diy_payload["order"]["orderSubscription"]["offers"]
-    assert offers[0]["offerId"] == "H3OF00000000001"
-    assert any(o["offerId"] == "OFF2" for o in offers)
-
-
-def test_build_cmn_purchase_payload() -> None:
-    body = CmnPurchaseRequest(
-        account_id="a@b.com",
-        subscriptionId="s1",
-        txnAmount=8,
-        price=28,
-        selectedNumber="12345678",
-        offerId="CMN1",
-    )
-    payload, pmt_amt = build_cmn_purchase_payload(body, access_key="AK")
-    assert pmt_amt == 20.0
-    assert payload["purchaseType"] == "CMN_ONLY"
-    assert payload["order"]["orderSubscription"]["msisdn"] == "12345678"
-    assert payload["order"]["orderSubscription"]["walletPayment"]["txnAmount"] == 8
-
-
-def test_auth_login_helpers() -> None:
-    url, brand = resolve_login_url_and_brand(
-        login_type="password",
-        dipped_sub_brand="SOSIM",
-        password_login_url="https://example/three",
-        otp_login_url_for_brand="https://example/sosim",
-    )
-    assert url == "https://example/three"
-    assert brand == "THREE"
-
-    otp_url, otp_brand = resolve_login_url_and_brand(
-        login_type="otp",
-        dipped_sub_brand="SOSIM",
-        password_login_url="https://example/three",
-        otp_login_url_for_brand="https://example/sosim",
-    )
-    assert otp_url == "https://example/sosim"
-    assert otp_brand == "SOSIM"
-
-    pw_payload = build_login_payload(
-        login_type="password", identifier="u", password="p", otp=None
-    )
-    assert pw_payload == {"id": "u", "password": "p", "rememberMe": True}
-
-    record = build_account_session_record(
-        cookies={"a": "b"},
-        sub_brand="THREE",
-        auth_code="code",
-        login_type="password",
-        password="secret",
-        otp=None,
-        encrypted_password="enc",
-    )
-    assert record["credential"] == "secret"
-    assert record["stored_password_encrypted"] == "enc"
-    assert "新用户登录" in format_login_notify_message(
-        identifier="u", login_type="password", sub_brand="THREE", account_count=2
-    )
 
 
 def test_parse_wallet_balance_max_amount() -> None:

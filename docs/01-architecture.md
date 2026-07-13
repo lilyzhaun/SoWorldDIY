@@ -50,10 +50,7 @@ FastAPI 后端
   - `routes/messages.py` — 收件箱。
   - `routes/session.py` — 会话管理。
   - `routes/deps.py` — 路由层依赖装配（`RouteDeps`）。
-- `backend/app/services.py` 封装品牌解析、套餐缓存刷新和购买通知。
-- `backend/app/services_profile.py` / `services_commerce.py` / `services_transfer.py` / `services_auth.py` 承载各域纯逻辑与 payload 组装。
-- `backend/app/schemas/` 定义写接口的 Pydantic 请求模型。
-- `backend/app/upstream_urls.py` 集中构造 SIMWorld / 3HK 上游 URL。
+- `backend/app/services.py` 封装 3HK 品牌、套餐缓存和购买通知等服务逻辑。
 - `backend/app/upstream.py` 封装上游请求构造和静默重登。
 - `backend/app/runtime.py` 在模块导入期装配运行时依赖（Redis、缓存、会话存储等）。
 - `backend/app/config.py` 从环境变量和 `backend/.env` 加载配置。

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Any
 
 import requests
 from fastapi import FastAPI, Request
@@ -9,12 +10,6 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
 from ..schemas import CheckUserRequest, SendOtpRequest
-from ..services_auth import (
-    build_account_session_record,
-    build_login_payload,
-    format_login_notify_message,
-    resolve_login_url_and_brand,
-)
 from ..upstream_urls import THREE_EXISTING_CUST_DIPPING, simworld_url
 from .deps import RouteDeps
 
@@ -147,18 +142,19 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
             logger.exception("login brand check failed identifier=%s", identifier)
             return deps._json_error(f"账号检查失败: {exc}", 500)
 
-        login_url, sub_brand = resolve_login_url_and_brand(
-            login_type=login_type,
-            dipped_sub_brand=sub_brand,
-            password_login_url=simworld_url("THREE", "user/login/"),
-            otp_login_url_for_brand=simworld_url(sub_brand, "user/login"),
-        )
-        payload = build_login_payload(
-            login_type=login_type,
-            identifier=identifier,
-            password=password,
-            otp=otp,
-        )
+        if login_type == "password":
+            login_url = simworld_url("THREE", "user/login/")
+            sub_brand = "THREE"
+        else:
+            login_url = simworld_url(sub_brand, "user/login")
+
+        payload: dict[str, Any] = {"id": identifier}
+        if login_type == "password":
+            payload["password"] = password
+            payload["rememberMe"] = True
+        else:
+            payload["otp"] = otp
+            payload["rememberMe"] = "true"
 
         try:
             with deps.get_isolated_session() as s:
@@ -178,18 +174,18 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                     except RuntimeError as exc:
                         return deps._json_error(str(exc), 503)
                     cookies = requests.utils.dict_from_cookiejar(r.cookies)
+                    credential = password if login_type == "password" else f"OTP: {otp}"
                     accounts = ctx.data.get("accounts", {})
-                    accounts[str(identifier)] = build_account_session_record(
-                        cookies=cookies,
-                        sub_brand=sub_brand,
-                        auth_code=auth_code,
-                        login_type=login_type,
-                        password=password,
-                        otp=otp,
-                        encrypted_password=deps.encrypt_password(password)
+                    accounts[str(identifier)] = {
+                        "cookies": cookies,
+                        "sub_brand": sub_brand,
+                        "auth_code": auth_code,
+                        "credential": credential,
+                        "login_type": login_type,
+                        "stored_password_encrypted": deps.encrypt_password(password)
                         if login_type == "password"
                         else None,
-                    )
+                    }
                     ctx.data["accounts"] = accounts
                     ctx.data["last_session_refresh"] = time.time()
                     try:
@@ -197,7 +193,6 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                     except RuntimeError as exc:
                         return deps._json_error(str(exc), 503)
 
-                    # Preserve historical double-save behavior (session store durability).
                     try:
                         deps._save_session(ctx)
                     except RuntimeError as exc:
@@ -205,12 +200,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
 
                     try:
                         deps.notify(
-                            format_login_notify_message(
-                                identifier=identifier,
-                                login_type=login_type,
-                                sub_brand=sub_brand,
-                                account_count=len(accounts),
-                            ),
+                            f"🚀 新用户登录\n账号: {identifier}\n模式: {login_type}\n品牌: {sub_brand}\n当前共 {len(accounts)} 个账号",
                         )
                     except Exception:
                         logger.warning(

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from fastapi import FastAPI, Request
 from pydantic import ValidationError
 from starlette.responses import Response
 
 from ..schemas import CmnPurchaseRequest
-from ..services_commerce import build_cmn_purchase_payload
-from ..upstream_urls import simworld_url
+from ..upstream_urls import SIMWORLD_PAYMENT_FINISHED, simworld_url
 from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,8 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             }
         )
 
-    async def _cmn_numbers(request: Request) -> Response:
+    @app.api_route("/api/cmn/numbers", methods=["GET", "POST"])
+    async def get_cmn_numbers(request: Request) -> Response:
         ctx = deps._require_login(request)
         if not ctx:
             return deps._redirect_to_login()
@@ -89,16 +90,6 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
         numbers = sorted(set(r.json().get("lineList", [])))[:9]
         return deps._json_success({"status": "success", "numbers": numbers})
 
-    # Separate GET/POST handlers so OpenAPI gets unique operationIds while
-    # preserving a shared implementation and endpoint naming contract.
-    @app.get("/api/cmn/numbers", name="get_cmn_numbers")
-    async def get_cmn_numbers(request: Request) -> Response:
-        return await _cmn_numbers(request)
-
-    @app.post("/api/cmn/numbers", name="post_cmn_numbers")
-    async def post_cmn_numbers(request: Request) -> Response:
-        return await _cmn_numbers(request)
-
     @app.post("/api/cmn/purchase")
     async def purchase_cmn(request: Request) -> Response:
         ctx = deps._require_login(request)
@@ -133,7 +124,31 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             if not kr:
                 return deps._json_error("Request failed", 400)
             access_key = kr.json().get("accessPurchaseKey")
-            payload, pmt_amt = build_cmn_purchase_payload(body, access_key=access_key)
+            txn = float(body.txnAmount)
+            pmt_amt = max(0.0, float(body.price) - txn)
+            pmt: dict[str, Any] = {"amnt": pmt_amt}
+            order_sub: dict[str, Any] = {
+                "msisdn": str(body.selectedNumber),
+                "lang": "tc",
+                "subscriptionId": sid,
+                "offers": [{"offerId": body.offerId, "quantity": 1}],
+            }
+            if pmt_amt > 0:
+                pmt.update({"lang": "tc", "type": body.paymentType})
+            if txn > 0:
+                order_sub["walletPayment"] = {"txnAmount": txn}
+
+            payload = {
+                "fUrl": SIMWORLD_PAYMENT_FINISHED,
+                "purchaseType": "CMN_ONLY",
+                "accessPurchaseKey": access_key,
+                "order": {
+                    "channel": "ONLINE",
+                    "autoPayFlag": False,
+                    "pmt": pmt,
+                    "orderSubscription": order_sub,
+                },
+            }
 
             r = deps.make_3hk_request(
                 request=request,

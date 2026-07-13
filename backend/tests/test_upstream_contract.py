@@ -25,8 +25,8 @@ from app.main import (
 )
 from app.session_store import SessionContext
 
-# ----- FakeResponse is intentionally local (not imported from contract_helpers)
-#       so this file stays self-contained and not coupled to app-route contracts. ----
+# ----- helpers shared with test_app_contracts.py (duplicated intentionally
+#       so this file is self-contained and not coupled to the other). ----
 
 
 def _ctx_with_accounts(accounts: dict[str, Any]) -> SessionContext:
