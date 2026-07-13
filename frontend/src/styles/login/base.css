@@ -1,0 +1,135 @@
+@import './tokens.css';
+
+/* ================= 全局布局 ================= */
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+*:focus {
+  outline: none;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+}
+
+#root {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  flex: none;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+
+  background-color: var(--page-bg);
+  /* 动态光晕背景 */
+  background-image:
+    radial-gradient(at 80% 0%, hsla(250, 100%, 70%, 0.15) 0px, transparent 50%),
+    radial-gradient(at 0% 50%, hsla(220, 100%, 70%, 0.1) 0px, transparent 50%),
+    radial-gradient(at 80% 100%, hsla(260, 100%, 70%, 0.1) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, hsla(190, 100%, 70%, 0.1) 0px, transparent 50%);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  padding: 0 20px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+}
+
+/* ================= 布局核心 (视觉调整版) ================= */
+.main-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* 垂直居中 */
+  align-items: center;
+  width: 100%;
+  max-width: 380px;
+
+  /* 关键修改：增加顶部 padding，把卡片视觉中心往下压 */
+  padding-top: 60px;
+  padding-bottom: 10px;
+}
+
+/* ================= 登录卡片 ================= */
+.auth-card {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+
+  border-radius: var(--radius-box);
+  padding: 24px 20px;
+
+  box-shadow:
+    var(--card-shadow),
+    0 0 0 1px var(--card-border) inset;
+}
+
+/* ================= 头部文字 ================= */
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.header h2 {
+  margin: 0;
+  font-size: 24px;
+  color: var(--text-title);
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.header p {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+/* ================= Tabs 切换 ================= */
+.tabs {
+  display: flex;
+  background: var(--tab-bg);
+  padding: 3px;
+  border-radius: 14px;
+  margin-bottom: 20px;
+}
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tab-text-inactive);
+  cursor: pointer;
+  border-radius: 11px;
+  border: 0;
+  transition:
+    background-color var(--motion-base) var(--motion-ease-standard),
+    color var(--motion-base) var(--motion-ease-standard),
+    box-shadow var(--motion-base) var(--motion-ease-standard),
+    transform var(--motion-fast) var(--motion-ease-standard);
+}
+.tab:hover {
+  color: var(--text-title);
+}
+.tab:active {
+  transform: scale(0.97);
+}
+.tab.active {
+  color: var(--primary);
+  background: var(--tab-bg-active);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}

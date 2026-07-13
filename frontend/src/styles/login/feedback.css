@@ -1,0 +1,187 @@
+
+/* ================= Toast & Anim ================= */
+.hidden {
+  display: none;
+}
+.toast {
+  position: fixed;
+  top: calc(20px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%) translateY(-200%);
+  padding: 0;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  transition:
+    transform var(--motion-base) var(--motion-ease-standard),
+    opacity var(--motion-base) var(--motion-ease-standard);
+  z-index: 1000;
+  white-space: nowrap;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+}
+@media (prefers-color-scheme: dark) {
+  .toast {
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.login-success-status {
+  position: fixed;
+  top: calc(20px + env(safe-area-inset-top));
+  left: 50%;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 10px 12px;
+  width: calc(100% - 32px);
+  max-width: 320px;
+  padding: 12px 14px 10px;
+  border: 1px solid var(--success-card-border);
+  border-radius: 16px;
+  background: var(--success-card-bg);
+  box-shadow: var(--success-card-shadow);
+  color: var(--text-title);
+  transform: translateX(-50%);
+  animation: loginSuccessEnter var(--motion-base) var(--motion-ease-standard) both;
+}
+
+.login-success-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--success-icon-bg);
+  color: var(--success-icon-color);
+}
+
+.login-success-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.login-success-copy {
+  min-width: 0;
+  align-self: center;
+}
+.login-success-title {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.login-success-subtitle {
+  margin-top: 2px;
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.login-success-progress {
+  grid-column: 1 / -1;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--success-progress-track);
+}
+.login-success-progress-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--success-progress-fill);
+  transform: scaleX(0);
+  transform-origin: left;
+  animation-name: loginSuccessProgress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes loginSuccessEnter {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes loginSuccessProgress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .auth-card,
+  .toast,
+  .login-success-status {
+    transform: none !important;
+  }
+  .login-success-status {
+    animation: none;
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+  .login-success-progress-fill {
+    animation: none;
+    transform: scaleX(1);
+  }
+}
+
+.status-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.status-message--info {
+  background: var(--status-info-bg);
+  color: var(--status-info-text);
+}
+.status-message--success {
+  background: var(--status-success-bg);
+  color: var(--status-success-text);
+}
+.status-message--warning {
+  background: var(--status-warning-bg);
+  color: var(--status-warning-text);
+}
+.status-message--error {
+  background: var(--status-error-bg);
+  color: var(--status-error-text);
+}
+.status-message [data-ui-icon] {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: currentColor;
+}
