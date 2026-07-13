@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -34,14 +32,14 @@ class TransferRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="ignore")
 
     account_id: str = ""
-    subscriptionId: Any = None
-    productFamily: Any = None
-    sourceMsisdn: Any = None
-    targetMsisdn: Any = None
-    userOfferId: Any = None
-    balanceResourceId: Any = None
-    unit: Any = None
-    amount: Any = None
+    subscriptionId: str | int | None = None
+    productFamily: str | None = None
+    sourceMsisdn: str | int | None = None
+    targetMsisdn: str | int | None = None
+    userOfferId: str | int | None = None
+    balanceResourceId: str | int | None = None
+    unit: str | None = None
+    amount: str | int | float | None = None
 
 
 class CmnPurchaseRequest(BaseModel):
@@ -50,12 +48,12 @@ class CmnPurchaseRequest(BaseModel):
     model_config = ConfigDict(frozen=True, extra="ignore")
 
     account_id: str = ""
-    subscriptionId: Any = None
+    subscriptionId: str | int | None = None
     txnAmount: float = 0
     price: float = 0
     paymentType: str = "ALCN"
-    selectedNumber: Any = None
-    offerId: Any = None
+    selectedNumber: str | int | None = None
+    offerId: str | int | None = None
 
 
 class CheckUserRequest(BaseModel):

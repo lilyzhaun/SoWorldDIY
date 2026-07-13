@@ -5,7 +5,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.schemas.requests import CmnPurchaseRequest, PurchaseItem, PurchaseRequest
+import pytest
+
+from app.schemas.requests import (
+    CmnPurchaseRequest,
+    PurchaseItem,
+    PurchaseRequest,
+    TransferRequest,
+)
 from app.services_commerce import (
     build_cmn_purchase_payload,
     build_plan_purchase_payload,
@@ -14,8 +21,11 @@ from app.services_commerce import (
 )
 from app.services_profile import (
     build_active_offers,
+    build_available_accounts,
     build_profile_from_brand_responses,
+    build_subscription_entry,
     fuzzy_time_key,
+    merge_brand_profile_data,
     safe_date_str,
 )
 from app.services_transfer import (
@@ -24,6 +34,40 @@ from app.services_transfer import (
     select_transfer_product_id,
 )
 from app.upstream_urls import SIMWORLD_PAYMENT_FINISHED
+
+
+def test_transfer_request_accepts_numeric_coercion_inputs() -> None:
+    body = TransferRequest.model_validate(
+        {
+            "account_id": "a@b.com",
+            "subscriptionId": 1001,
+            "productFamily": "DATA",
+            "sourceMsisdn": 85211112222,
+            "targetMsisdn": "85233334444",
+            "userOfferId": "UO",
+            "balanceResourceId": "9",
+            "unit": "MB",
+            "amount": "500.5",
+        }
+    )
+    assert body.subscriptionId == 1001
+    assert body.sourceMsisdn == 85211112222
+    assert body.balanceResourceId == "9"
+    assert body.amount == "500.5"
+    assert int(body.balanceResourceId) == 9
+    assert float(body.amount) == 500.5
+
+
+def test_build_available_accounts_marks_active() -> None:
+    accounts = {
+        "a@b.com": {"sub_brand": "THREE"},
+        "b@c.com": {"sub_brand": "SOSIM"},
+    }
+    result = build_available_accounts(accounts, "b@c.com")
+    assert result == [
+        {"identifier": "a@b.com", "active": False, "subBrand": "THREE"},
+        {"identifier": "b@c.com", "active": True, "subBrand": "SOSIM"},
+    ]
 
 
 def test_safe_date_str_splits_iso() -> None:
@@ -45,6 +89,91 @@ def test_parse_wallet_balance_max_amount() -> None:
     assert parse_wallet_balance(None) == 0.0
     assert parse_wallet_balance({"amount": 1}) == 0.0
     assert parse_wallet_balance([{"nope": 1}, {"amount": 3}]) == 3.0
+
+
+def test_parse_wallet_balance_malformed_element_raises() -> None:
+    with pytest.raises(TypeError):
+        parse_wallet_balance([1, {"amount": 3}])
+    with pytest.raises(TypeError):
+        parse_wallet_balance(["amount"])
+    with pytest.raises(TypeError):
+        parse_wallet_balance(["not-an-amount"])
+
+
+def test_select_dto_offer_malformed_container_raises() -> None:
+    with pytest.raises(TypeError):
+        select_dto_offer({"offerSubType": "DTO"})
+    with pytest.raises(TypeError):
+        select_dto_offer("DTO")
+    with pytest.raises(TypeError):
+        select_dto_offer([{"offerSubType": "OTHER"}, "not-a-mapping"])
+
+
+def test_select_dto_offer_valid_empty_or_no_dto_returns_none() -> None:
+    assert select_dto_offer([]) is None
+    assert select_dto_offer([{"offerSubType": "OTHER"}]) is None
+
+
+def test_select_transfer_product_id_malformed_products_raises() -> None:
+    with pytest.raises(TypeError):
+        select_transfer_product_id({"products": "bad"}, "DATA")
+    with pytest.raises(TypeError):
+        select_transfer_product_id(
+            {"products": [{"productId": "P", "productFamily": "DATA"}, 1]},
+            "DATA",
+        )
+    with pytest.raises(KeyError):
+        select_transfer_product_id({}, "DATA")
+
+
+def test_build_active_offers_malformed_products_raises() -> None:
+    with pytest.raises(TypeError):
+        build_active_offers(
+            [
+                {
+                    "offerId": "OFF1",
+                    "offerType": "VAS",
+                    "offerSubType": "LOCAL",
+                    "planStatus": "ACTIVE",
+                    "subscriptionProducts": "not-a-list",
+                }
+            ]
+        )
+    with pytest.raises(TypeError):
+        build_active_offers(
+            [
+                {
+                    "offerId": "OFF1",
+                    "offerType": "VAS",
+                    "offerSubType": "LOCAL",
+                    "planStatus": "ACTIVE",
+                    "subscriptionProducts": ["not-a-mapping"],
+                }
+            ]
+        )
+
+
+def test_merge_brand_profile_malformed_subscriptions_raises() -> None:
+    with pytest.raises(TypeError):
+        merge_brand_profile_data(
+            "THREE",
+            {"email": "a@b.com", "subscriptions": "bad"},
+            {},
+            "",
+        )
+    with pytest.raises(TypeError):
+        build_subscription_entry(
+            {
+                "primaryMsisdn": "8521",
+                "subscriptionOffers": {"offerId": "x"},
+            },
+            "THREE",
+        )
+
+
+def test_build_available_accounts_malformed_entry_raises() -> None:
+    with pytest.raises(TypeError):
+        build_available_accounts({"a@b.com": "not-a-mapping"}, "a@b.com")
 
 
 def test_load_plans_from_cache_ok_and_missing(tmp_path: Path) -> None:

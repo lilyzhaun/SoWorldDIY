@@ -9,6 +9,8 @@ from starlette.responses import Response
 from ..schemas import TransferRequest
 from ..services_transfer import (
     build_transfer_payload,
+    coerce_request_float,
+    coerce_request_int,
     select_dto_offer,
     select_transfer_product_id,
 )
@@ -66,9 +68,9 @@ def register_transfer_routes(app: FastAPI, deps: RouteDeps) -> None:
                 subscription_id=sid,
                 target_msisdn=str(body.targetMsisdn),
                 user_offer_id=body.userOfferId,
-                balance_resource_id=int(body.balanceResourceId),
+                balance_resource_id=coerce_request_int(body.balanceResourceId),
                 unit=body.unit,
-                amount=float(body.amount),
+                amount=coerce_request_float(body.amount),
             )
 
             r = deps.make_3hk_request(

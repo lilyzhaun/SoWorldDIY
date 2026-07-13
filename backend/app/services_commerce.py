@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Final, TypedDict
+from typing import Final, TypedDict
 
 from .schemas.requests import CmnPurchaseRequest, PurchaseRequest
 from .upstream_urls import (
@@ -84,14 +85,14 @@ class PlanPurchasePayloadResult:
 
 
 class CmnPurchaseOfferPayload(TypedDict):
-    offerId: str | None
+    offerId: str | int | None
     quantity: int
 
 
 class CmnPurchaseSubscriptionPayload(TypedDict, total=False):
     msisdn: str
     lang: str
-    subscriptionId: str | None
+    subscriptionId: str | int | None
     offers: list[CmnPurchaseOfferPayload]
     walletPayment: dict[str, float]
 
@@ -165,14 +166,14 @@ def build_plan_purchase_payload(
         payment.update({"lang": "tc", "type": body.paymentType})
 
     if body.new_line:
-        offers: list[PurchaseOfferPayload] = [
+        new_line_offers: list[PurchaseOfferPayload] = [
             {
                 "offerId": BASE_NEW_LINE_OFFER,
                 "quantity": 1,
                 "autoRenewFlag": False,
             }
         ]
-        offers.extend(
+        new_line_offers.extend(
             {
                 "offerId": item.offerId,
                 "quantity": int(item.quantity),
@@ -187,7 +188,7 @@ def build_plan_purchase_payload(
             "pmt": payment,
             "orderSubscription": {
                 "lang": "tc",
-                "offers": offers,
+                "offers": new_line_offers,
                 "promoOptOuts": [],
                 "simType": "ESIM",
             },
@@ -199,7 +200,7 @@ def build_plan_purchase_payload(
             "order": new_line_order,
         }
     else:
-        offers: list[PurchaseOfferPayload] = [
+        normal_offers: list[PurchaseOfferPayload] = [
             {
                 "offerId": item.offerId,
                 "quantity": int(item.quantity),
@@ -210,7 +211,7 @@ def build_plan_purchase_payload(
         subscription: NormalPurchaseSubscriptionPayload = {
             "lang": "tc",
             "subscriptionId": body.subscriptionId,
-            "offers": offers,
+            "offers": normal_offers,
         }
         if txn > 0:
             subscription["walletPayment"] = {"txnAmount": txn}
@@ -231,20 +232,41 @@ def build_plan_purchase_payload(
     return PlanPurchasePayloadResult(payload=payload, payable_amount=payable_amount)
 
 
-def parse_wallet_balance(data: Any) -> float:
+def _wallet_amount(value: object) -> float:
+    if isinstance(value, bool):
+        return float(value)
+    if isinstance(value, int):
+        return float(value)
+    if isinstance(value, float):
+        return value
+    if isinstance(value, str):
+        return float(value)
+    raise TypeError(
+        f"float() argument must be a string or a real number, not '{type(value).__name__}'"
+    )
+
+
+def parse_wallet_balance(data: object) -> float:
     """Return max amount from WalletBalances list payload, else 0."""
-    if isinstance(data, list) and data:
-        return max(
-            float(item.get("amount", 0)) for item in data if "amount" in item
-        )
-    return 0.0
+    if not isinstance(data, list) or not data:
+        return 0.0
+    amounts: list[float] = []
+    for item in data:
+        if not isinstance(item, Mapping):
+            raise TypeError(
+                f"wallet balance item must be a mapping, got {type(item).__name__}"
+            )
+        if "amount" not in item:
+            continue
+        amounts.append(_wallet_amount(item.get("amount", 0)))
+    return max(amounts)
 
 
 def load_plans_from_cache(
     cache_file: Path,
     *,
     brand: str | None = None,
-) -> dict[str, Any] | None:
+) -> dict[str, object] | None:
     """Load plans JSON from disk; log and return None on parse failure.
 
     Missing file returns None without logging (caller decides next step).

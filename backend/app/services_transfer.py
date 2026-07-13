@@ -2,41 +2,115 @@
 
 from __future__ import annotations
 
-from typing import Any
+from collections.abc import Mapping, Sequence
+from typing import TypedDict
 
 
-def select_dto_offer(offers: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Return the first DTO offer, or None if unsupported."""
-    return next((o for o in offers if o.get("offerSubType") == "DTO"), None)
+class ProductDataPayload(TypedDict):
+    unit: str | None
+    volume: float
+
+
+class OfferProductPayload(TypedDict):
+    balanceResourceId: int
+    productId: object
+    productData: ProductDataPayload
+
+
+class TransferOfferItemPayload(TypedDict):
+    offerId: object
+    transferOfferId: object
+    offerProduct: OfferProductPayload
+
+
+class OrderSubscriptionPayload(TypedDict):
+    msisdn: str
+    subscriptionId: object
+    volumeUpMsisdn: str
+    lang: str
+    offers: list[TransferOfferItemPayload]
+
+
+class TranferOrderPayload(TypedDict):
+    channel: str
+    orderSubscription: OrderSubscriptionPayload
+
+
+class TransferPayload(TypedDict):
+    # Deliberate upstream field name (typo preserved).
+    tranferOrder: TranferOrderPayload
+
+
+def require_mapping_list(value: object) -> list[Mapping[str, object]]:
+    """Require a list of mappings; malformed containers raise TypeError."""
+    if not isinstance(value, list):
+        raise TypeError(
+            f"expected list of mappings, got {type(value).__name__}"
+        )
+    result: list[Mapping[str, object]] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, Mapping):
+            raise TypeError(
+                f"sequence element {index} must be a mapping, got {type(item).__name__}"
+            )
+        result.append(item)
+    return result
+
+
+def coerce_request_int(value: str | int | None) -> int:
+    """int() for transfer request fields; None raises TypeError like bare int(None)."""
+    if value is None:
+        raise TypeError(
+            "int() argument must be a string, a bytes-like object or a real number, not 'NoneType'"
+        )
+    return int(value)
+
+
+def coerce_request_float(value: str | int | float | None) -> float:
+    """float() for transfer request fields; None raises TypeError like bare float(None)."""
+    if value is None:
+        raise TypeError(
+            "float() argument must be a string or a real number, not 'NoneType'"
+        )
+    return float(value)
+
+
+def select_dto_offer(offers: object) -> Mapping[str, object] | None:
+    """Return the first DTO offer, or None when the list has no DTO entry."""
+    for offer in require_mapping_list(offers):
+        if offer.get("offerSubType") == "DTO":
+            return offer
+    return None
 
 
 def select_transfer_product_id(
-    dto: dict[str, Any],
-    product_family: str,
-) -> Any:
+    dto: Mapping[str, object],
+    product_family: str | None,
+) -> object:
     """Pick productId matching productFamily, else first product."""
+    products = require_mapping_list(dto["products"])
     return next(
         (
             p["productId"]
-            for p in dto.get("products", [])
+            for p in products
             if p.get("productFamily") == product_family
         ),
-        dto["products"][0]["productId"],
+        products[0]["productId"],
     )
 
 
 def build_transfer_payload(
     *,
-    dto_offer_id: Any,
-    target_product_id: Any,
+    dto_offer_id: object,
+    target_product_id: object,
     source_msisdn: str,
-    subscription_id: Any,
+    subscription_id: object,
     target_msisdn: str,
-    user_offer_id: Any,
+    user_offer_id: object,
     balance_resource_id: int,
-    unit: str,
+    unit: str | None,
     amount: float,
-) -> dict[str, Any]:
+) -> TransferPayload:
     """Assemble the upstream transfer body (keeps deliberate tranferOrder typo)."""
     return {
         "tranferOrder": {
@@ -66,17 +140,17 @@ def build_transfer_payload(
 
 
 def assemble_transfer_payload(
-    offers: list[dict[str, Any]],
+    offers: Sequence[Mapping[str, object]],
     *,
-    product_family: str,
+    product_family: str | None,
     source_msisdn: str,
-    subscription_id: Any,
+    subscription_id: object,
     target_msisdn: str,
-    user_offer_id: Any,
+    user_offer_id: object,
     balance_resource_id: int,
-    unit: str,
+    unit: str | None,
     amount: float,
-) -> dict[str, Any] | None:
+) -> TransferPayload | None:
     """Select DTO offer and build payload; None when transfer is unsupported."""
     dto = select_dto_offer(offers)
     if not dto:
