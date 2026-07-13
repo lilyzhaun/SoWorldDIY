@@ -30,6 +30,8 @@ auth_code.txt
 delivery_extension_local.py
 request_overrides_local.py
 requirements-local.txt
+# Example templates are tracked
+!*_local.example.py
 
 # Runtime data
 flask_session_data/
