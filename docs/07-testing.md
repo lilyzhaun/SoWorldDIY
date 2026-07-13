@@ -36,25 +36,25 @@ cd backend
 
 后端测试按职责拆分，每条路由有独立的 contract 测试文件：
 
-| 测试文件 | 覆盖范围 |
-| --- | --- |
-| `test_app_routes.py` | 路由存在性和注册 |
-| `test_route_registration_contract.py` | 路由注册契约 |
-| `test_contract_auth.py` | 登录、OTP、check-user |
-| `test_contract_cmn.py` | CMN 换号（GET/POST numbers、purchase） |
-| `test_contract_commerce.py` | 套餐购买、余额查询 |
-| `test_contract_profile.py` | 资料聚合 |
-| `test_contract_transfer.py` | 资源转移 |
-| `test_contract_messages.py` | 收件箱与交易记录 |
-| `test_contract_pages_session.py` | 页面路由与 session 维护 |
-| `test_auth_codes.py` | 鉴权码创建、验证、消耗、撤销 |
-| `test_security.py` | 密码加密/解密和 CSRF token |
-| `test_cache_store.py` | 内存缓存行为 |
-| `test_service_helpers.py` | services 层辅助函数 |
-| `test_main_deps_adapter.py` | MainDepsAdapter 属性转发 |
-| `test_upstream_contract.py` | upstream 请求构造 |
-| `test_upstream_urls.py` | URL 常量和构造函数 |
-| `test_delivery_extension.py` | 通知 seam |
+| 测试文件                              | 覆盖范围                               |
+| ------------------------------------- | -------------------------------------- |
+| `test_app_routes.py`                  | 路由存在性和注册                       |
+| `test_route_registration_contract.py` | 路由注册契约                           |
+| `test_contract_auth.py`               | 登录、OTP、check-user                  |
+| `test_contract_cmn.py`                | CMN 换号（GET/POST numbers、purchase） |
+| `test_contract_commerce.py`           | 套餐购买、余额查询                     |
+| `test_contract_profile.py`            | 资料聚合                               |
+| `test_contract_transfer.py`           | 资源转移                               |
+| `test_contract_messages.py`           | 收件箱与交易记录                       |
+| `test_contract_pages_session.py`      | 页面路由与 session 维护                |
+| `test_auth_codes.py`                  | 鉴权码创建、验证、消耗、撤销           |
+| `test_security.py`                    | 密码加密/解密和 CSRF token             |
+| `test_cache_store.py`                 | 内存缓存行为                           |
+| `test_service_helpers.py`             | services 层辅助函数                    |
+| `test_main_deps_adapter.py`           | MainDepsAdapter 属性转发               |
+| `test_upstream_contract.py`           | upstream 请求构造                      |
+| `test_upstream_urls.py`               | URL 常量和构造函数                     |
+| `test_delivery_extension.py`                    | 通知 seam                              |
 
 `tests/contract_support.py` 提供 ASGI 调用辅助（`invoke`、`FakeResponse`、`FakeSessionStore`、`authed_request`），各 contract 测试共享这些 fixture 构造请求并断言响应。
 
@@ -83,7 +83,14 @@ cd frontend
 npm test
 ```
 
-前端使用 Vitest，测试文件与源码同目录放置（`*.test.ts` / `*.test.tsx`）或使用 `.browser.test.mjs` 后缀的浏览器测试。当前覆盖范围包括：
+前端使用 Vitest。单元测试和组件测试继续与源码同目录放置（`src/**/*.test.ts` / `src/**/*.test.tsx`）；跨模块源码契约测试位于 `tests/contracts/`；真实 Chromium 测试、共享 harness 和页面 fixture 分别位于 `tests/browser/`、`tests/browser/browserHarness.mjs` 和 `tests/browser/fixtures/`。
+
+`npm test` 依次组合以下两个脚本：
+
+- `npm run test:unit`：运行普通测试并排除 `tests/browser/**`，保留 Vitest 默认文件并行。
+- `npm run test:browser`：只运行 `tests/browser/` 下的浏览器测试，并使用 `--no-file-parallelism` 串行执行，避免 Chromium/Vite fixture 之间互相干扰。
+
+当前覆盖范围包括：
 
 - API 客户端 Cookie 读取与 CSRF 头注入。
 - CMN hooks（`useCmn`、`useCmnAutoRefresh`、`useCmnEligibility`、`useCmnNumbers`）。
@@ -94,8 +101,8 @@ npm test
 - 组件渲染（`StatusMessage`、`LoginSuccessStatus`、`UiIcon`、`PresentationSections`、`CartQuantityModal`）。
 - CMN 浏览器交互（长按、strict mode、scope）。
 - inbox 内容消毒。
-- 视觉契约（`VisualContracts.test.mjs`）。
-- feedback 流程（`FeedbackFlows.test.ts`）。
+- 视觉契约（`tests/contracts/VisualContracts.test.mjs`）。
+- feedback 流程（`tests/contracts/FeedbackFlows.test.ts`）。
 - mainPage 工具函数。
 - CMN 自动刷新与号码模式匹配。
 

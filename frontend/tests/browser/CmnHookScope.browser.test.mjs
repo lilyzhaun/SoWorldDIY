@@ -6,9 +6,9 @@ import { URL, fileURLToPath } from 'node:url'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createServer } from 'vite'
 
-import { dumpBrowserDom, resolveBrowserExecutable } from './test-utils/browserHarness.mjs'
+import { dumpBrowserDom, resolveBrowserExecutable } from './browserHarness.mjs'
 
-const frontendRoot = fileURLToPath(new URL('..', import.meta.url))
+const frontendRoot = fileURLToPath(new URL('../..', import.meta.url))
 let server
 let browserProfile
 let browserExecutable
@@ -21,7 +21,7 @@ beforeAll(async () => {
   await server.listen()
   const origin = server.resolvedUrls?.local[0]
   if (!origin) throw new Error('Vite browser-test server did not expose a local URL')
-  testUrl = new URL('/src/test-fixtures/cmn-hook-scope.html', origin).href
+  testUrl = new URL('/tests/browser/fixtures/cmn-hook-scope.html', origin).href
 }, 20_000)
 
 afterAll(async () => {

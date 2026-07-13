@@ -3,12 +3,12 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-import activeOffersSource from './components/ActiveOffersSection.tsx?raw'
-import dialogHookSource from './hooks/useDialogAccessibility.ts?raw'
-import historyModalSource from './components/HistoryModal.tsx?raw'
-import loginFlowSource from './hooks/useLoginFlow.ts?raw'
-import loginPageSource from './LoginPage.tsx?raw'
-import sanitizeInboxSource from './utils/sanitizeInboxContent.ts?raw'
+import activeOffersSource from '../../src/components/ActiveOffersSection.tsx?raw'
+import dialogHookSource from '../../src/hooks/useDialogAccessibility.ts?raw'
+import historyModalSource from '../../src/components/HistoryModal.tsx?raw'
+import loginFlowSource from '../../src/hooks/useLoginFlow.ts?raw'
+import loginPageSource from '../../src/LoginPage.tsx?raw'
+import sanitizeInboxSource from '../../src/utils/sanitizeInboxContent.ts?raw'
 
 function readCssBundle(entryUrl) {
   const entryPath = fileURLToPath(entryUrl)
@@ -25,8 +25,8 @@ function readCssBundle(entryUrl) {
   return load(entryPath)
 }
 
-const mainStyles = readCssBundle(new globalThis.URL('./styles/main.css', import.meta.url))
-const loginStyles = readCssBundle(new globalThis.URL('./styles/login.css', import.meta.url))
+const mainStyles = readCssBundle(new globalThis.URL('../../src/styles/main.css', import.meta.url))
+const loginStyles = readCssBundle(new globalThis.URL('../../src/styles/login.css', import.meta.url))
 
 describe('visual QA blocking contracts', () => {
   it('uses the accessible theme focus-ring token without changing focus geometry', () => {

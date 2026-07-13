@@ -40,11 +40,11 @@
 
 ### 环境要求
 
-| 依赖 | 最低版本 | 说明 |
-| --- | --- | --- |
-| Python | 3.11 | 后端运行时 |
-| Node.js | 20.19 | 前端构建 |
-| Redis | 6 | session 和鉴权码存储 |
+| 依赖    | 最低版本 | 说明                 |
+| ------- | -------- | -------------------- |
+| Python  | 3.11     | 后端运行时           |
+| Node.js | 20.19    | 前端构建             |
+| Redis   | 6        | session 和鉴权码存储 |
 
 ### 1. 克隆仓库
 
@@ -100,18 +100,18 @@ curl http://127.0.0.1:8888/_ready
 
 完整文档位于 [`docs/`](docs/README.md) 目录：
 
-| 文档 | 说明 |
-| --- | --- |
-| [架构说明](docs/01-architecture.md) | 系统组件、请求流程和外部服务边界 |
-| [安装与本地开发](docs/02-setup.md) | 从零搭建开发环境 |
-| [配置说明](docs/03-configuration.md) | 环境变量矩阵和密钥建议 |
-| [入口与运行方式](docs/04-entrypoints.md) | 后端、前端、Web 路由和维护入口 |
-| [API 参考](docs/05-api-reference.md) | 全部 HTTP 接口说明 |
-| [鉴权码管理](docs/06-auth-codes.md) | CLI 命令和安全建议 |
-| [测试说明](docs/07-testing.md) | 测试命令和覆盖范围 |
-| [部署说明](docs/08-deploy.md) | 生产部署、反向代理和运维 |
-| [安全与运维](docs/09-security-and-operations.md) | 敏感数据、会话和凭据管理 |
-| [故障排查](docs/10-troubleshooting.md) | 常见问题和解决方案 |
+| 文档                                             | 说明                             |
+| ------------------------------------------------ | -------------------------------- |
+| [架构说明](docs/01-architecture.md)              | 系统组件、请求流程和外部服务边界 |
+| [安装与本地开发](docs/02-setup.md)               | 从零搭建开发环境                 |
+| [配置说明](docs/03-configuration.md)             | 环境变量矩阵和密钥建议           |
+| [入口与运行方式](docs/04-entrypoints.md)         | 后端、前端、Web 路由和维护入口   |
+| [API 参考](docs/05-api-reference.md)             | 全部 HTTP 接口说明               |
+| [鉴权码管理](docs/06-auth-codes.md)              | CLI 命令和安全建议               |
+| [测试说明](docs/07-testing.md)                   | 测试命令和覆盖范围               |
+| [部署说明](docs/08-deploy.md)                    | 生产部署、反向代理和运维         |
+| [安全与运维](docs/09-security-and-operations.md) | 敏感数据、会话和凭据管理         |
+| [故障排查](docs/10-troubleshooting.md)           | 常见问题和解决方案               |
 
 ## 开发
 
@@ -170,9 +170,9 @@ npm run build
 │   │   ├── schemas/         # Pydantic 请求体模型
 │   │   │   └── requests.py  # PurchaseRequest, TransferRequest, CmnPurchaseRequest, ...
 │   │   └── routes/          # 路由模块
-│   │       ├── system.py    # 健康检查、就绪检查、首页、PWA 文件
+│   │       ├── system.py    # 健康检查、就绪检查与 PWA 文件
 │   │       ├── auth.py      # 登录、OTP、check-user
-│   │       ├── account_pages.py # /main 页面路由
+│   │       ├── account_pages.py # 登录页与 /main 页面路由
 │   │       ├── profile.py   # 资料与套餐用量
 │   │       ├── commerce.py  # 套餐购买、余额查询
 │   │       ├── cmn.py       # CMN 换号（GET/POST numbers, purchase）
@@ -200,6 +200,9 @@ npm run build
 │   │   ├── hooks/           # CMN、profile、购买、转移等 hooks
 │   │   ├── utils/           # 前端工具函数
 │   │   └── styles/          # CSS 聚合层（main.css / login.css）
+│   ├── tests/
+│   │   ├── browser/         # 串行 Chromium 测试、browserHarness 与 fixtures
+│   │   └── contracts/       # 跨模块源码字符串契约测试
 │   ├── index.html           # 主控制台入口
 │   └── login.html           # 登录页入口
 ├── deploy/bt/               # 宝塔/虚拟主机遗留部署示例

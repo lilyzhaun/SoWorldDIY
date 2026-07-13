@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import loginPageSource from './LoginPage.tsx?raw'
-import loginFlowSource from './hooks/useLoginFlow.ts?raw'
-import mainPageSource from './MainPage.tsx?raw'
-import appModalSource from './hooks/useAppModal.ts?raw'
-import modalActionsSource from './components/MainModalActions.tsx?raw'
-import mainPageDialogsSource from './components/MainPageDialogs.tsx?raw'
-import transferSource from './hooks/useTransfer.ts?raw'
+import loginPageSource from '../../src/LoginPage.tsx?raw'
+import loginFlowSource from '../../src/hooks/useLoginFlow.ts?raw'
+import mainPageSource from '../../src/MainPage.tsx?raw'
+import appModalSource from '../../src/hooks/useAppModal.ts?raw'
+import modalActionsSource from '../../src/components/MainModalActions.tsx?raw'
+import mainPageDialogsSource from '../../src/components/MainPageDialogs.tsx?raw'
+import transferSource from '../../src/hooks/useTransfer.ts?raw'
 
 describe('semantic feedback flow contracts', () => {
   it('uses typed login toast tones, plain messages, and unchanged timing contracts', () => {
