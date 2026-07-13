@@ -293,7 +293,7 @@ def test_check_user_reads_live_base_headers_and_proxies(monkeypatch: Any) -> Non
     captured: dict[str, object] = {}
 
     class FakeSession:
-        def __enter__(self) -> "FakeSession":
+        def __enter__(self) -> FakeSession:
             return self
 
         def __exit__(self, *_: object) -> None:
