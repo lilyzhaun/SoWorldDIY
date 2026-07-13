@@ -27,6 +27,7 @@ import { isRootOpacityTransition, usePresenceValue } from '@/hooks/usePresenceVa
 import { useProfileBootstrap } from '@/hooks/useProfileBootstrap'
 import { usePurchaseCart } from '@/hooks/usePurchaseCart'
 import { useServiceWorker } from '@/hooks/useServiceWorker'
+import { useSubscriptionBootstrap } from '@/hooks/useSubscriptionBootstrap'
 import { useTransfer } from '@/hooks/useTransfer'
 import type { AvailableAccount, Category, Plan, ProfileResponse, Subscription } from '@/types'
 import { getAccountIdFromPathname, getApiUrl } from '@/utils/mainPage'
@@ -87,24 +88,22 @@ export function MainPage(): JSX.Element {
   useServiceWorker(BUILD_VERSION)
   useBodyScrollLock(inboxOpen || historyOpen || showModal || cartQtyDraft !== null)
 
-  useProfileBootstrap({
+  useProfileBootstrap({ accountId, currentSubId, setAvailableAccounts, setCurrentSubId, setLoading, setNoNumberMode, setSubscriptions })
+
+  useSubscriptionBootstrap({
     accountId,
+    category,
     currentSubId,
-    setCurrentSubId,
     noNumberMode,
-    setNoNumberMode,
-    setLoading,
-    setSubscriptions,
-    setAvailableAccounts,
     setBalance,
     setPlans,
     setPlansLoading,
-    category,
+  }, {
+    checkCmnEligibility,
     fetchInbox,
     fetchHistory,
     resetCart,
     resetHistory,
-    checkCmnEligibility,
     showAlert,
   })
 
