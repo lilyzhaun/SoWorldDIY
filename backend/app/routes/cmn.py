@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from fastapi import FastAPI, Request
 from pydantic import ValidationError
 from starlette.responses import Response
 
 from ..schemas import CmnPurchaseRequest
-from ..upstream_urls import SIMWORLD_PAYMENT_FINISHED, simworld_url
+from ..services_commerce import build_cmn_purchase_payload
+from ..upstream_urls import simworld_url
 from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
@@ -147,46 +147,27 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             )
             if not kr:
                 return deps._json_error("Request failed", 400)
-            access_key = kr.json().get("accessPurchaseKey")
-            txn = float(body.txnAmount)
-            pmt_amt = max(0.0, float(body.price) - txn)
-            pmt: dict[str, Any] = {"amnt": pmt_amt}
-            order_sub: dict[str, Any] = {
-                "msisdn": str(body.selectedNumber),
-                "lang": "tc",
-                "subscriptionId": sid,
-                "offers": [{"offerId": body.offerId, "quantity": 1}],
-            }
-            if pmt_amt > 0:
-                pmt.update({"lang": "tc", "type": body.paymentType})
-            if txn > 0:
-                order_sub["walletPayment"] = {"txnAmount": txn}
-
-            payload = {
-                "fUrl": SIMWORLD_PAYMENT_FINISHED,
-                "purchaseType": "CMN_ONLY",
-                "accessPurchaseKey": access_key,
-                "order": {
-                    "channel": "ONLINE",
-                    "autoPayFlag": False,
-                    "pmt": pmt,
-                    "orderSubscription": order_sub,
-                },
-            }
+            purchase = build_cmn_purchase_payload(
+                body,
+                kr.json().get("accessPurchaseKey"),
+            )
 
             r = deps.make_3hk_request(
                 request=request,
                 ctx=ctx,
                 method="POST",
                 url=simworld_url(target_brand, "pmt/purchase/createPurchase/"),
-                json_data=payload,
+                json_data=purchase.payload,
                 account_id=req_ident,
                 account_context=account_ctx,
             )
             if r and r.status_code == 200 and "paymentUrl" in r.json():
                 deps.delete_cache(f"profile_{req_ident}")
                 deps.handle_purchase_event(
-                    r.json()["paymentUrl"], str(sid), pmt_amt, req_ident
+                    r.json()["paymentUrl"],
+                    str(sid),
+                    purchase.payable_amount,
+                    req_ident,
                 )
                 return deps._json_success(
                     {"status": "success", "paymentUrl": r.json()["paymentUrl"]}

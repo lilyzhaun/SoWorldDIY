@@ -5,8 +5,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.schemas.requests import PurchaseItem, PurchaseRequest
+from app.schemas.requests import CmnPurchaseRequest, PurchaseItem, PurchaseRequest
 from app.services_commerce import (
+    build_cmn_purchase_payload,
     build_plan_purchase_payload,
     load_plans_from_cache,
     parse_wallet_balance,
@@ -22,6 +23,7 @@ from app.services_transfer import (
     select_dto_offer,
     select_transfer_product_id,
 )
+from app.upstream_urls import SIMWORLD_PAYMENT_FINISHED
 
 
 def test_safe_date_str_splits_iso() -> None:
@@ -128,6 +130,60 @@ def test_build_plan_purchase_payload_new_line_exact_shape_and_no_mutation() -> N
     ]
     assert order.get("pmt") == {"amnt": 0.0}
     assert "walletPayment" not in order
+
+
+def test_build_cmn_purchase_payload_external_payment_and_wallet() -> None:
+    body = CmnPurchaseRequest(
+        subscriptionId="sub-1",
+        selectedNumber="85298765432",
+        offerId="CMN-OFFER",
+        price=100,
+        txnAmount=30,
+        paymentType="ALCN",
+    )
+    before = body.model_dump()
+
+    result = build_cmn_purchase_payload(body, "KEY")
+
+    assert body.model_dump() == before
+    assert result.payable_amount == 70.0
+    assert result.payload == {
+        "fUrl": SIMWORLD_PAYMENT_FINISHED,
+        "purchaseType": "CMN_ONLY",
+        "accessPurchaseKey": "KEY",
+        "order": {
+            "channel": "ONLINE",
+            "autoPayFlag": False,
+            "pmt": {"amnt": 70.0, "lang": "tc", "type": "ALCN"},
+            "orderSubscription": {
+                "msisdn": "85298765432",
+                "lang": "tc",
+                "subscriptionId": "sub-1",
+                "offers": [{"offerId": "CMN-OFFER", "quantity": 1}],
+                "walletPayment": {"txnAmount": 30.0},
+            },
+        },
+    }
+
+
+def test_build_cmn_purchase_payload_clamps_amount_and_omits_external_payment() -> None:
+    body = CmnPurchaseRequest(
+        subscriptionId="sub-2",
+        selectedNumber=123,
+        offerId="CMN-OFFER-2",
+        price=10,
+        txnAmount=20,
+        paymentType="CARD",
+    )
+
+    result = build_cmn_purchase_payload(body, None)
+
+    assert result.payable_amount == 0.0
+    assert result.payload["order"]["pmt"] == {"amnt": 0.0}
+    assert "walletPayment" in result.payload["order"]["orderSubscription"]
+    assert result.payload["order"]["orderSubscription"]["walletPayment"] == {
+        "txnAmount": 20.0
+    }
 
 
 def test_select_dto_and_product() -> None:

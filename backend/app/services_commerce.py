@@ -8,8 +8,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Final, TypedDict
 
-from .schemas.requests import PurchaseRequest
-from .upstream_urls import SIMWORLD_WEB_MAIN, THREE_DIY_PAYMENT_FINISHED
+from .schemas.requests import CmnPurchaseRequest, PurchaseRequest
+from .upstream_urls import (
+    SIMWORLD_PAYMENT_FINISHED,
+    SIMWORLD_WEB_MAIN,
+    THREE_DIY_PAYMENT_FINISHED,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +81,76 @@ class PlanPurchasePayload(TypedDict):
 class PlanPurchasePayloadResult:
     payload: PlanPurchasePayload
     payable_amount: float
+
+
+class CmnPurchaseOfferPayload(TypedDict):
+    offerId: str | None
+    quantity: int
+
+
+class CmnPurchaseSubscriptionPayload(TypedDict, total=False):
+    msisdn: str
+    lang: str
+    subscriptionId: str | None
+    offers: list[CmnPurchaseOfferPayload]
+    walletPayment: dict[str, float]
+
+
+class CmnPurchaseOrderPayload(TypedDict):
+    channel: str
+    autoPayFlag: bool
+    pmt: PurchasePaymentPayload
+    orderSubscription: CmnPurchaseSubscriptionPayload
+
+
+class CmnPurchasePayload(TypedDict):
+    fUrl: str
+    purchaseType: str
+    accessPurchaseKey: str | None
+    order: CmnPurchaseOrderPayload
+
+
+@dataclass(frozen=True, slots=True)
+class CmnPurchasePayloadResult:
+    payload: CmnPurchasePayload
+    payable_amount: float
+
+
+def build_cmn_purchase_payload(
+    body: CmnPurchaseRequest,
+    access_key: str | None,
+) -> CmnPurchasePayloadResult:
+    """Build the upstream payload for a CMN number purchase."""
+    txn = float(body.txnAmount)
+    payable_amount = max(0.0, float(body.price) - txn)
+    payment: PurchasePaymentPayload = {"amnt": payable_amount}
+    if payable_amount > 0:
+        payment.update({"lang": "tc", "type": body.paymentType})
+
+    subscription: CmnPurchaseSubscriptionPayload = {
+        "msisdn": str(body.selectedNumber),
+        "lang": "tc",
+        "subscriptionId": body.subscriptionId,
+        "offers": [{"offerId": body.offerId, "quantity": 1}],
+    }
+    if txn > 0:
+        subscription["walletPayment"] = {"txnAmount": txn}
+
+    payload: CmnPurchasePayload = {
+        "fUrl": SIMWORLD_PAYMENT_FINISHED,
+        "purchaseType": "CMN_ONLY",
+        "accessPurchaseKey": access_key,
+        "order": {
+            "channel": "ONLINE",
+            "autoPayFlag": False,
+            "pmt": payment,
+            "orderSubscription": subscription,
+        },
+    }
+    return CmnPurchasePayloadResult(
+        payload=payload,
+        payable_amount=payable_amount,
+    )
 
 
 def build_plan_purchase_payload(
