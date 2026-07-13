@@ -25,8 +25,8 @@ from app.main import (
 )
 from app.session_store import SessionContext
 
-# ----- helpers shared with test_app_contracts.py (duplicated intentionally
-#       so this file is self-contained and not coupled to the other). ----
+# ----- FakeResponse is intentionally local (not imported from contract_helpers)
+#       so this file stays self-contained and not coupled to app-route contracts. ----
 
 
 def _ctx_with_accounts(accounts: dict[str, Any]) -> SessionContext:
@@ -85,7 +85,7 @@ def test_make_3hk_request_passes_cookies_and_returns_response(
         def __init__(self) -> None:
             self.cookies = requests.utils.cookiejar_from_dict({"existing": "c"})
 
-        def __enter__(self) -> "FakeSession":
+        def __enter__(self) -> FakeSession:
             return self
 
         def __exit__(self, *_: object) -> None:
@@ -135,7 +135,7 @@ def test_make_3hk_request_401_triggers_silent_relogin_then_retries(
         def __init__(self) -> None:
             self.cookies = requests.utils.cookiejar_from_dict({})
 
-        def __enter__(self) -> "FakeSession":
+        def __enter__(self) -> FakeSession:
             return self
 
         def __exit__(self, *_: object) -> None:
@@ -189,7 +189,7 @@ def test_make_3hk_request_401_relogin_fails_returns_401_response(
         def __init__(self) -> None:
             self.cookies = requests.utils.cookiejar_from_dict({})
 
-        def __enter__(self) -> "FakeSession":
+        def __enter__(self) -> FakeSession:
             return self
 
         def __exit__(self, *_: object) -> None:
@@ -225,7 +225,7 @@ def test_make_3hk_request_does_not_retry_after_relogin_already_retried(
         def __init__(self) -> None:
             self.cookies = requests.utils.cookiejar_from_dict({})
 
-        def __enter__(self) -> "FakeSession":
+        def __enter__(self) -> FakeSession:
             return self
 
         def __exit__(self, *_: object) -> None:
@@ -259,7 +259,7 @@ def test_make_3hk_request_exception_returns_none(monkeypatch: MonkeyPatch) -> No
         def __init__(self) -> None:
             self.cookies = requests.utils.cookiejar_from_dict({})
 
-        def __enter__(self) -> "FakeSession":
+        def __enter__(self) -> FakeSession:
             return self
 
         def __exit__(self, *_: object) -> None:
@@ -293,7 +293,7 @@ def test_make_3hk_request_401_infers_account_id_from_account_context_identity(
         def __init__(self) -> None:
             self.cookies = requests.utils.cookiejar_from_dict({})
 
-        def __enter__(self) -> "FakeSession":
+        def __enter__(self) -> FakeSession:
             return self
 
         def __exit__(self, *_: object) -> None:
@@ -358,7 +358,7 @@ def test_attempt_silent_relogin_success_updates_cookies(monkeypatch: MonkeyPatch
         def __init__(self) -> None:
             self.cookies = requests.utils.cookiejar_from_dict({"sess": "new"})
 
-        def __enter__(self) -> "FakeSession":
+        def __enter__(self) -> FakeSession:
             return self
 
         def __exit__(self, *_: object) -> None:
@@ -391,7 +391,7 @@ def test_attempt_silent_relogin_non_204_returns_false(monkeypatch: MonkeyPatch) 
         def __init__(self) -> None:
             self.cookies = requests.utils.cookiejar_from_dict({})
 
-        def __enter__(self) -> "FakeSession":
+        def __enter__(self) -> FakeSession:
             return self
 
         def __exit__(self, *_: object) -> None:
