@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -10,12 +9,12 @@ from pydantic import ValidationError
 from starlette.responses import Response
 
 from ..schemas import PurchaseRequest
-from ..services_commerce import load_plans_from_cache, parse_wallet_balance
-from ..upstream_urls import (
-    SIMWORLD_WEB_MAIN,
-    THREE_DIY_PAYMENT_FINISHED,
-    simworld_url,
+from ..services_commerce import (
+    build_plan_purchase_payload,
+    load_plans_from_cache,
+    parse_wallet_balance,
 )
+from ..upstream_urls import simworld_url
 from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
@@ -116,7 +115,6 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
             return deps._json_error("Auth failed", 401)
 
         sid = body.subscriptionId
-        new_line = body.new_line
         target_brand = deps.get_brand_by_sub_id(ctx, str(sid), str(req_ident))
         try:
             kr = deps.make_3hk_request(
@@ -129,86 +127,26 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
             )
             if not kr:
                 return deps._json_error("Request failed", 400)
-            access_key = kr.json().get("accessPurchaseKey")
-            txn = float(body.txnAmount)
-            pmt: dict[str, Any] = {"amnt": max(0.0, float(body.price) - txn)}
-            if pmt["amnt"] > 0:
-                pmt.update({"lang": "tc", "type": body.paymentType})
-
-            if new_line:
-                offers_payload = [
-                    {
-                        "offerId": "H3OF00000000001",
-                        "quantity": 1,
-                        "autoRenewFlag": False,
-                    },
-                ]
-                for item in body.items:
-                    if item.offerId != "H3OF00000000001":
-                        offers_payload.append(
-                            {
-                                "offerId": item.offerId,
-                                "quantity": int(item.quantity),
-                                "autoRenewFlag": False,
-                            }
-                        )
-                payload = {
-                    "fUrl": THREE_DIY_PAYMENT_FINISHED,
-                    "accessPurchaseKey": access_key,
-                    "purchaseType": "PREPAID_DIY",
-                    "order": {
-                        "channel": "GLOBAL_ESIM",
-                        "autoPayFlag": False,
-                        "pmt": pmt,
-                        "orderSubscription": {
-                            "lang": "tc",
-                            "offers": offers_payload,
-                            "promoOptOuts": [],
-                            "simType": "ESIM",
-                        },
-                    },
-                }
-            else:
-                offers_payload = [
-                    {
-                        "offerId": item.offerId,
-                        "quantity": int(item.quantity),
-                        "autoRenewFlag": False,
-                    }
-                    for item in body.items
-                ]
-                sub_payload: dict[str, Any] = {
-                    "lang": "tc",
-                    "subscriptionId": sid,
-                    "offers": offers_payload,
-                }
-                if txn > 0:
-                    sub_payload["walletPayment"] = {"txnAmount": txn}
-                payload = {
-                    "fUrl": SIMWORLD_WEB_MAIN,
-                    "purchaseType": "SOSIM_VAS",
-                    "accessPurchaseKey": access_key,
-                    "order": {
-                        "channel": "ONLINE",
-                        "autoPayFlag": False,
-                        "lang": "tc",
-                        "pmt": pmt,
-                        "orderSubscriptions": [sub_payload],
-                    },
-                }
+            purchase = build_plan_purchase_payload(
+                body,
+                kr.json().get("accessPurchaseKey"),
+            )
             r = deps.make_3hk_request(
                 request=request,
                 ctx=ctx,
                 method="POST",
                 url=simworld_url(target_brand, "pmt/purchase/createPurchase/"),
-                json_data=payload,
+                json_data=purchase.payload,
                 account_id=str(req_ident),
                 account_context=account_ctx,
             )
             if r and r.status_code == 200 and "paymentUrl" in r.json():
                 deps.delete_cache(f"profile_{req_ident}")
                 deps.handle_purchase_event(
-                    r.json()["paymentUrl"], str(sid), pmt["amnt"], str(req_ident)
+                    r.json()["paymentUrl"],
+                    str(sid),
+                    purchase.payable_amount,
+                    str(req_ident),
                 )
                 return deps._json_success(
                     {"status": "success", "paymentUrl": r.json()["paymentUrl"]}

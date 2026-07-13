@@ -5,7 +5,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from app.services_commerce import load_plans_from_cache, parse_wallet_balance
+from app.schemas.requests import PurchaseItem, PurchaseRequest
+from app.services_commerce import (
+    build_plan_purchase_payload,
+    load_plans_from_cache,
+    parse_wallet_balance,
+)
 from app.services_profile import (
     build_active_offers,
     build_profile_from_brand_responses,
@@ -52,6 +57,77 @@ def test_load_plans_from_cache_ok_and_missing(tmp_path: Path) -> None:
     bad = tmp_path / "bad.json"
     bad.write_text("{not-json", encoding="utf-8")
     assert load_plans_from_cache(bad) is None
+
+
+def test_build_plan_purchase_payload_normal_flow() -> None:
+    body = PurchaseRequest(
+        subscriptionId="sub-1",
+        items=[
+            PurchaseItem(offerId="OFF1", quantity=2),
+            PurchaseItem(offerId="OFF2", quantity=1),
+        ],
+        price=100,
+        txnAmount=30,
+        paymentType="ALCN",
+    )
+
+    result = build_plan_purchase_payload(body, "KEY")
+
+    assert result.payable_amount == 70.0
+    assert result.payload == {
+        "fUrl": "https://simworld.net/SIMworld/main/tc",
+        "purchaseType": "SOSIM_VAS",
+        "accessPurchaseKey": "KEY",
+        "order": {
+            "channel": "ONLINE",
+            "autoPayFlag": False,
+            "lang": "tc",
+            "pmt": {"amnt": 70.0, "lang": "tc", "type": "ALCN"},
+            "orderSubscriptions": [
+                {
+                    "lang": "tc",
+                    "subscriptionId": "sub-1",
+                    "offers": [
+                        {"offerId": "OFF1", "quantity": 2, "autoRenewFlag": False},
+                        {"offerId": "OFF2", "quantity": 1, "autoRenewFlag": False},
+                    ],
+                    "walletPayment": {"txnAmount": 30.0},
+                }
+            ],
+        },
+    }
+
+
+def test_build_plan_purchase_payload_new_line_exact_shape_and_no_mutation() -> None:
+    body = PurchaseRequest(
+        subscriptionId="sub-1",
+        new_line=True,
+        items=[
+            PurchaseItem(offerId="VAS1", quantity=1),
+            PurchaseItem(offerId="H3OF00000000001", quantity=99),
+            PurchaseItem(offerId="VAS2", quantity=3),
+        ],
+        price=10,
+        txnAmount=20,
+        paymentType="CARD",
+    )
+    before = body.model_dump()
+
+    result = build_plan_purchase_payload(body, None)
+
+    assert body.model_dump() == before
+    assert result.payable_amount == 0.0
+    order = result.payload["order"]
+    subscription = order.get("orderSubscription")
+    assert subscription is not None
+    offers = subscription["offers"]
+    assert offers == [
+        {"offerId": "H3OF00000000001", "quantity": 1, "autoRenewFlag": False},
+        {"offerId": "VAS1", "quantity": 1, "autoRenewFlag": False},
+        {"offerId": "VAS2", "quantity": 3, "autoRenewFlag": False},
+    ]
+    assert order.get("pmt") == {"amnt": 0.0}
+    assert "walletPayment" not in order
 
 
 def test_select_dto_and_product() -> None:
