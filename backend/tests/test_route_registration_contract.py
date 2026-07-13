@@ -31,7 +31,8 @@ EXPECTED_API_ROUTES: list[tuple[str, list[str], str]] = [
     ("/api/balance", ["GET"], "get_balance"),
     ("/api/purchase", ["POST"], "purchase_plan"),
     ("/api/cmn/check", ["GET"], "check_cmn"),
-    ("/api/cmn/numbers", ["GET", "POST"], "get_cmn_numbers"),
+    ("/api/cmn/numbers", ["GET"], "get_cmn_numbers"),
+    ("/api/cmn/numbers", ["POST"], "post_cmn_numbers"),
     ("/api/cmn/purchase", ["POST"], "purchase_cmn"),
     ("/api/sim/transfer", ["POST"], "transfer_resource"),
     ("/api/inbox", ["GET"], "get_inbox"),
@@ -40,7 +41,7 @@ EXPECTED_API_ROUTES: list[tuple[str, list[str], str]] = [
     ("/internal/session-cleanup", ["POST"], "session_cleanup"),
 ]
 
-EXPECTED_OPENAPI_PATHS = sorted(path for path, _, _ in EXPECTED_API_ROUTES)
+EXPECTED_OPENAPI_PATHS = sorted({path for path, _, _ in EXPECTED_API_ROUTES})
 
 MAIN_SEAMS = [
     "session_store",
