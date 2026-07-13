@@ -76,8 +76,10 @@ cd ../backend
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-./start.sh
+HOST=127.0.0.1 PORT=8888 ./start.sh
 ```
+
+`start.sh` 默认监听 `0.0.0.0:8000`，生产环境建议绑定本机地址并通过反向代理对外提供 HTTPS。
 
 ### 5. 创建鉴权码
 
@@ -88,11 +90,11 @@ python -m app.auth_cli create YOUR_CODE --limit 10
 ### 6. 验证服务
 
 ```bash
-curl http://127.0.0.1:8000/_health
-curl http://127.0.0.1:8000/_ready
+curl http://127.0.0.1:8888/_health
+curl http://127.0.0.1:8888/_ready
 ```
 
-访问 <http://127.0.0.1:8000/> 即可看到登录页。
+访问 <http://127.0.0.1:8888/> 即可看到登录页。
 
 ## 文档
 
@@ -113,12 +115,24 @@ curl http://127.0.0.1:8000/_ready
 
 ## 开发
 
-```bash
-# 后端测试和 lint
-cd backend && .venv/bin/pytest && .venv/bin/ruff check app tests
+后端 CI gates（与 `.github/workflows/ci.yml` 一致）：
 
-# 前端测试、lint 和构建
-cd frontend && npm test && npm run lint && npm run build
+```bash
+cd backend
+.venv/bin/python -m compileall -q app
+PYTHONWARNINGS=error .venv/bin/python -c "from app.main import create_app; create_app().openapi()"
+basedpyright --project pyrightconfig.json
+.venv/bin/ruff check app tests
+.venv/bin/pytest
+```
+
+前端 CI gates：
+
+```bash
+cd frontend
+npm run lint
+npm test
+npm run build
 ```
 
 详见 [测试说明](docs/07-testing.md) 和 [贡献指南](CONTRIBUTING.md)。
@@ -128,25 +142,60 @@ cd frontend && npm test && npm run lint && npm run build
 ```text
 .
 ├── backend/                 # FastAPI 后端
-│   ├── app/                 # 应用代码、配置、会话、鉴权码和安全工具
-│   │   ├── main.py          # 应用工厂与路由注册入口
-│   │   ├── routes/          # 路由模块 (auth, profile, cmn, commerce, ...)
-│   │   ├── services.py      # 3HK/品牌/套餐服务逻辑
-│   │   ├── upstream.py      # 上游请求与静默重登
-│   │   ├── runtime.py       # 运行时依赖装配
+│   ├── app/
+│   │   ├── main.py          # 应用工厂、路由注册、模块 seam re-export
+│   │   ├── main_deps.py     # MainDepsAdapter（模块级 late-bound 依赖适配器）
+│   │   ├── runtime.py       # 运行时依赖装配（Redis、缓存、session_store）
 │   │   ├── config.py        # 配置加载
 │   │   ├── session_store.py # Redis 会话存储
+│   │   ├── session_utils.py # 会话中间件与 session 辅助函数
 │   │   ├── auth_codes.py    # 鉴权码存储
 │   │   ├── security.py      # 密码加密与 CSRF
-│   │   └── auth_cli.py      # 鉴权码 CLI
+│   │   ├── auth_cli.py      # 鉴权码 CLI
+│   │   ├── upstream.py       # 上游请求与静默重登
+│   │   ├── upstream_urls.py # 上游 URL 常量与构造
+│   │   ├── services.py       # 品牌识别、套餐后台刷新、购买通知
+│   │   ├── services_commerce.py  # 套餐/CMN 购买 payload 与钱包余额解析
+│   │   ├── services_profile.py   # 资料聚合与品牌 profile 合并
+│   │   ├── services_profile_offers.py # active offer 解析
+│   │   ├── services_transfer.py  # 资源转移 offer 选择与 payload 组装
+│   │   ├── responses.py     # JSON/错误/重定向响应函数与 Protocol
+│   │   ├── delivery_extension.py      # 通知发送 seam（默认 no-op）
+│   │   ├── cache_store.py   # 内存缓存
+│   │   ├── request_overrides.py # 代理解析 seam
+│   │   ├── schemas/         # Pydantic 请求体模型
+│   │   │   └── requests.py  # PurchaseRequest, TransferRequest, CmnPurchaseRequest, ...
+│   │   └── routes/          # 路由模块
+│   │       ├── system.py    # 健康检查、就绪检查、首页、PWA 文件
+│   │       ├── auth.py      # 登录、OTP、check-user
+│   │       ├── account_pages.py # /main 页面路由
+│   │       ├── profile.py   # 资料与套餐用量
+│   │       ├── commerce.py  # 套餐购买、余额查询
+│   │       ├── cmn.py       # CMN 换号（GET/POST numbers, purchase）
+│   │       ├── transfer.py  # 资源转移
+│   │       ├── messages.py  # 收件箱与交易记录
+│   │       ├── session.py   # 登出与内部维护入口
+│   │       └── deps.py      # RouteDeps Protocol
+│   ├── tests/               # pytest 测试（含按路由拆分的 contract 测试）
 │   ├── plans_cache/         # 运行时套餐缓存（仅 .gitkeep）
+│   ├── pyproject.toml       # Ruff + pytest 配置
+│   ├── pyrightconfig.json   # basedpyright 配置
 │   ├── requirements.txt
-│   ├── requirements-dev.txt # 开发依赖 (ruff, pytest)
-│   ├── run.py               # ASGI 入口
+│   ├── requirements-dev.txt # ruff, pytest, basedpyright
+│   ├── run.py               # ASGI 入口（导出 app）
 │   └── start.sh             # 启动脚本
 ├── frontend/                # React + Vite 前端
 │   ├── public/              # PWA manifest、service worker
-│   ├── src/                 # 登录页、主页面、API 客户端
+│   ├── src/
+│   │   ├── main.tsx         # 主控制台 React 挂载入口
+│   │   ├── login.tsx        # 登录页 React 挂载入口
+│   │   ├── MainPage.tsx     # 主页面容器（组合 hooks 与组件）
+│   │   ├── LoginPage.tsx   # 登录页
+│   │   ├── api/client.ts    # API 客户端（CSRF 头注入）
+│   │   ├── components/      # 可复用 UI 组件
+│   │   ├── hooks/           # CMN、profile、购买、转移等 hooks
+│   │   ├── utils/           # 前端工具函数
+│   │   └── styles/          # CSS 聚合层（main.css / login.css）
 │   ├── index.html           # 主控制台入口
 │   └── login.html           # 登录页入口
 ├── deploy/bt/               # 宝塔/虚拟主机遗留部署示例

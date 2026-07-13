@@ -10,32 +10,74 @@
 
 1. 准备 Redis。
 2. 准备 `backend/.env`，设置强随机密钥和生产 Redis 地址。
-3. 安装后端依赖。
-4. 安装并构建前端。
-5. 使用 Uvicorn、systemd、进程管理器或容器运行 `backend/run.py` 暴露的 ASGI 应用。
-6. 用 Nginx、Caddy 或其他反向代理转发到后端监听端口。
+3. 安装后端依赖（`pip install -r requirements.txt`）。
+4. 安装并构建前端（`npm ci && npm run build`）。
+5. 用 systemd 或进程管理器运行 Uvicorn，监听本机端口。
+6. 用 Nginx、Caddy 或其他反向代理转发到后端监听端口，对外提供 HTTPS。
 
 ## 构建前端
 
 ```bash
 cd frontend
-npm install
+npm ci
 npm run build
 ```
 
-确保 `frontend/dist/index.html`、`frontend/dist/login.html`、`frontend/dist/manifest.json`、`frontend/dist/sw.js` 和 `frontend/dist/assets/` 存在。
+确保 `frontend/dist/index.html`、`frontend/dist/login.html`、`frontend/dist/manifest.json`、`frontend/dist/sw.js`、`frontend/dist/assets/` 和 `frontend/dist/static/` 存在。
 
 ## 启动后端
+
+### 本地开发
 
 ```bash
 cd backend
 python -m venv .venv
 . .venv/bin/activate
 pip install -r requirements.txt
-HOST=127.0.0.1 PORT=8000 ./start.sh
+HOST=127.0.0.1 PORT=8888 ./start.sh
 ```
 
-生产环境建议只监听内网地址或本机地址，由反向代理对外提供 HTTPS。
+`start.sh` 默认监听 `0.0.0.0:8000`，可用 `HOST` 和 `PORT` 环境变量覆盖。生产环境建议只监听内网地址或本机地址，由反向代理对外提供 HTTPS。
+
+### systemd 生产部署
+
+生产环境使用 systemd 管理进程。当前部署的 systemd 单元位于 `/etc/systemd/system/3hk-new.service`：
+
+```ini
+[Unit]
+Description=3HK New App
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/repos/3hk_new/backend
+ExecStart=/root/repos/3hk_new/backend/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8888
+Restart=always
+RestartSec=3
+StandardOutput=append:/var/log/3hk-new.log
+StandardError=append:/var/log/3hk-new.log
+
+[Install]
+WantedBy=multi-user.target
+```
+
+关键点：
+
+- `WorkingDirectory` 是 `backend/`，Uvicorn 从该目录加载 `app.main:app`。
+- 监听端口 8888，反向代理应转发到该端口。
+- `Restart=always` 确保进程退出后自动重启。
+- 日志追加到 `/var/log/3hk-new.log`。
+
+管理命令：
+
+```bash
+systemctl daemon-reload
+systemctl enable 3hk-new.service
+systemctl start 3hk-new.service
+systemctl status 3hk-new.service
+systemctl restart 3hk-new.service
+```
 
 ## 反向代理建议
 
@@ -51,6 +93,60 @@ HOST=127.0.0.1 PORT=8000 ./start.sh
 - 使用密码或内网访问控制。
 - 根据业务需要配置持久化。
 - 备份前确认备份文件不会公开。
+
+## 健康检查
+
+### 本地检查
+
+```bash
+curl http://127.0.0.1:8888/_health
+curl http://127.0.0.1:8888/_ready
+```
+
+`/_health` 返回 `{"status":"ok"}`，只确认进程存活。`/_ready` 检查 Redis、前端构建产物和缓存目录，任一失败返回 503 和 `checks` 字段。
+
+### 公网检查
+
+```bash
+curl https://3hk.exesim.com/_health
+curl https://3hk.exesim.com/_ready
+```
+
+### PID 检查
+
+确认 systemd 管理的进程正在运行：
+
+```bash
+systemctl is-active 3hk-new.service
+systemctl status 3hk-new.service
+```
+
+`is-active` 返回 `active` 表示进程在运行。`status` 显示 Main PID 和最近日志。
+
+## 回滚
+
+回滚使用 `git revert` 创建反向提交，安全且不丢失历史。**不要使用 `git reset --hard`**，它会丢弃未提交的更改并改写历史，可能导致运行中的服务状态与仓库不一致。
+
+```bash
+# 查看最近的提交
+git log --oneline -5
+
+# 回滚指定提交
+git revert <commit-sha>
+
+# 推送回滚提交
+git push
+
+# 重新构建前端（如果前端有变更）
+cd frontend && npm run build
+
+# 重启服务以加载后端变更
+systemctl restart 3hk-new.service
+
+# 验证
+curl http://127.0.0.1:8888/_health
+curl http://127.0.0.1:8888/_ready
+```
 
 ## 运行时文件
 
@@ -68,17 +164,6 @@ HOST=127.0.0.1 PORT=8000 ./start.sh
 ## 宝塔/虚拟主机遗留说明
 
 `deploy/bt/` 下保留了宝塔/虚拟主机风格部署的遗留说明。根目录不再保留 `.htaccess` 或 `.user.ini`，避免污染应用代码目录。如果仍使用这类环境，可参考 `deploy/bt/.user.ini.example` 按线上路径手动创建。
-
-## 健康检查
-
-部署后执行：
-
-```bash
-curl https://your-domain.example/_health
-curl https://your-domain.example/_ready
-```
-
-`/_ready` 返回 503 时，按返回的 `checks` 字段排查 Redis、前端构建产物或缓存目录。
 
 ---
 
