@@ -52,26 +52,12 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             }
         )
 
-    @app.api_route("/api/cmn/numbers", methods=["GET", "POST"])
-    async def get_cmn_numbers(request: Request) -> Response:
-        ctx = deps._require_login(request)
-        if not ctx:
-            return deps._redirect_to_login()
-        if request.method == "POST":
-            csrf_error = deps._validate_csrf(request, ctx)
-            if csrf_error:
-                return csrf_error
-
-        if request.method == "GET":
-            req_ident = request.query_params.get("account_id")
-            sid = request.query_params.get("subscriptionId")
-        else:
-            form = await request.form()
-            req_ident = str(form.get("account_id")) if form.get("account_id") else None
-            sid = (
-                str(form.get("subscriptionId")) if form.get("subscriptionId") else None
-            )
-
+    async def _build_cmn_numbers(
+        request: Request,
+        ctx,
+        req_ident: str | None,
+        sid: str | None,
+    ) -> Response:
         account_ctx = deps.get_account_context(ctx, req_ident)
         if not account_ctx:
             return deps._redirect_to_login()
@@ -89,6 +75,44 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             return deps._json_error("Fetch failed", 400)
         numbers = sorted(set(r.json().get("lineList", [])))[:9]
         return deps._json_success({"status": "success", "numbers": numbers})
+
+    @app.get(
+        "/api/cmn/numbers",
+        name="get_cmn_numbers",
+        operation_id="get_cmn_numbers",
+    )
+    async def get_cmn_numbers(request: Request) -> Response:
+        ctx = deps._require_login(request)
+        if not ctx:
+            return deps._redirect_to_login()
+        return await _build_cmn_numbers(
+            request,
+            ctx=ctx,
+            req_ident=request.query_params.get("account_id"),
+            sid=request.query_params.get("subscriptionId"),
+        )
+
+    @app.post(
+        "/api/cmn/numbers",
+        name="post_cmn_numbers",
+        operation_id="post_cmn_numbers",
+    )
+    async def post_cmn_numbers(request: Request) -> Response:
+        ctx = deps._require_login(request)
+        if not ctx:
+            return deps._redirect_to_login()
+        csrf_error = deps._validate_csrf(request, ctx)
+        if csrf_error:
+            return csrf_error
+        form = await request.form()
+        req_ident = str(form.get("account_id")) if form.get("account_id") else None
+        sid = str(form.get("subscriptionId")) if form.get("subscriptionId") else None
+        return await _build_cmn_numbers(
+            request=request,
+            ctx=ctx,
+            req_ident=req_ident,
+            sid=sid,
+        )
 
     @app.post("/api/cmn/purchase")
     async def purchase_cmn(request: Request) -> Response:

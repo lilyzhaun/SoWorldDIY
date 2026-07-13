@@ -250,6 +250,13 @@ def _endpoint(path: str) -> Callable[..., Any]:
 
 
 def run_endpoint(path: str, request: Request) -> Any:
+    method = (request.method or "").upper()
+    for route in main.app.routes:
+        if not isinstance(route, APIRoute) or route.path != path:
+            continue
+        methods = {m for m in route.methods or set()} if route.methods else set()
+        if not method or method in methods:
+            return anyio.run(route.endpoint, request)
     return anyio.run(_endpoint(path), request)
 
 

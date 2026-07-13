@@ -83,6 +83,31 @@ def test_cmn_numbers_fetch_fail_returns_400(monkeypatch: MonkeyPatch) -> None:
     }
 
 
+def test_cmn_numbers_post_returns_sorted_unique(monkeypatch: MonkeyPatch) -> None:
+    captured: list[str] = []
+    monkeypatch.setattr(
+        main,
+        "make_3hk_request",
+        lambda **kw: (
+            captured.append(kw.get("method", "")),
+            FakeResponse(200, {"lineList": ["222", "111", "111", "333"]}),
+        )[1],
+    )
+    request = authed_request(
+        "/api/cmn/numbers",
+        "POST",
+        content_type="application/x-www-form-urlencoded",
+        body=b"account_id=a%40b.com&subscriptionId=s",
+    )
+    resp = run_endpoint("/api/cmn/numbers", request)
+    assert resp.status_code == 200
+    assert json.loads(bytes(resp.body)) == {
+        "status": "success",
+        "numbers": ["111", "222", "333"],
+    }
+    assert captured == ["POST"]
+
+
 def test_cmn_numbers_post_without_csrf_returns_403(monkeypatch: MonkeyPatch) -> None:
     request = authed_request(
         "/api/cmn/numbers",

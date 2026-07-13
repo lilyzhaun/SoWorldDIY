@@ -31,7 +31,8 @@ EXPECTED_API_ROUTES: list[tuple[str, list[str], str]] = [
     ("/api/balance", ["GET"], "get_balance"),
     ("/api/purchase", ["POST"], "purchase_plan"),
     ("/api/cmn/check", ["GET"], "check_cmn"),
-    ("/api/cmn/numbers", ["GET", "POST"], "get_cmn_numbers"),
+    ("/api/cmn/numbers", ["GET"], "get_cmn_numbers"),
+    ("/api/cmn/numbers", ["POST"], "post_cmn_numbers"),
     ("/api/cmn/purchase", ["POST"], "purchase_cmn"),
     ("/api/sim/transfer", ["POST"], "transfer_resource"),
     ("/api/inbox", ["GET"], "get_inbox"),
@@ -40,7 +41,7 @@ EXPECTED_API_ROUTES: list[tuple[str, list[str], str]] = [
     ("/internal/session-cleanup", ["POST"], "session_cleanup"),
 ]
 
-EXPECTED_OPENAPI_PATHS = sorted(path for path, _, _ in EXPECTED_API_ROUTES)
+EXPECTED_OPENAPI_PATHS = sorted({path for path, _, _ in EXPECTED_API_ROUTES})
 
 MAIN_SEAMS = [
     "session_store",
@@ -110,6 +111,13 @@ def test_api_route_topology_order_methods_and_names() -> None:
 def test_openapi_paths_match_registered_api_routes() -> None:
     paths = sorted(main.app.openapi()["paths"].keys())
     assert paths == EXPECTED_OPENAPI_PATHS
+
+
+def test_cmn_numbers_route_operation_ids_are_distinct() -> None:
+    cmn_openapi = main.app.openapi()["paths"].get("/api/cmn/numbers", {})
+    assert "get" in cmn_openapi
+    assert "post" in cmn_openapi
+    assert cmn_openapi["get"]["operationId"] != cmn_openapi["post"]["operationId"]
 
 
 def test_middleware_includes_session_middleware() -> None:
