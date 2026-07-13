@@ -4,11 +4,54 @@ import json
 import logging
 import uuid
 from dataclasses import dataclass
+from typing import Protocol
 
-import redis
 from redis.exceptions import RedisError
 
 logger = logging.getLogger(__name__)
+
+
+class SessionRedisClient(Protocol):
+    """Sync Redis surface used by session storage."""
+
+    def get(self, name: str) -> str | bytes | None: ...
+
+    def setex(self, name: str, time: int, value: str) -> object: ...
+
+    def delete(self, *names: str) -> int: ...
+
+
+def _bind_session_redis_client(client: object) -> SessionRedisClient:
+    """Adapt a redis-like client to the sync session Protocol.
+
+    redis-py stubs type many commands as ``Awaitable[T] | T``. Binding through
+    ``getattr`` plus narrow runtime checks keeps store code on concrete sync
+    return types while remaining compatible with ``redis.Redis`` and test fakes.
+    """
+    methods = {name: getattr(client, name) for name in ("get", "setex", "delete")}
+    get = methods["get"]
+    setex = methods["setex"]
+    delete = methods["delete"]
+
+    class _BoundSessionRedisClient:
+        def get(self, name: str) -> str | bytes | None:
+            raw = get(name)
+            if raw is None or isinstance(raw, (str, bytes)):
+                return raw
+            raise TypeError(f"redis GET returned unexpected type {type(raw)!r}")
+
+        def setex(self, name: str, time: int, value: str) -> object:
+            return setex(name, time, value)
+
+        def delete(self, *names: str) -> int:
+            result = delete(*names)
+            if isinstance(result, bool):
+                return int(result)
+            if isinstance(result, int):
+                return result
+            raise TypeError(f"redis DELETE returned unexpected type {type(result)!r}")
+
+    return _BoundSessionRedisClient()
 
 
 @dataclass
@@ -20,12 +63,12 @@ class SessionContext:
 class RedisSessionStore:
     def __init__(
         self,
-        redis_client: redis.Redis,
+        redis_client: object,
         key_prefix: str,
         lifetime_seconds: int,
         sid_prefix: str,
     ) -> None:
-        self.redis_client = redis_client
+        self.redis_client = _bind_session_redis_client(redis_client)
         self.key_prefix = key_prefix
         self.lifetime_seconds = lifetime_seconds
         self.sid_prefix = sid_prefix

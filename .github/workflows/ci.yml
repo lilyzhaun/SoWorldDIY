@@ -32,6 +32,9 @@ jobs:
           python-version: "3.11"
       - run: pip install -r requirements.txt
       - run: pip install -r requirements-dev.txt
+      - run: python -m compileall -q app
+      - run: PYTHONWARNINGS=error python -c "from app.main import create_app; create_app().openapi()"
+      - run: basedpyright --project pyrightconfig.json
       - run: ruff check app tests
       - run: pytest
 

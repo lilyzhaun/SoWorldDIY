@@ -2,20 +2,107 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterable, Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
-import redis
 from redis.exceptions import RedisError
 
 logger = logging.getLogger(__name__)
 
 
+class AuthCodeRedisClient(Protocol):
+    """Sync Redis surface used by auth-code storage."""
+
+    def exists(self, *names: str) -> int | bool: ...
+
+    def hset(
+        self,
+        name: str,
+        key: str | None = None,
+        value: str | None = None,
+        mapping: Mapping[str, object] | None = None,
+    ) -> object: ...
+
+    def delete(self, *names: str) -> int: ...
+
+    def scan_iter(self, match: str | None = None) -> Iterable[object]: ...
+
+    def hgetall(self, name: str) -> dict[str, str]: ...
+
+    def eval(self, script: str, numkeys: int, *keys_and_args: str) -> object: ...
+
+
+def _bind_auth_code_redis_client(client: object) -> AuthCodeRedisClient:
+    """Adapt a redis-like client to the sync auth-code Protocol.
+
+    redis-py stubs type many commands as ``Awaitable[T] | T``. Binding through
+    ``getattr`` plus narrow runtime checks keeps store code on concrete sync
+    return types while remaining compatible with ``redis.Redis`` and test fakes.
+    """
+    methods = {
+        name: getattr(client, name)
+        for name in ("exists", "hset", "delete", "scan_iter", "hgetall", "eval")
+    }
+    exists = methods["exists"]
+    hset = methods["hset"]
+    delete = methods["delete"]
+    scan_iter = methods["scan_iter"]
+    hgetall = methods["hgetall"]
+    eval_script = methods["eval"]
+
+    class _BoundAuthCodeRedisClient:
+        def exists(self, *names: str) -> int | bool:
+            result = exists(*names)
+            if isinstance(result, bool):
+                return result
+            if isinstance(result, int):
+                return result
+            raise TypeError(f"redis EXISTS returned unexpected type {type(result)!r}")
+
+        def hset(
+            self,
+            name: str,
+            key: str | None = None,
+            value: str | None = None,
+            mapping: Mapping[str, object] | None = None,
+        ) -> object:
+            if mapping is not None:
+                return hset(name, mapping=dict(mapping))
+            return hset(name, key, value)
+
+        def delete(self, *names: str) -> int:
+            result = delete(*names)
+            if isinstance(result, bool):
+                return int(result)
+            if isinstance(result, int):
+                return result
+            raise TypeError(f"redis DELETE returned unexpected type {type(result)!r}")
+
+        def scan_iter(self, match: str | None = None) -> Iterable[object]:
+            if match is None:
+                return scan_iter()
+            return scan_iter(match)
+
+        def hgetall(self, name: str) -> dict[str, str]:
+            result = hgetall(name)
+            if not isinstance(result, dict):
+                raise TypeError(
+                    f"redis HGETALL returned unexpected type {type(result)!r}"
+                )
+            return {str(field): str(value) for field, value in result.items()}
+
+        def eval(self, script: str, numkeys: int, *keys_and_args: str) -> object:
+            return eval_script(script, numkeys, *keys_and_args)
+
+    return _BoundAuthCodeRedisClient()
+
+
 class AuthCodeStore:
     def __init__(
-        self, redis_client: redis.Redis, seed_file: Path, key_prefix: str = "auth_code:"
+        self, redis_client: object, seed_file: Path, key_prefix: str = "auth_code:"
     ) -> None:
-        self.redis_client = redis_client
+        self.redis_client = _bind_auth_code_redis_client(redis_client)
         self.seed_file = seed_file
         self.key_prefix = key_prefix
 
@@ -108,15 +195,17 @@ class AuthCodeStore:
             local next_used = redis.call('HINCRBY', key, 'times_used', 1)
             return {1, usage_limit, next_used}
             """
-            status, _, _ = self.redis_client.eval(script, 1, key)
-            status = int(status)
+            result = self.redis_client.eval(script, 1, key)
+            if not isinstance(result, (list, tuple)) or len(result) < 1:
+                raise RedisError("auth code eval returned unexpected payload")
+            status = int(str(result[0]))
             if status == -1:
                 return False, "无效鉴权码"
             if status == 0:
                 return False, "鉴权码已用完"
             return True, "OK"
 
-        entry: dict[str, Any] = self.redis_client.hgetall(key)
+        entry = self.redis_client.hgetall(key)
         if not entry:
             return False, "无效鉴权码"
         usage_limit = int(entry.get("usage_limit", 0))
