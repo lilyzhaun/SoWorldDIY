@@ -1,8 +1,9 @@
 import { useState } from 'react'
 
-import { apiPostJson } from '../api/client'
-import type { Subscription, TransferDraft } from '../types'
-import { getApiUrl } from '../utils/mainPage'
+import { apiPostJson } from '@/api/client'
+import type { Subscription, TransferDraft } from '@/types'
+import { toUserFacingApiError } from '@/utils'
+import { getApiUrl } from '@/utils/mainPage'
 
 export function useTransfer(accountId: string, currentSubId: string) {
   const [transferDraft, setTransferDraft] = useState<TransferDraft | null>(null)
@@ -44,9 +45,9 @@ export function useTransfer(accountId: string, currentSubId: string) {
         setTransferSubmitting(false)
         setTransferError(data.message || '转移失败')
       }
-    } catch {
+    } catch (error: unknown) {
       setTransferSubmitting(false)
-      setTransferError('网络请求失败')
+      setTransferError(toUserFacingApiError(error, '网络请求失败'))
     }
     return null
   }

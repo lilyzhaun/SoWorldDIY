@@ -1,5 +1,5 @@
-import type { TransferDraft } from '../types'
-import { normalizeUnit } from '../utils/mainPage'
+import type { TransferDraft } from '@/types'
+import { normalizeUnit } from '@/utils/mainPage'
 import { StatusMessage } from './StatusMessage'
 
 type TransferModalContentProps = { readonly amount: string; readonly draft: TransferDraft; readonly error: string; readonly onChangeAmount: (value: string) => void; readonly onChangeTarget: (value: string) => void; readonly target: string }

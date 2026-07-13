@@ -1,7 +1,7 @@
 import { StrictMode, useEffect, useLayoutEffect, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import { useCmn } from '../hooks/useCmn'
+import { useCmn } from '@/hooks/useCmn'
 
 const wait = (milliseconds: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 const realDateNow = Date.now.bind(Date)

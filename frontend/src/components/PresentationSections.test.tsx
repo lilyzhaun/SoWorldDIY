@@ -14,8 +14,8 @@ import { MainHeader } from './MainHeader'
 import { PlanList } from './PlanList'
 import { PurchaseModalContent } from './PurchaseModalContent'
 import { TransferModalContent } from './TransferModalContent'
-import { parseCmnPattern } from '../utils/cmnPattern'
-import { splitInboxTimeTokens } from '../utils/inboxTimeTokens'
+import { parseCmnPattern } from '@/utils/cmnPattern'
+import { splitInboxTimeTokens } from '@/utils/inboxTimeTokens'
 
 vi.mock('dompurify', () => ({
   default: {

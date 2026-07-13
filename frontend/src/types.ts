@@ -100,14 +100,16 @@ export type CartItem = {
   quantity: number
 }
 
+export type CmnOfferData = {
+  offerId: string
+  offerSubType?: string
+  price: number
+}
+
 export type CmnCheckResponse = {
   status: string
   message?: string
-  data?: {
-    offerId: string
-    offerSubType?: string
-    price: number
-  }
+  data?: CmnOfferData
 }
 
 export type TransferDraft = {

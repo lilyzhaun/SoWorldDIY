@@ -1,15 +1,32 @@
 import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 import activeOffersSource from './components/ActiveOffersSection.tsx?raw'
 import dialogHookSource from './hooks/useDialogAccessibility.ts?raw'
 import historyModalSource from './components/HistoryModal.tsx?raw'
+import loginFlowSource from './hooks/useLoginFlow.ts?raw'
 import loginPageSource from './LoginPage.tsx?raw'
 import sanitizeInboxSource from './utils/sanitizeInboxContent.ts?raw'
 
-const mainStyles = readFileSync(fileURLToPath(new globalThis.URL('./styles/main.css', import.meta.url)), 'utf8')
-const loginStyles = readFileSync(fileURLToPath(new globalThis.URL('./styles/login.css', import.meta.url)), 'utf8')
+function readCssBundle(entryUrl) {
+  const entryPath = fileURLToPath(entryUrl)
+  const seen = new Set()
+  const load = (filePath) => {
+    const absolute = resolve(filePath)
+    if (seen.has(absolute)) return ''
+    seen.add(absolute)
+    const source = readFileSync(absolute, 'utf8')
+    return source.replace(/@import\s+['"](.+?)['"]\s*;/g, (_match, importPath) => {
+      return load(resolve(dirname(absolute), importPath))
+    })
+  }
+  return load(entryPath)
+}
+
+const mainStyles = readCssBundle(new globalThis.URL('./styles/main.css', import.meta.url))
+const loginStyles = readCssBundle(new globalThis.URL('./styles/login.css', import.meta.url))
 
 describe('visual QA blocking contracts', () => {
   it('uses the accessible theme focus-ring token without changing focus geometry', () => {
@@ -127,7 +144,7 @@ describe('visual QA blocking contracts', () => {
 
   it('retains toast content for its visual exit without changing the three-second timer', () => {
     expect(loginPageSource).toContain('retainedToast')
-    expect(loginPageSource).toContain('}, 3000)')
+    expect(loginFlowSource).toContain('}, 3000)')
     expect(loginPageSource).toContain('onTransitionEnd')
   })
 

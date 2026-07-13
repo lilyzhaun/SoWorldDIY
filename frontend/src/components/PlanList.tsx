@@ -1,5 +1,5 @@
-import type { Plan } from '../types'
-import { stripHtml } from '../utils/mainPage'
+import type { Plan } from '@/types'
+import { stripHtml } from '@/utils/mainPage'
 import { UiIcon } from './UiIcon'
 
 type PlanListProps = {

@@ -1,4 +1,4 @@
-import type { AvailableAccount, Subscription } from '../types'
+import type { AvailableAccount, Subscription } from '@/types'
 import { UiIcon } from './UiIcon'
 
 type AccountSwitchModalContentProps = {

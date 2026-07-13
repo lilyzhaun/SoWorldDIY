@@ -1,8 +1,8 @@
 import { useState } from 'react'
 
-import { apiGet } from '../api/client'
-import type { HistoryItem } from '../types'
-import { getApiUrl, getIsoTime } from '../utils/mainPage'
+import { apiGet } from '@/api/client'
+import type { HistoryItem } from '@/types'
+import { getApiUrl, getIsoTime } from '@/utils/mainPage'
 
 type ShowAlert = (text: string, title?: string) => void
 

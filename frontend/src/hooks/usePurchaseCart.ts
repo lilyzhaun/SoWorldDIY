@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 
-import { apiPostJson } from '../api/client'
-import type { CartItem, CmnCheckResponse, Plan } from '../types'
-import { getApiUrl } from '../utils/mainPage'
+import { apiPostJson } from '@/api/client'
+import type { CartItem, CmnCheckResponse, Plan } from '@/types'
+import { toUserFacingApiError } from '@/utils'
+import { getApiUrl } from '@/utils/mainPage'
 
 export type CartQuantityDraft = {
   readonly offerId: string
@@ -88,8 +89,8 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
         showAlert(data.message || '提交失败', '错误')
         setPurchaseDraft((previous) => (previous ? { ...previous, submitting: false } : null))
       }
-    } catch {
-      showAlert('网络错误', '错误')
+    } catch (error: unknown) {
+      showAlert(toUserFacingApiError(error, '网络错误'), '错误')
       setPurchaseDraft((previous) => (previous ? { ...previous, submitting: false } : null))
     }
   }
@@ -106,8 +107,8 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
         showAlert(data.message || '提交失败', '失败')
         setPurchaseDraft((previous) => (previous ? { ...previous, submitting: false } : null))
       }
-    } catch {
-      showAlert('网络错误', '错误')
+    } catch (error: unknown) {
+      showAlert(toUserFacingApiError(error, '网络错误'), '错误')
       setPurchaseDraft((previous) => (previous ? { ...previous, submitting: false } : null))
     }
   }

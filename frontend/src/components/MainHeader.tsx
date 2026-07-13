@@ -1,5 +1,5 @@
-import type { AvailableAccount, Category, Subscription } from '../types'
-import { formatStatus } from '../utils/mainPage'
+import type { AvailableAccount, Category, Subscription } from '@/types'
+import { formatStatus } from '@/utils/mainPage'
 import { UiIcon } from './UiIcon'
 
 type MainHeaderProps = {

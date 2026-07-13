@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { apiGet } from '../api/client'
-import type { CmnCheckResponse } from '../types'
+import { apiGet } from '@/api/client'
+import type { CmnCheckResponse } from '@/types'
+import { toUserFacingApiError } from '@/utils'
 import {
   CMN_AUTO_REFRESH_MAX_ATTEMPTS,
   type CmnAutoRefreshResult,
   type CmnRefreshOutcome,
   runCmnAutoRefresh,
-} from '../utils/cmnAutoRefresh'
-import { parseCmnPattern } from '../utils/cmnPattern'
-import { getApiUrl } from '../utils/mainPage'
+} from '@/utils/cmnAutoRefresh'
+import { parseCmnPattern } from '@/utils/cmnPattern'
+import { getApiUrl } from '@/utils/mainPage'
 
 type ShowAlert = (text: string, title?: string) => void
 type OpenPurchase = (title: string, price: number, source: 'cmn') => void
@@ -144,11 +145,11 @@ export function useCmn(accountId: string, currentSubId: string, visible: boolean
         setCmnError(data.message || '无法使用换号服务')
         cancelAutoRefresh(false)
       }
-    } catch (error) {
+    } catch (error: unknown) {
       if (controller.signal.aborted) return
-      if (error instanceof Error && mountedRef.current && scope === scopeGenerationRef.current) {
+      if (mountedRef.current && scope === scopeGenerationRef.current) {
         setCmnData(null)
-        setCmnError('网络错误')
+        setCmnError(toUserFacingApiError(error, '网络错误'))
         cancelAutoRefresh(false)
       }
     } finally {
@@ -189,11 +190,11 @@ export function useCmn(accountId: string, currentSubId: string, visible: boolean
       canRefreshAtRef.current = Date.now() + (CMN_REFRESH_COOLDOWN_SECONDS * 1000)
       setCmnCooldown(CMN_REFRESH_COOLDOWN_SECONDS)
       return { kind: 'success', numbers }
-    } catch (error) {
+    } catch (error: unknown) {
       if (requestSignal.aborted) return { kind: 'unavailable' }
-      if (error instanceof Error && isCurrent()) {
+      if (isCurrent()) {
         setCmnCanRefresh(true)
-        if (mode === 'manual') showAlert('请求失败')
+        if (mode === 'manual') showAlert(toUserFacingApiError(error, '请求失败'))
         return { kind: 'error' }
       }
       return { kind: 'unavailable' }

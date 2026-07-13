@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 
-import { useDialogAccessibility } from '../hooks/useDialogAccessibility'
-import type { HistoryItem } from '../types'
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility'
+import type { HistoryItem } from '@/types'
 import { UiIcon } from './UiIcon'
 
 type HistoryModalProps = {

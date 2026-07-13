@@ -1,10 +1,10 @@
 import { useCallback, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
-import { CmnSection } from '../components/CmnSection'
-import type { CmnAutoRefreshState } from '../hooks/useCmn'
-import '../styles/main.css'
-import { parseCmnPattern } from '../utils/cmnPattern'
+import { CmnSection } from '@/components/CmnSection'
+import type { CmnAutoRefreshState } from '@/hooks/useCmn'
+import '@/styles/main.css'
+import { parseCmnPattern } from '@/utils/cmnPattern'
 
 const wait = (milliseconds: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 

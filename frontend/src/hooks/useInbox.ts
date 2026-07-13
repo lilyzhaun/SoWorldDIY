@@ -1,8 +1,8 @@
 import { useState } from 'react'
 
-import { apiGet } from '../api/client'
-import type { InboxMessage } from '../types'
-import { getApiUrl } from '../utils/mainPage'
+import { apiGet } from '@/api/client'
+import type { InboxMessage } from '@/types'
+import { getApiUrl } from '@/utils/mainPage'
 
 type ShowAlert = (text: string, title?: string) => void
 

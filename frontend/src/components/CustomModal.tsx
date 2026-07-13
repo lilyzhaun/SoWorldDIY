@@ -1,5 +1,5 @@
-import type { ModalMode } from '../types'
-import { useDialogAccessibility } from '../hooks/useDialogAccessibility'
+import type { ModalMode } from '@/types'
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility'
 
 type CustomModalProps = { readonly actions: React.ReactNode; readonly children: React.ReactNode; readonly mode: ModalMode; readonly onClose: () => void; readonly open: boolean; readonly title: string }
 

@@ -1,4 +1,4 @@
-import type { CartItem } from '../types'
+import type { CartItem } from '@/types'
 import { UiIcon } from './UiIcon'
 
 type CartModalContentProps = { readonly cart: CartItem[]; readonly onRemove: (index: number) => void; readonly onUpdateQuantity: (index: number, delta: number) => void; readonly total: number }

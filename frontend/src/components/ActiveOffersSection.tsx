@@ -1,5 +1,5 @@
-import type { Subscription, TransferDraft } from '../types'
-import { normalizeUnit, stripHtml } from '../utils/mainPage'
+import type { Subscription, TransferDraft } from '@/types'
+import { normalizeUnit, stripHtml } from '@/utils/mainPage'
 import { UiIcon } from './UiIcon'
 
 type ActiveOffersSectionProps = {

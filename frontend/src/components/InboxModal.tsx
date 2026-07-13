@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react'
 
-import { useDialogAccessibility } from '../hooks/useDialogAccessibility'
-import type { InboxMessage, Subscription } from '../types'
-import { sanitizeInboxContent } from '../utils/sanitizeInboxContent'
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility'
+import type { InboxMessage, Subscription } from '@/types'
+import { sanitizeInboxContent } from '@/utils/sanitizeInboxContent'
 import { UiIcon } from './UiIcon'
 
 type InboxModalProps = {

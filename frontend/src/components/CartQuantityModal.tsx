@@ -1,7 +1,7 @@
-import type { CartItem } from '../types'
-import { isRootOpacityTransition, type PresencePhase } from '../hooks/usePresenceValue'
-import type { CartQuantityDraft } from '../hooks/usePurchaseCart'
-import { useDialogAccessibility } from '../hooks/useDialogAccessibility'
+import type { CartItem } from '@/types'
+import { isRootOpacityTransition, type PresencePhase } from '@/hooks/usePresenceValue'
+import type { CartQuantityDraft } from '@/hooks/usePurchaseCart'
+import { useDialogAccessibility } from '@/hooks/useDialogAccessibility'
 import { UiIcon } from './UiIcon'
 
 type CartQuantityModalProps = {

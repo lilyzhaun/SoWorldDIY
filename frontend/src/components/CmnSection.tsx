@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 
-import type { CmnAutoRefreshState } from '../hooks/useCmn'
-import type { CmnCheckResponse } from '../types'
-import { findCmnPatternRanges, segmentCmnCandidate, type CmnPattern } from '../utils/cmnPattern'
+import type { CmnAutoRefreshState } from '@/hooks/useCmn'
+import type { CmnCheckResponse } from '@/types'
+import { findCmnPatternRanges, segmentCmnCandidate, type CmnPattern } from '@/utils/cmnPattern'
 import { UiIcon } from './UiIcon'
 
 const LONG_PRESS_MS = 550

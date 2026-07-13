@@ -1,4 +1,4 @@
-import type { PurchaseDraft } from '../hooks/usePurchaseCart'
+import type { PurchaseDraft } from '@/hooks/usePurchaseCart'
 import { UiIcon } from './UiIcon'
 
 type PurchaseModalContentProps = {
