@@ -1,0 +1,42 @@
+
+@media (orientation: portrait), (max-width: 767px) {
+  .category-tabs {
+    display: flex;
+    gap: 0;
+    background: var(--bg-secondary);
+    padding: 4px;
+    border-radius: 14px;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .category-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .cat-tab {
+    flex: 1 0 auto;
+    text-align: center;
+    padding: 8px 12px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-sub);
+    border: 0;
+    background: transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    transition:
+      background-color var(--motion-fast) var(--motion-ease-standard),
+      color var(--motion-fast) var(--motion-ease-standard),
+      box-shadow var(--motion-fast) var(--motion-ease-standard),
+      transform var(--motion-fast) var(--motion-ease-standard);
+  }
+  .cat-tab.active {
+    background: var(--bg-card);
+    color: var(--primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  }
+}
+.cat-tab:active {
+  transform: scale(0.97);
+}

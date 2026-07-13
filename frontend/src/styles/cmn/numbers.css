@@ -1,0 +1,74 @@
+.cmn-grid-label {
+  margin-bottom: 10px;
+  color: var(--text-sub);
+  font-size: 12px;
+}
+.num-grid {
+  position: relative;
+  min-height: 168px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: 48px;
+  align-content: start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.num-grid.is-loading .num-btn {
+  visibility: hidden;
+}
+.cmn-grid-loader {
+  position: absolute;
+  inset: 0;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+}
+.num-btn {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-main);
+  font-size: 15px;
+  font-weight: 600;
+  font-family: monospace;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-base) var(--motion-ease-standard),
+    border-color var(--motion-base) var(--motion-ease-standard),
+    color var(--motion-base) var(--motion-ease-standard),
+    box-shadow var(--motion-base) var(--motion-ease-standard);
+  user-select: none;
+  position: relative;
+}
+.num-btn.selected {
+  background: var(--accent-purple-deep);
+  color: white;
+  border-color: var(--accent-purple-deep);
+  box-shadow: 0 4px 10px var(--accent-purple-shadow);
+}
+.num-btn-label {
+  display: inline-block;
+  line-height: 1;
+}
+.cmn-match {
+  background: none;
+  color: var(--cmn-match-text);
+  font-family: inherit;
+  font-weight: 700;
+  padding: 0;
+  border-radius: 0;
+  text-decoration-line: underline;
+  text-decoration-color: var(--cmn-match-underline);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+}
+.num-btn.selected .cmn-match {
+  color: var(--cmn-match-text-selected);
+  text-decoration-color: var(--cmn-match-underline-selected);
+}
