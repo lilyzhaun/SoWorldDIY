@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from app import main
 from tests.contract_support import (
     FakeIsolatedSession,
@@ -156,6 +158,49 @@ def test_password_login_success_sets_session_and_redirect(
     assert acct["credential"] == "secret"
     cookies = " ".join(resp.header("set-cookie"))
     assert "session=" in cookies and "csrf_token=" in cookies
+
+
+def test_password_login_success_saves_session_once(monkeypatch: MonkeyPatch) -> None:
+    _install_fake_store(monkeypatch)
+    monkeypatch.setattr(main, "verify_auth_code", lambda code, consume: (True, "OK"))
+    monkeypatch.setattr(main, "notify", lambda msg: None)
+    monkeypatch.setattr(
+        main,
+        "get_isolated_session",
+        isolated_sessions(
+            [FakeResponse(200, {"subBrand": "SOSIM"}), FakeResponse(204)]
+        ),
+    )
+
+    saved: list[tuple[str, dict[str, Any]]] = []
+
+    def fake_save_session(ctx) -> None:
+        saved.append((ctx.sid, dict(ctx.data)))
+
+    monkeypatch.setattr(main, "_save_session", fake_save_session)
+
+    resp = invoke(
+        "/login",
+        method="POST",
+        headers={"content-type": "application/x-www-form-urlencoded"},
+        body=b"login_type=password&identifier=a@b.com&auth_code=C&password=secret",
+    )
+
+    assert resp.status == 200
+    assert resp.json == {"status": "success", "redirect": "/main/a@b.com"}
+    assert len(saved) == 1
+
+    _sid, data = saved[0]
+    assert _sid.startswith("3hk_user_")
+    account = data["accounts"]["a@b.com"]
+    assert account["cookies"] == {}
+    assert account["sub_brand"] == "THREE"
+    assert account["auth_code"] == "C"
+    assert account["credential"] == "secret"
+    assert account["login_type"] == "password"
+    assert account["stored_password_encrypted"] is not None
+    assert data["last_session_refresh"] > 0
+    assert "csrf_token" in data
 
 
 def test_otp_login_success_uses_dipping_subbrand(monkeypatch: MonkeyPatch) -> None:

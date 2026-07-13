@@ -194,11 +194,6 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                         return deps._json_error(str(exc), 503)
 
                     try:
-                        deps._save_session(ctx)
-                    except RuntimeError as exc:
-                        return deps._json_error(str(exc), 503)
-
-                    try:
                         deps.notify(
                             f"🚀 新用户登录\n账号: {identifier}\n模式: {login_type}\n品牌: {sub_brand}\n当前共 {len(accounts)} 个账号",
                         )
