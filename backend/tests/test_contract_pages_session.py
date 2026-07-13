@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from app import main
 from tests.contract_support import (
@@ -104,7 +105,17 @@ def test_plans_invalid_account_returns_401_bare_error(monkeypatch: MonkeyPatch) 
     assert json.loads(bytes(resp.body)) == {"status": "error"}
 
 
-def test_plans_serves_cached_brand_file(monkeypatch: MonkeyPatch) -> None:
+def test_plans_serves_cached_brand_file(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "plans_THREE.json").write_text(
+        json.dumps(
+            {"status": "success", "plans": [{"offerId": "fixture-plan"}]}
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(main, "PLANS_CACHE_DIR", tmp_path)
     monkeypatch.setattr(main, "fetch_and_save_plans_background", lambda *a, **k: None)
     request = authed_request("/api/plans", "GET")
     request.scope["query_string"] = b"account_id=a@b.com&subscriptionId=s&brand=THREE"
@@ -112,7 +123,7 @@ def test_plans_serves_cached_brand_file(monkeypatch: MonkeyPatch) -> None:
     assert resp.status_code == 200
     body = json.loads(bytes(resp.body))
     assert body["status"] == "success"
-    assert "plans" in body
+    assert body["plans"] == [{"offerId": "fixture-plan"}]
 
 
 def test_logout_no_session_redirects_to_root(monkeypatch: MonkeyPatch) -> None:
