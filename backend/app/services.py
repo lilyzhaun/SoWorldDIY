@@ -9,6 +9,7 @@ import requests
 
 from .runtime import BASE_HEADERS, PLANS_CACHE_DIR, PROXIES, plans_refresh_lock
 from .session_store import SessionContext
+from .upstream_urls import three_offer_url
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,11 @@ def handle_purchase_event(
         msg = f"💳 新支付请求\n👤 账号: {account_id}\n📱 {phone}\n🔗 {payment_url}"
         d.notify(msg)
     except Exception:
-        pass
+        logger.exception(
+            "handle_purchase_event failed account_id=%s sub_id=%s",
+            account_id,
+            sub_id,
+        )
 
 
 def fetch_and_save_plans_background(
@@ -103,7 +108,7 @@ def fetch_and_save_plans_background(
         d.plans_refreshing.add(sub_brand)
     file_path = PLANS_CACHE_DIR / f"plans_{sub_brand}.json"
     try:
-        url = f"https://www.three.com.hk/account-pro/HTHK/THREE/{sub_brand}/offer/getPlanOffers/"
+        url = three_offer_url(sub_brand, "offer/getPlanOffers/")
         headers = dict(BASE_HEADERS)
         if user_agent:
             headers["User-Agent"] = user_agent
@@ -150,7 +155,7 @@ def fetch_and_save_plans_background(
                 )
                 logger.info("Plans updated for %s", sub_brand)
     except Exception as exc:
-        logger.error("Background plan fetch failed: %s", exc)
+        logger.exception("Background plan fetch failed brand=%s: %s", sub_brand, exc)
     finally:
         with plans_refresh_lock:
             d.plans_refreshing.discard(sub_brand)

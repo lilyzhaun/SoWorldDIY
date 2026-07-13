@@ -7,9 +7,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
+from ..upstream_urls import simworld_url
 from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
+
 
 def register_messages_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.get("/api/inbox")
@@ -31,7 +33,7 @@ def register_messages_routes(app: FastAPI, deps: RouteDeps) -> None:
                 request=request,
                 ctx=ctx,
                 method="GET",
-                url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{brand}/inbox/getMessages",
+                url=simworld_url(brand, "inbox/getMessages"),
                 params={"lang": "tc"},
                 account_id=req_ident,
                 account_context=account_ctx,
@@ -43,7 +45,9 @@ def register_messages_routes(app: FastAPI, deps: RouteDeps) -> None:
                         messages.append(msg)
                         seen.add(msg_id)
         except Exception:
-            pass
+            logger.exception(
+                "get_inbox failed brand=%s account_id=%s", brand, req_ident
+            )
         return deps._json_success(
             {
                 "status": "success",
@@ -52,7 +56,6 @@ def register_messages_routes(app: FastAPI, deps: RouteDeps) -> None:
                 ),
             }
         )
-
 
     @app.get("/api/history")
     async def get_transaction_history(request: Request) -> Response:
@@ -78,7 +81,7 @@ def register_messages_routes(app: FastAPI, deps: RouteDeps) -> None:
                 request=request,
                 ctx=ctx,
                 method="GET",
-                url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/pmt/TransactionHistory",
+                url=simworld_url(target_brand, "pmt/TransactionHistory"),
                 params=params,
                 account_id=req_ident,
                 account_context=account_ctx,
@@ -87,4 +90,10 @@ def register_messages_routes(app: FastAPI, deps: RouteDeps) -> None:
                 return deps._json_success({"status": "success", "data": r.json()})
             return JSONResponse(status_code=400, content={"status": "error"})
         except Exception as exc:
+            logger.exception(
+                "get_transaction_history failed brand=%s sid=%s account_id=%s",
+                target_brand,
+                sid,
+                req_ident,
+            )
             return deps._json_error(str(exc), 500)

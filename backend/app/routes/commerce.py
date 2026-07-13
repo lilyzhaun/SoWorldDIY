@@ -1,17 +1,25 @@
 from __future__ import annotations
 
-import json
 import logging
 import threading
 from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
+from pydantic import ValidationError
 from starlette.responses import Response
 
+from ..schemas import PurchaseRequest
+from ..services_commerce import load_plans_from_cache, parse_wallet_balance
+from ..upstream_urls import (
+    SIMWORLD_WEB_MAIN,
+    THREE_DIY_PAYMENT_FINISHED,
+    simworld_url,
+)
 from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
+
 
 def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.get("/api/plans")
@@ -37,20 +45,18 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
         curr_cookies = account_ctx.get("cookies", {})
         curr_ua = request.headers.get("User-Agent")
 
-        if cache_file.exists():
-            try:
-                cached_data = json.loads(cache_file.read_text(encoding="utf-8"))
-                threading.Thread(
-                    target=deps.fetch_and_save_plans_background,
-                    args=(target_brand, curr_cookies, curr_ua),
-                ).start()
-                return deps._json_success(cached_data)
-            except Exception:
-                pass
+        cached_data = load_plans_from_cache(cache_file, brand=target_brand)
+        if cached_data is not None:
+            threading.Thread(
+                target=deps.fetch_and_save_plans_background,
+                args=(target_brand, curr_cookies, curr_ua),
+            ).start()
+            return deps._json_success(cached_data)
 
         deps.fetch_and_save_plans_background(target_brand, curr_cookies, curr_ua)
-        if cache_file.exists():
-            return deps._json_success(json.loads(cache_file.read_text(encoding="utf-8")))
+        refreshed = load_plans_from_cache(cache_file, brand=target_brand)
+        if refreshed is not None:
+            return deps._json_success(refreshed)
         return deps._json_error("Fetch plans failed", 400)
 
     @app.get("/api/balance")
@@ -71,18 +77,20 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
                 request=request,
                 ctx=ctx,
                 method="GET",
-                url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/sim/{sid}/WalletBalances",
+                url=simworld_url(target_brand, "sim", str(sid), "WalletBalances"),
                 account_id=req_ident,
                 account_context=account_ctx,
             )
             data = r.json() if r and r.status_code == 200 else []
-            balance = (
-                max(float(item.get("amount", 0)) for item in data if "amount" in item)
-                if isinstance(data, list) and data
-                else 0
-            )
+            balance = parse_wallet_balance(data)
             return deps._json_success({"status": "success", "balance": balance})
         except Exception:
+            logger.exception(
+                "get_balance failed brand=%s sid=%s account_id=%s",
+                target_brand,
+                sid,
+                req_ident,
+            )
             return deps._json_success({"status": "success", "balance": 0})
 
     @app.post("/api/purchase")
@@ -94,33 +102,38 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
         if csrf_error:
             return csrf_error
 
-        data = await request.json()
-        req_ident = data.get("account_id") or request.query_params.get("account_id")
+        raw = await request.json()
+        try:
+            body = PurchaseRequest.model_validate(raw)
+        except ValidationError as exc:
+            return deps._json_error(str(exc), 400)
+
+        req_ident = body.account_id or request.query_params.get("account_id")
         account_ctx = deps.get_account_context(
             ctx, str(req_ident) if req_ident is not None else None
         )
         if not account_ctx:
             return deps._json_error("Auth failed", 401)
 
-        sid = data.get("subscriptionId")
-        new_line = bool(data.get("new_line", False))
+        sid = body.subscriptionId
+        new_line = body.new_line
         target_brand = deps.get_brand_by_sub_id(ctx, str(sid), str(req_ident))
         try:
             kr = deps.make_3hk_request(
                 request=request,
                 ctx=ctx,
                 method="GET",
-                url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/pmt/accessPurchaseKey",
+                url=simworld_url(target_brand, "pmt/accessPurchaseKey"),
                 account_id=str(req_ident),
                 account_context=account_ctx,
             )
             if not kr:
                 return deps._json_error("Request failed", 400)
             access_key = kr.json().get("accessPurchaseKey")
-            txn = float(data.get("txnAmount", 0))
-            pmt: dict[str, Any] = {"amnt": max(0.0, float(data.get("price", 0)) - txn)}
+            txn = float(body.txnAmount)
+            pmt: dict[str, Any] = {"amnt": max(0.0, float(body.price) - txn)}
             if pmt["amnt"] > 0:
-                pmt.update({"lang": "tc", "type": data.get("paymentType", "ALCN")})
+                pmt.update({"lang": "tc", "type": body.paymentType})
 
             if new_line:
                 offers_payload = [
@@ -130,17 +143,17 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
                         "autoRenewFlag": False,
                     },
                 ]
-                for item in data.get("items", []):
-                    if item.get("offerId") != "H3OF00000000001":
+                for item in body.items:
+                    if item.offerId != "H3OF00000000001":
                         offers_payload.append(
                             {
-                                "offerId": item["offerId"],
-                                "quantity": int(item["quantity"]),
+                                "offerId": item.offerId,
+                                "quantity": int(item.quantity),
                                 "autoRenewFlag": False,
                             }
                         )
                 payload = {
-                    "fUrl": "https://www.three.com.hk/prepaid/DIY/tc/checkout/payment/finished?actionflow=NEWSIM&purchaseid={purchaseid}",
+                    "fUrl": THREE_DIY_PAYMENT_FINISHED,
                     "accessPurchaseKey": access_key,
                     "purchaseType": "PREPAID_DIY",
                     "order": {
@@ -158,11 +171,11 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
             else:
                 offers_payload = [
                     {
-                        "offerId": item["offerId"],
-                        "quantity": int(item["quantity"]),
+                        "offerId": item.offerId,
+                        "quantity": int(item.quantity),
                         "autoRenewFlag": False,
                     }
-                    for item in data.get("items", [])
+                    for item in body.items
                 ]
                 sub_payload: dict[str, Any] = {
                     "lang": "tc",
@@ -172,7 +185,7 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
                 if txn > 0:
                     sub_payload["walletPayment"] = {"txnAmount": txn}
                 payload = {
-                    "fUrl": "https://simworld.net/SIMworld/main/tc",
+                    "fUrl": SIMWORLD_WEB_MAIN,
                     "purchaseType": "SOSIM_VAS",
                     "accessPurchaseKey": access_key,
                     "order": {
@@ -187,7 +200,7 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
                 request=request,
                 ctx=ctx,
                 method="POST",
-                url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/pmt/purchase/createPurchase/",
+                url=simworld_url(target_brand, "pmt/purchase/createPurchase/"),
                 json_data=payload,
                 account_id=str(req_ident),
                 account_context=account_ctx,
@@ -202,4 +215,10 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
                 )
             return deps._upstream_error(r, "购买请求失败，请稍后重试", 400)
         except Exception as exc:
+            logger.exception(
+                "purchase_plan failed brand=%s sid=%s account_id=%s",
+                target_brand,
+                sid,
+                req_ident,
+            )
             return deps._json_error(str(exc), 500)

@@ -37,3 +37,10 @@ def _json_success(content: dict[str, Any]) -> JSONResponse:
 
 def _redirect_to_login() -> RedirectResponse:
     return RedirectResponse(url="/", status_code=302)
+
+
+# Public aliases (compat layer; keep underscore names for monkeypatch seams)
+json_error = _json_error
+json_success = _json_success
+upstream_error = _upstream_error
+redirect_to_login = _redirect_to_login

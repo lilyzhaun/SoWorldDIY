@@ -7,22 +7,32 @@ from typing import Any
 import requests
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
+from ..schemas import CheckUserRequest, SendOtpRequest
+from ..upstream_urls import THREE_EXISTING_CUST_DIPPING, simworld_url
 from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
 
+
 def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.post("/api/check-user")
     async def check_user(request: Request) -> JSONResponse:
-        data = await request.json()
+        raw = await request.json()
         try:
-            identifier = str(data["identifier"])
+            body = CheckUserRequest.model_validate(raw)
+        except ValidationError as exc:
+            return JSONResponse(
+                status_code=500, content={"status": "error", "message": str(exc)}
+            )
+        try:
+            identifier = body.identifier
             headers = dict(deps.BASE_HEADERS)
             headers["User-Agent"] = request.headers.get("User-Agent", "Mozilla/5.0")
             with deps.get_isolated_session() as s:
                 r = s.post(
-                    "https://www.three.com.hk/account-pro/user/existingCustDipping",
+                    THREE_EXISTING_CUST_DIPPING,
                     json={"id": identifier},
                     headers=headers,
                     proxies=deps.PROXIES,
@@ -37,18 +47,24 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                     )
                 return JSONResponse(status_code=400, content={"status": "error"})
         except Exception as exc:
+            logger.exception("check_user failed identifier=%s", raw.get("identifier"))
             return JSONResponse(
                 status_code=500, content={"status": "error", "message": str(exc)}
             )
 
     @app.post("/api/send-otp")
     async def send_otp(request: Request) -> JSONResponse:
-        data = await request.json()
-        valid, message = deps.verify_auth_code(data.get("auth_code"), False)
+        raw = await request.json()
+        try:
+            body = SendOtpRequest.model_validate(raw)
+        except ValidationError as exc:
+            return deps._json_error(str(exc), 400)
+
+        valid, message = deps.verify_auth_code(body.auth_code, False)
         if not valid:
             return deps._json_error(message, 400)
 
-        ident = str(data.get("identifier", ""))
+        ident = body.identifier
         sub_brand = "THREE"
         headers = dict(deps.BASE_HEADERS)
         headers["User-Agent"] = request.headers.get("User-Agent", "Mozilla/5.0")
@@ -56,7 +72,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
         try:
             with deps.get_isolated_session() as s:
                 r = s.post(
-                    "https://www.three.com.hk/account-pro/user/existingCustDipping",
+                    THREE_EXISTING_CUST_DIPPING,
                     json={"id": ident},
                     headers=headers,
                     proxies=deps.PROXIES,
@@ -64,12 +80,16 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                 )
                 sub_brand = r.json().get("subBrand", "THREE")
         except Exception:
-            pass
+            logger.warning(
+                "send_otp brand lookup failed identifier=%s; defaulting brand",
+                ident,
+                exc_info=True,
+            )
 
         try:
             with deps.get_isolated_session() as s:
                 r = s.post(
-                    f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{sub_brand}/user/requestLoginOtp",
+                    simworld_url(sub_brand, "user/requestLoginOtp"),
                     json={"id": ident, "lang": "tc"},
                     headers=headers,
                     proxies=deps.PROXIES,
@@ -79,6 +99,9 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                     return deps._json_success({"status": "success"})
                 return deps._upstream_error(r, "验证码发送失败，请稍后重试", 400)
         except Exception as exc:
+            logger.exception(
+                "send_otp failed identifier=%s brand=%s", ident, sub_brand
+            )
             return JSONResponse(
                 status_code=500, content={"status": "error", "message": str(exc)}
             )
@@ -105,7 +128,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
         try:
             with deps.get_isolated_session() as s:
                 r_check = s.post(
-                    "https://www.three.com.hk/account-pro/user/existingCustDipping",
+                    THREE_EXISTING_CUST_DIPPING,
                     json={"id": identifier},
                     headers=headers,
                     proxies=deps.PROXIES,
@@ -116,15 +139,14 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                 else:
                     return deps._json_error("账号无效或网络错误", 400)
         except Exception as exc:
+            logger.exception("login brand check failed identifier=%s", identifier)
             return deps._json_error(f"账号检查失败: {exc}", 500)
 
         if login_type == "password":
-            login_url = (
-                "https://simworld.net/SIMworldApi-pro/HTHK/THREE/THREE/user/login/"
-            )
+            login_url = simworld_url("THREE", "user/login/")
             sub_brand = "THREE"
         else:
-            login_url = f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{sub_brand}/user/login"
+            login_url = simworld_url(sub_brand, "user/login")
 
         payload: dict[str, Any] = {"id": identifier}
         if login_type == "password":
@@ -181,7 +203,11 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                             f"🚀 新用户登录\n账号: {identifier}\n模式: {login_type}\n品牌: {sub_brand}\n当前共 {len(accounts)} 个账号",
                         )
                     except Exception:
-                        pass
+                        logger.warning(
+                            "login notify failed identifier=%s",
+                            identifier,
+                            exc_info=True,
+                        )
 
                     return deps._json_success(
                         {"status": "success", "redirect": f"/main/{identifier}"}
@@ -189,4 +215,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
 
             return deps._json_error("登录失败，请检查密码或OTP", 401)
         except Exception as exc:
+            logger.exception(
+                "login failed identifier=%s login_type=%s", identifier, login_type
+            )
             return deps._json_error(str(exc), 500)

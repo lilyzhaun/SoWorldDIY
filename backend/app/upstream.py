@@ -9,6 +9,7 @@ from fastapi import Request
 
 from .runtime import BASE_HEADERS, PROXIES
 from .session_store import SessionContext
+from .upstream_urls import simworld_url
 
 logger = logging.getLogger(__name__)
 
@@ -82,9 +83,7 @@ def attempt_silent_relogin(
     if not password:
         return False
     sub_brand = str(account_data.get("sub_brand", "THREE"))
-    login_url = (
-        f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{sub_brand}/user/login/"
-    )
+    login_url = simworld_url(sub_brand, "user/login/")
     payload = {
         "id": account_id,
         "password": password,

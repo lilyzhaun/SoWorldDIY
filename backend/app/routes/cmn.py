@@ -4,11 +4,15 @@ import logging
 from typing import Any
 
 from fastapi import FastAPI, Request
+from pydantic import ValidationError
 from starlette.responses import Response
 
+from ..schemas import CmnPurchaseRequest
+from ..upstream_urls import SIMWORLD_PAYMENT_FINISHED, simworld_url
 from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
+
 
 def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.get("/api/cmn/check")
@@ -28,7 +32,7 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             request=request,
             ctx=ctx,
             method="GET",
-            url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/offer/getCmnOffer",
+            url=simworld_url(target_brand, "offer/getCmnOffer"),
             account_id=req_ident,
             account_context=account_ctx,
         )
@@ -47,7 +51,6 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
                 },
             }
         )
-
 
     @app.api_route("/api/cmn/numbers", methods=["GET", "POST"])
     async def get_cmn_numbers(request: Request) -> Response:
@@ -78,7 +81,7 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             request=request,
             ctx=ctx,
             method="POST",
-            url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/mnms/holdAvailableNumbersFor15m/9/",
+            url=simworld_url(target_brand, "mnms/holdAvailableNumbersFor15m/9/"),
             account_id=req_ident,
             account_context=account_ctx,
         )
@@ -86,7 +89,6 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             return deps._json_error("Fetch failed", 400)
         numbers = sorted(set(r.json().get("lineList", [])))[:9]
         return deps._json_success({"status": "success", "numbers": numbers})
-
 
     @app.post("/api/cmn/purchase")
     async def purchase_cmn(request: Request) -> Response:
@@ -97,42 +99,47 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
         if csrf_error:
             return csrf_error
 
-        data = await request.json()
-        req_ident = str(data.get("account_id", ""))
+        raw = await request.json()
+        try:
+            body = CmnPurchaseRequest.model_validate(raw)
+        except ValidationError as exc:
+            return deps._json_error(str(exc), 400)
+
+        req_ident = str(body.account_id)
         account_ctx = deps.get_account_context(ctx, req_ident)
         if not account_ctx:
             return deps._redirect_to_login()
 
-        sid = data.get("subscriptionId")
+        sid = body.subscriptionId
         target_brand = deps.get_brand_by_sub_id(ctx, str(sid), req_ident)
         try:
             kr = deps.make_3hk_request(
                 request=request,
                 ctx=ctx,
                 method="GET",
-                url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/pmt/accessPurchaseKey",
+                url=simworld_url(target_brand, "pmt/accessPurchaseKey"),
                 account_id=req_ident,
                 account_context=account_ctx,
             )
             if not kr:
                 return deps._json_error("Request failed", 400)
             access_key = kr.json().get("accessPurchaseKey")
-            txn = float(data.get("txnAmount", 0))
-            pmt_amt = max(0.0, float(data.get("price", 0)) - txn)
+            txn = float(body.txnAmount)
+            pmt_amt = max(0.0, float(body.price) - txn)
             pmt: dict[str, Any] = {"amnt": pmt_amt}
             order_sub: dict[str, Any] = {
-                "msisdn": str(data["selectedNumber"]),
+                "msisdn": str(body.selectedNumber),
                 "lang": "tc",
                 "subscriptionId": sid,
-                "offers": [{"offerId": data["offerId"], "quantity": 1}],
+                "offers": [{"offerId": body.offerId, "quantity": 1}],
             }
             if pmt_amt > 0:
-                pmt.update({"lang": "tc", "type": data.get("paymentType", "ALCN")})
+                pmt.update({"lang": "tc", "type": body.paymentType})
             if txn > 0:
                 order_sub["walletPayment"] = {"txnAmount": txn}
 
             payload = {
-                "fUrl": "https://simworld.net/SIMworld/main/checkout/payment/finished/",
+                "fUrl": SIMWORLD_PAYMENT_FINISHED,
                 "purchaseType": "CMN_ONLY",
                 "accessPurchaseKey": access_key,
                 "order": {
@@ -147,7 +154,7 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
                 request=request,
                 ctx=ctx,
                 method="POST",
-                url=f"https://simworld.net/SIMworldApi-pro/HTHK/THREE/{target_brand}/pmt/purchase/createPurchase/",
+                url=simworld_url(target_brand, "pmt/purchase/createPurchase/"),
                 json_data=payload,
                 account_id=req_ident,
                 account_context=account_ctx,
@@ -162,4 +169,10 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
                 )
             return deps._upstream_error(r, "换号购买请求失败，请稍后重试", 400)
         except Exception as exc:
+            logger.exception(
+                "purchase_cmn failed brand=%s sid=%s account_id=%s",
+                target_brand,
+                sid,
+                req_ident,
+            )
             return deps._json_error(str(exc), 500)
