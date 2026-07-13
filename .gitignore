@@ -34,12 +34,14 @@ requirements-local.txt
 !*_local.example.py
 
 # Runtime data
-flask_session_data/
 plans_cache/*.json
 *.log
 
 # Agent/runtime metadata
 .omo/
+
+# Code intelligence metadata (local only)
+.codegraph/
 
 # OS/editor
 .DS_Store
