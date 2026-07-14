@@ -34,7 +34,9 @@ export function LoginPage(): JSX.Element {
           <br />
           <span>3HK</span> Assistant
         </h1>
-        <p>DIY / SoSIM / SIMWorld / 3國際萬能卡 / HAHA SIM 套餐管理工具</p>
+        <p>
+          DIY / SoSIM / SIMWorld / 3國際萬能卡 / <span className="brand-nowrap-token">HAHA SIM</span> 套餐管理工具
+        </p>
         <div className="login-brand-features">
           <div className="feat">
             <div className="feat-dot"></div>多品牌账号统一管理
@@ -57,7 +59,7 @@ export function LoginPage(): JSX.Element {
             <p>
               支持 DIY / SoSIM / SIMWorld
               <br />
-              3國際萬能卡 / HAHA SIM
+              3國際萬能卡 / <span className="brand-nowrap-token">HAHA SIM</span>
             </p>
           </div>
 

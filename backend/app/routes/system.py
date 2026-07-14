@@ -54,6 +54,13 @@ def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
             deps.FRONTEND_DIST_DIR / "sw.js", media_type="application/javascript"
         )
 
+    @app.get("/favicon.ico")
+    async def favicon() -> FileResponse:
+        return FileResponse(
+            deps.FRONTEND_DIST_DIR / "static/images/icon-192.png",
+            media_type="image/png",
+        )
+
     @app.get("/")
     async def index(request: Request) -> Response:
         ctx = getattr(request.state, "session_ctx", None)

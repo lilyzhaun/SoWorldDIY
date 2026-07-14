@@ -185,6 +185,23 @@ def test_health_returns_ok() -> None:
     assert resp.json == {"status": "ok"}
 
 
+def test_favicon_serves_existing_frontend_png(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    icon = tmp_path / "static" / "images" / "icon-192.png"
+    icon.parent.mkdir(parents=True)
+    icon_bytes = b"\x89PNG\r\n\x1a\nfixture-icon"
+    icon.write_bytes(icon_bytes)
+    monkeypatch.setattr(main, "FRONTEND_DIST_DIR", tmp_path)
+
+    resp = invoke("/favicon.ico")
+
+    assert resp.status == 200
+    assert resp.header("content-type") == ["image/png"]
+    assert bytes(resp.body) == icon_bytes
+
+
 def test_readiness_reports_checks_shape(monkeypatch: MonkeyPatch) -> None:
     monkeypatch.setattr(main.redis_client, "ping", lambda: True)
     resp = invoke("/_ready")

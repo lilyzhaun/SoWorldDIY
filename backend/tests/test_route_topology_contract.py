@@ -23,6 +23,7 @@ EXPECTED_API_ROUTES: list[tuple[str, list[str], str]] = [
     ("/_ready", ["GET"], "readiness"),
     ("/manifest.json", ["GET"], "manifest"),
     ("/sw.js", ["GET"], "service_worker"),
+    ("/favicon.ico", ["GET"], "favicon"),
     ("/", ["GET"], "index"),
     ("/api/check-user", ["POST"], "check_user"),
     ("/api/send-otp", ["POST"], "send_otp"),

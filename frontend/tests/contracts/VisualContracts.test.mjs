@@ -119,6 +119,13 @@ describe('visual QA blocking contracts', () => {
     expect(mainStyles).toMatch(/\.inbox-nowrap-token\s*\{[^}]*white-space:\s*nowrap/s)
   })
 
+  it('keeps HAHA SIM brand tokens intact across login layouts', () => {
+    const brandTokens = loginPageSource.match(/<span\s+className=["']brand-nowrap-token["']\s*>\s*HAHA SIM\s*<\/span>/g)
+
+    expect(brandTokens).toHaveLength(2)
+    expect(loginStyles).toMatch(/\.brand-nowrap-token\s*\{[^}]*white-space:\s*nowrap/s)
+  })
+
   it('reserves anywhere wrapping for technical history tokens', () => {
     expect(mainStyles).toMatch(
       /\.records-detail-list dd\s*\{[^}]*overflow-wrap:\s*break-word[^}]*line-break:\s*strict[^}]*word-break:\s*normal/s,

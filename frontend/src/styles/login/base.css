@@ -98,6 +98,10 @@ body {
   font-weight: 500;
 }
 
+.brand-nowrap-token {
+  white-space: nowrap;
+}
+
 /* ================= Tabs 切换 ================= */
 .tabs {
   display: flex;
