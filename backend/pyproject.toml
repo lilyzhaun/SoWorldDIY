@@ -13,3 +13,24 @@ line-ending = "lf"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = [
+  "app/delivery_extension_local.py",
+  "app/request_overrides_local.py",
+  "app/delivery_extension_local.example.py",
+  "app/request_overrides_local.example.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+precision = 1
+fail_under = 84
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+]
+

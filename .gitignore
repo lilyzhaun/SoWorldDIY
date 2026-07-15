@@ -48,3 +48,7 @@ plans_cache/*.json
 .idea/
 .vscode/
 .opencode/
+.coverage
+**/coverage/
+**/htmlcov/
+backend/coverage.json

@@ -556,3 +556,55 @@ def test_logout_single_account_store_failure_returns_503(
     assert "second@x.com" in store.sessions[sid]["accounts"]
     set_cookie = " ".join(resp.header("set-cookie"))
     assert "Max-Age=0" not in set_cookie
+
+
+def test_session_store_create_load_delete_success() -> None:
+    from app.session_store import RedisSessionStore
+
+    class OkRedis:
+        def __init__(self) -> None:
+            self.data: dict[str, str] = {}
+
+        def get(self, key: str) -> str | None:
+            return self.data.get(key)
+
+        def setex(self, key: str, _ttl: int, value: str) -> None:
+            self.data[key] = value
+
+        def delete(self, key: str) -> int:
+            return 1 if self.data.pop(key, None) is not None else 0
+
+    store = RedisSessionStore(
+        redis_client=OkRedis(),
+        key_prefix="session:",
+        lifetime_seconds=60,
+        sid_prefix="3hk_user_",
+    )
+    ctx = store.create({"csrf_token": "t"})
+    loaded = store.load(ctx.sid)
+    assert loaded is not None
+    assert loaded["csrf_token"] == "t"
+    store.delete(ctx.sid)
+    assert store.load(ctx.sid) is None
+
+
+def test_session_store_load_invalid_json_returns_none() -> None:
+    from app.session_store import RedisSessionStore
+
+    class BadJsonRedis:
+        def get(self, key: str) -> str:
+            return "{not-json"
+
+        def setex(self, *a: object, **k: object) -> None:
+            return None
+
+        def delete(self, *a: object, **k: object) -> int:
+            return 0
+
+    store = RedisSessionStore(
+        redis_client=BadJsonRedis(),
+        key_prefix="session:",
+        lifetime_seconds=60,
+        sid_prefix="3hk_user_",
+    )
+    assert store.load("sid") is None

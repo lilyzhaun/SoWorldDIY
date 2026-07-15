@@ -8,3 +8,6 @@ auth_codes.json
 auth_code.txt
 flask_session_data/
 plans_cache/*.json
+.coverage
+coverage.json
+htmlcov/

@@ -157,3 +157,32 @@ git ls-files backend/.env backend/auth_codes.json .omo frontend/dist backend/.ve
 ---
 
 [← 鉴权码管理](06-auth-codes.md) · [部署说明 →](08-deploy.md)
+
+## Coverage gates
+
+Coverage is enforced in CI and local pre-merge checks.
+
+### Backend
+
+```bash
+cd backend
+.venv/bin/pytest --cov=app --cov-branch --cov-report=term-missing --cov-report=json:coverage.json
+```
+
+- Provider: `pytest-cov==7.1.0` with branch coverage enabled in `pyproject.toml`
+- Gate: `[tool.coverage.report] fail_under = 84` (floor of measured total percent_covered with branches)
+- Measured baseline (task 13): statements ≈89%, branches =70%, total percent_covered ≈84.8%
+- Line and branch totals must remain ≥70%
+
+### Frontend
+
+```bash
+cd frontend
+npm run test:coverage
+```
+
+- Provider: `@vitest/coverage-v8@4.1.5` configured in `vite.config.ts`
+- Gates (floor of measured): lines 83, branches 70, functions 67, statements 79
+- Measured baseline (task 13): lines ≈83.3%, branches ≈70.8%, functions ≈67.6%, statements ≈79.8%
+- Line and branch totals must remain ≥70%
+- Do not exclude production modules only to raise coverage, and do not lower thresholds after measurement

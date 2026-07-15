@@ -16,3 +16,8 @@ describe('getNextDialogFocusIndex', () => {
     expect(getNextDialogFocusIndex(-1, 3, true)).toBe(2)
   })
 })
+
+  it('returns -1 when there are no focusable controls', () => {
+    expect(getNextDialogFocusIndex(0, 0, false)).toBe(-1)
+    expect(getNextDialogFocusIndex(-1, 0, true)).toBe(-1)
+  })
