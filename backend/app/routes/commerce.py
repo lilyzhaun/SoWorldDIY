@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import ValidationError
 from starlette.responses import Response
 
+from ..brand import INVALID_BRAND_CODE, InvalidBrandError, parse_brand, plans_cache_path
 from ..schemas import PurchaseRequest
 from ..services_commerce import (
     build_plan_purchase_payload,
@@ -34,17 +35,25 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
 
         sub_id = request.query_params.get("subscriptionId")
         brand_override = request.query_params.get("brand")
-        target_brand = (
+        raw_brand = (
             brand_override
             if brand_override
             else deps.get_brand_by_sub_id(ctx, sub_id, req_ident)
         )
+        try:
+            target_brand = parse_brand(raw_brand)
+            cache_file = plans_cache_path(deps.PLANS_CACHE_DIR, target_brand)
+        except InvalidBrandError:
+            return deps._json_error(INVALID_BRAND_CODE, 400)
 
-        cache_file = deps.PLANS_CACHE_DIR / f"plans_{target_brand}.json"
         curr_cookies = account_ctx.get("cookies", {})
         curr_ua = request.headers.get("User-Agent")
 
-        cached_data = load_plans_from_cache(cache_file, brand=target_brand)
+        cached_data = load_plans_from_cache(
+            cache_file,
+            cache_root=deps.PLANS_CACHE_DIR,
+            brand=target_brand,
+        )
         if cached_data is not None:
             threading.Thread(
                 target=deps.fetch_and_save_plans_background,
@@ -53,7 +62,11 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
             return deps._json_success(cached_data)
 
         deps.fetch_and_save_plans_background(target_brand, curr_cookies, curr_ua)
-        refreshed = load_plans_from_cache(cache_file, brand=target_brand)
+        refreshed = load_plans_from_cache(
+            cache_file,
+            cache_root=deps.PLANS_CACHE_DIR,
+            brand=target_brand,
+        )
         if refreshed is not None:
             return deps._json_success(refreshed)
         return deps._json_error("Fetch plans failed", 400)

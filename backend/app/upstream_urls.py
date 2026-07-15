@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Final
 
+from .brand import parse_brand
+
 SIMWORLD_API_BASE: Final[str] = "https://simworld.net/SIMworldApi-pro/HTHK/THREE"
 THREE_ACCOUNT_BASE: Final[str] = "https://www.three.com.hk/account-pro/HTHK/THREE"
 THREE_ACCOUNT_PRO_ROOT: Final[str] = "https://www.three.com.hk/account-pro"
@@ -22,15 +24,17 @@ THREE_DIY_PAYMENT_FINISHED: Final[str] = (
 
 def simworld_url(brand: str, *path_parts: str) -> str:
     """Build a SIMWorld API URL: ``{SIMWORLD_API_BASE}/{brand}/{path...}``."""
+    canonical = parse_brand(brand)
     if not path_parts:
-        return f"{SIMWORLD_API_BASE}/{brand}"
+        return f"{SIMWORLD_API_BASE}/{canonical}"
     suffix = "/".join(path_parts)
-    return f"{SIMWORLD_API_BASE}/{brand}/{suffix}"
+    return f"{SIMWORLD_API_BASE}/{canonical}/{suffix}"
 
 
 def three_offer_url(brand: str, *path_parts: str) -> str:
     """Build a 3HK account-pro offer URL under HTHK/THREE/{brand}/..."""
+    canonical = parse_brand(brand)
     if not path_parts:
-        return f"{THREE_ACCOUNT_BASE}/{brand}"
+        return f"{THREE_ACCOUNT_BASE}/{canonical}"
     suffix = "/".join(path_parts)
-    return f"{THREE_ACCOUNT_BASE}/{brand}/{suffix}"
+    return f"{THREE_ACCOUNT_BASE}/{canonical}/{suffix}"

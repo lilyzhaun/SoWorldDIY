@@ -36,16 +36,16 @@ def test_parse_wallet_balance_malformed_element_raises() -> None:
 
 def test_load_plans_from_cache_ok_and_missing(tmp_path: Path) -> None:
     missing = tmp_path / "nope.json"
-    assert load_plans_from_cache(missing) is None
+    assert load_plans_from_cache(missing, cache_root=tmp_path) is None
 
     good = tmp_path / "plans_THREE.json"
     payload = {"status": "success", "plans": [{"offerId": "X"}]}
     good.write_text(json.dumps(payload), encoding="utf-8")
-    assert load_plans_from_cache(good) == payload
+    assert load_plans_from_cache(good, cache_root=tmp_path, brand="THREE") == payload
 
     bad = tmp_path / "bad.json"
     bad.write_text("{not-json", encoding="utf-8")
-    assert load_plans_from_cache(bad) is None
+    assert load_plans_from_cache(bad, cache_root=tmp_path) is None
 
 
 def test_build_plan_purchase_payload_normal_flow() -> None:

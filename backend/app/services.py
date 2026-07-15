@@ -7,6 +7,7 @@ from typing import Any, Protocol, runtime_checkable
 
 import requests
 
+from .brand import InvalidBrandError, parse_brand, plans_cache_path
 from .runtime import BASE_HEADERS, PLANS_CACHE_DIR, PROXIES, plans_refresh_lock
 from .session_store import SessionContext
 from .upstream_urls import three_offer_url
@@ -120,14 +121,20 @@ def handle_purchase_event(
 def fetch_and_save_plans_background(
     sub_brand: str, cookies: dict[str, Any], user_agent: str | None
 ) -> None:
+    try:
+        brand = parse_brand(sub_brand)
+        file_path = plans_cache_path(PLANS_CACHE_DIR, brand)
+    except InvalidBrandError:
+        logger.warning("Background plan fetch rejected invalid brand=%r", sub_brand)
+        return
+
     d = _deps()
     with plans_refresh_lock:
-        if sub_brand in d.plans_refreshing:
+        if brand in d.plans_refreshing:
             return
-        d.plans_refreshing.add(sub_brand)
-    file_path = PLANS_CACHE_DIR / f"plans_{sub_brand}.json"
+        d.plans_refreshing.add(brand)
     try:
-        url = three_offer_url(sub_brand, "offer/getPlanOffers/")
+        url = three_offer_url(brand, "offer/getPlanOffers/")
         headers = dict(BASE_HEADERS)
         if user_agent:
             headers["User-Agent"] = user_agent
@@ -169,12 +176,13 @@ def fetch_and_save_plans_background(
                     "status": "success",
                     "plans": sorted(vas_plans, key=lambda x: x["price"]),
                 }
+                plans_cache_path(PLANS_CACHE_DIR, brand)
                 file_path.write_text(
                     json.dumps(result, ensure_ascii=False), encoding="utf-8"
                 )
-                logger.info("Plans updated for %s", sub_brand)
+                logger.info("Plans updated for %s", brand)
     except Exception as exc:
-        logger.exception("Background plan fetch failed brand=%s: %s", sub_brand, exc)
+        logger.exception("Background plan fetch failed brand=%s: %s", brand, exc)
     finally:
         with plans_refresh_lock:
-            d.plans_refreshing.discard(sub_brand)
+            d.plans_refreshing.discard(brand)

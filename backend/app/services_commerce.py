@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Final, TypedDict
 
+from .brand import ensure_within_cache_dir
 from .schemas.requests import CmnPurchaseRequest, PurchaseRequest
 from .upstream_urls import (
     SIMWORLD_PAYMENT_FINISHED,
@@ -265,12 +266,15 @@ def parse_wallet_balance(data: object) -> float:
 def load_plans_from_cache(
     cache_file: Path,
     *,
+    cache_root: Path,
     brand: str | None = None,
 ) -> dict[str, object] | None:
-    """Load plans JSON from disk; log and return None on parse failure.
+    """Load plans JSON from disk after verifying path containment in cache_root.
 
     Missing file returns None without logging (caller decides next step).
+    Parse failures log a warning and return None.
     """
+    ensure_within_cache_dir(cache_file, cache_root)
     if not cache_file.exists():
         return None
     try:

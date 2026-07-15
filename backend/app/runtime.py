@@ -12,6 +12,7 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from .auth_codes import AuthCodeStore
+from .brand import SUPPORTED_BRANDS
 from .cache_store import MemoryCache
 from .config import load_settings
 from .security import (
@@ -73,7 +74,7 @@ BASE_HEADERS: dict[str, str] = {
     "Sec-Fetch-Dest": "empty",
 }
 
-SUB_BRANDS = ["THREE", "SOSIM", "HAHA", "TRADER"]
+SUB_BRANDS = list(SUPPORTED_BRANDS)
 
 retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
 global_adapter = HTTPAdapter(pool_connections=20, pool_maxsize=20, max_retries=retries)

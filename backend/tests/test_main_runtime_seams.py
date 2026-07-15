@@ -214,7 +214,7 @@ def test_profile_reads_live_sub_brands(monkeypatch: Any) -> None:
     monkeypatch.setattr(main, "get_cache", lambda _k: None)
     monkeypatch.setattr(main, "set_cache", lambda *a, **k: None)
     monkeypatch.setattr(main, "make_3hk_request", fake_make)
-    monkeypatch.setattr(main, "SUB_BRANDS", ["ALPHA", "BETA"])
+    monkeypatch.setattr(main, "SUB_BRANDS", ["HAHA", "TRADER"])
 
     endpoint = _endpoint("/api/profile")
     request = Request(
@@ -228,7 +228,7 @@ def test_profile_reads_live_sub_brands(monkeypatch: Any) -> None:
     )
     response = anyio.run(endpoint, request)
     assert response.status_code == 200
-    assert brands_seen == ["ALPHA", "BETA"]
+    assert brands_seen == ["HAHA", "TRADER"]
 
 
 def test_readiness_reads_live_paths_and_redis(monkeypatch: Any) -> None:
