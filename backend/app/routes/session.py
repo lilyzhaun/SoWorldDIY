@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from redis.exceptions import RedisError
 from starlette.responses import Response
 
-from ..public_errors import REDIS_UNAVAILABLE, UNAUTHORIZED
+from ..public_errors import REDIS_UNAVAILABLE, SERVICE_UNAVAILABLE, UNAUTHORIZED
 from ..responses import _public_error
 from .deps import RouteDeps
 
@@ -62,9 +62,12 @@ def register_session_routes(app: FastAPI, deps: RouteDeps) -> None:
         if req_ident:
             try:
                 has_left = deps.internal_logout_account(ctx, req_ident)
-            except RuntimeError:
-                deps._mark_session_cookie_for_deletion(request)
-                return RedirectResponse(url="/", status_code=302)
+            except RuntimeError as exc:
+                logger.error(
+                    "logout failed operation=logout_account error_class=%s",
+                    type(exc).__name__,
+                )
+                return _public_error(SERVICE_UNAVAILABLE, 503)
             if not has_left:
                 deps._mark_session_cookie_for_deletion(request)
                 return RedirectResponse(url="/", status_code=302)
@@ -75,8 +78,12 @@ def register_session_routes(app: FastAPI, deps: RouteDeps) -> None:
 
         try:
             deps._clear_session(ctx)
-        except RuntimeError:
-            pass
+        except RuntimeError as exc:
+            logger.error(
+                "logout failed operation=logout_clear error_class=%s",
+                type(exc).__name__,
+            )
+            return _public_error(SERVICE_UNAVAILABLE, 503)
         deps._mark_session_cookie_for_deletion(request)
         return RedirectResponse(url="/", status_code=302)
 

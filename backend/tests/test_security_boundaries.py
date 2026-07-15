@@ -467,3 +467,92 @@ def test_auth_code_store_logging_redacts_code_and_exception(
     log_text = buf.getvalue()
     assert SECRET_SENTINEL not in log_text
     assert "error_class=RedisError" in log_text
+
+
+def test_logout_full_session_store_failure_returns_503(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    store = _install_fake_store(monkeypatch)
+    sid, csrf = _authed_session(store, accounts={"a@b.com": {"sub_brand": "THREE"}})
+
+    def boom_clear(_ctx: object) -> None:
+        raise RuntimeError(SECRET_SENTINEL)
+
+    monkeypatch.setattr(main, "_clear_session", boom_clear)
+    buf = StringIO()
+    handler = logging.StreamHandler(buf)
+    logger = logging.getLogger("app.routes.session")
+    logger.addHandler(handler)
+    try:
+        resp = invoke(
+            "/logout",
+            method="POST",
+            headers={
+                "cookie": f"session={sid}",
+                "x-csrf-token": csrf,
+                "content-type": "application/x-www-form-urlencoded",
+            },
+            body=b"",
+        )
+    finally:
+        logger.removeHandler(handler)
+
+    assert resp.status == 503
+    assert resp.json == {
+        "status": "error",
+        "message": "服务暂时不可用",
+        "code": "service_unavailable",
+    }
+    assert SECRET_SENTINEL not in json.dumps(resp.json)
+    assert SECRET_SENTINEL not in buf.getvalue()
+    assert sid in store.sessions
+    set_cookie = " ".join(resp.header("set-cookie"))
+    assert "Max-Age=0" not in set_cookie
+
+
+def test_logout_single_account_store_failure_returns_503(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    store = _install_fake_store(monkeypatch)
+    sid, csrf = _authed_session(
+        store,
+        accounts={
+            "first@x.com": {"sub_brand": "THREE"},
+            "second@x.com": {"sub_brand": "SOSIM"},
+        },
+    )
+
+    def boom_logout(_ctx: object, _account_id: str) -> bool:
+        raise RuntimeError(SECRET_SENTINEL)
+
+    monkeypatch.setattr(main, "internal_logout_account", boom_logout)
+    buf = StringIO()
+    handler = logging.StreamHandler(buf)
+    logger = logging.getLogger("app.routes.session")
+    logger.addHandler(handler)
+    try:
+        resp = invoke(
+            "/logout",
+            method="POST",
+            headers={
+                "cookie": f"session={sid}",
+                "x-csrf-token": csrf,
+                "content-type": "application/x-www-form-urlencoded",
+            },
+            body=b"account_id=second%40x.com",
+        )
+    finally:
+        logger.removeHandler(handler)
+
+    assert resp.status == 503
+    assert resp.json == {
+        "status": "error",
+        "message": "服务暂时不可用",
+        "code": "service_unavailable",
+    }
+    assert SECRET_SENTINEL not in json.dumps(resp.json)
+    assert SECRET_SENTINEL not in buf.getvalue()
+    assert sid in store.sessions
+    assert "second@x.com" in store.sessions[sid]["accounts"]
+    set_cookie = " ".join(resp.header("set-cookie"))
+    assert "Max-Age=0" not in set_cookie

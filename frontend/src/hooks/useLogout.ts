@@ -7,16 +7,36 @@ type ShowAlert = (text: string, title?: string) => void
 
 type LogoutNavigate = (url: string) => void
 
-async function messageFromFailedResponse(response: Response): Promise<string> {
-  try {
-    const body = (await response.json()) as { message?: string }
-    if (typeof body.message === 'string' && body.message.trim()) return body.message.trim()
-  } catch {
-    void 0
-  }
-  if (response.status === 403) return '没有权限执行此操作'
-  if (response.status >= 500) return '服务暂时不可用，请稍后再试'
+type PublicErrorBody = {
+  readonly message?: unknown
+  readonly code?: unknown
+}
+
+function statusFallbackMessage(status: number): string {
+  if (status === 403) return '没有权限执行此操作'
+  if (status >= 500) return '服务暂时不可用，请稍后再试'
   return '退出失败'
+}
+
+async function messageFromFailedResponse(response: Response): Promise<string> {
+  const fallback = statusFallbackMessage(response.status)
+  let rawText: string
+  try {
+    rawText = await response.text()
+  } catch (error: unknown) {
+    return toUserFacingApiError(error, fallback)
+  }
+  if (!rawText.trim()) return fallback
+  try {
+    const body = JSON.parse(rawText) as PublicErrorBody
+    if (typeof body.message === 'string' && body.message.trim()) {
+      return body.message.trim()
+    }
+  } catch (error: unknown) {
+    if (error instanceof SyntaxError) return fallback
+    return toUserFacingApiError(error, fallback)
+  }
+  return fallback
 }
 
 export async function performLogout(
