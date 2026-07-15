@@ -228,6 +228,52 @@ def test_plans_api_rejects_traversal_and_non_canonical_brands(
         assert {p.name for p in Path("/tmp").iterdir()} == outside_before
 
 
+def test_plans_api_rejects_explicit_empty_brand_override(
+    monkeypatch: MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Explicit brand= must not fall through to account brand resolution."""
+    (tmp_path / "plans_THREE.json").write_text(
+        json.dumps({"status": "success", "plans": [{"offerId": "should-not-read"}]}),
+        encoding="utf-8",
+    )
+
+    resolver_calls: list[tuple[Any, ...]] = []
+    cache_reads: list[Path] = []
+    outbound: list[tuple[Any, ...]] = []
+
+    def capture_resolver(*args: Any, **_kwargs: Any) -> str:
+        resolver_calls.append(args)
+        return "THREE"
+
+    def capture_background(*args: Any, **_kwargs: Any) -> None:
+        outbound.append(args)
+
+    real_load = load_plans_from_cache
+
+    def capture_load(cache_file: Path, **kwargs: Any) -> Any:
+        cache_reads.append(cache_file)
+        return real_load(cache_file, **kwargs)
+
+    monkeypatch.setattr(main, "PLANS_CACHE_DIR", tmp_path)
+    monkeypatch.setattr(main, "get_brand_by_sub_id", capture_resolver)
+    monkeypatch.setattr(main, "fetch_and_save_plans_background", capture_background)
+    monkeypatch.setattr(
+        "app.routes.commerce.load_plans_from_cache",
+        capture_load,
+    )
+
+    resp = run_endpoint("/api/plans", _plans_request(""))
+    body = json.loads(bytes(resp.body))
+
+    assert resp.status_code == 400
+    assert body == {"status": "error", "message": INVALID_BRAND_CODE}
+    assert resolver_calls == []
+    assert cache_reads == []
+    assert outbound == []
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["plans_THREE.json"]
+
+
 @pytest.mark.parametrize("brand", list(SUPPORTED_BRANDS))
 def test_plans_api_accepts_all_supported_brands(
     monkeypatch: MonkeyPatch,

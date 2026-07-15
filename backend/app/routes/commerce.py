@@ -37,7 +37,7 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
         brand_override = request.query_params.get("brand")
         raw_brand = (
             brand_override
-            if brand_override
+            if brand_override is not None
             else deps.get_brand_by_sub_id(ctx, sub_id, req_ident)
         )
         try:
