@@ -40,9 +40,7 @@ class MainModuleSource(Protocol):
     decrypt_password: Callable[[str | None], str | None]
     get_isolated_session: Callable[[], requests.Session]
     _save_session: Callable[[SessionContext], None]
-    resolve_proxies: Callable[
-        [str, MutableMapping[str, str] | None], MutableMapping[str, str] | None
-    ]
+    resolve_proxies: Callable[[str, dict[str, str] | None], dict[str, str] | None]
     attempt_silent_relogin: Callable[
         [Request, SessionContext, str, dict[str, Any]], bool
     ]
@@ -69,7 +67,7 @@ class MainModuleSource(Protocol):
     _mark_session_cookie_for_deletion: Callable[[Request], None]
     _clear_session: Callable[[SessionContext], None]
     BASE_HEADERS: MutableMapping[str, str]
-    PROXIES: MutableMapping[str, str] | None
+    PROXIES: dict[str, str] | None
     SUB_BRANDS: Sequence[str]
     FRONTEND_DIST_DIR: Path
     PLANS_CACHE_DIR: Path
@@ -106,9 +104,7 @@ class MainDepsAdapter:
     @property
     def resolve_proxies(
         self,
-    ) -> Callable[
-        [str, MutableMapping[str, str] | None], MutableMapping[str, str] | None
-    ]:
+    ) -> Callable[[str, dict[str, str] | None], dict[str, str] | None]:
         return self.source.resolve_proxies
 
     @property
@@ -214,7 +210,7 @@ class MainDepsAdapter:
         return self.source.BASE_HEADERS
 
     @property
-    def PROXIES(self) -> MutableMapping[str, str] | None:
+    def PROXIES(self) -> dict[str, str] | None:
         return self.source.PROXIES
 
     @property

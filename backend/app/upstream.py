@@ -50,9 +50,7 @@ class UpstreamDepsProtocol(Protocol):
     @property
     def resolve_proxies(
         self,
-    ) -> Callable[
-        [str, MutableMapping[str, str] | None], MutableMapping[str, str] | None
-    ]: ...
+    ) -> Callable[[str, dict[str, str] | None], dict[str, str] | None]: ...
 
     @property
     def attempt_silent_relogin(

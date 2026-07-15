@@ -1,7 +1,7 @@
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
-python-multipart==0.0.9
-requests==2.32.3
-urllib3==2.2.2
-cryptography==46.0.1
+python-multipart==0.0.32
+requests==2.34.2
+urllib3==2.7.0
+cryptography==48.0.1
 redis==5.2.1
