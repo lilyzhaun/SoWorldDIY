@@ -47,7 +47,13 @@ def test_cmn_numbers_holds_nine_numbers_for_three_by_three_grid(
             }
 
     def require_login(_: Request) -> SessionContext:
-        return SessionContext(sid="test", data={"accounts": {"acct@example.com": {}}})
+        return SessionContext(
+            sid="test",
+            data={
+                "csrf_token": "tok",
+                "accounts": {"acct@example.com": {}},
+            },
+        )
 
     def account_context(
         ctx: SessionContext, account_id: str | None
@@ -95,11 +101,22 @@ def test_cmn_numbers_holds_nine_numbers_for_three_by_three_grid(
     request = Request(
         {
             "type": "http",
-            "method": "GET",
+            "method": "POST",
             "path": "/api/cmn/numbers",
-            "headers": [],
-            "query_string": b"account_id=acct%40example.com&subscriptionId=sub-1",
-        }
+            "headers": [
+                (b"content-type", b"application/x-www-form-urlencoded"),
+                (b"x-csrf-token", b"tok"),
+            ],
+            "query_string": b"",
+        },
+        receive=_form_receive(b"account_id=acct%40example.com&subscriptionId=sub-1"),
+    )
+    request.state.session_ctx = SessionContext(
+        sid="test",
+        data={
+            "csrf_token": "tok",
+            "accounts": {"acct@example.com": {"cookies": {}}},
+        },
     )
     endpoint: Callable[[Request], Awaitable[Response]] | None = None
     for route in main.app.routes:
@@ -129,3 +146,15 @@ def test_cmn_numbers_holds_nine_numbers_for_three_by_three_grid(
     assert captured_urls == [
         "https://simworld.net/SIMworldApi-pro/HTHK/THREE/THREE/mnms/holdAvailableNumbersFor15m/9/"
     ]
+
+
+def _form_receive(body: bytes):
+    done = {"flag": False}
+
+    async def receive():
+        if done["flag"]:
+            return {"type": "http.disconnect"}
+        done["flag"] = True
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    return receive

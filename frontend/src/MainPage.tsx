@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 
+import { apiFetch } from '@/api/client'
 import { BUILD_VERSION } from '@/build'
 import { MainHeader } from '@/components/MainHeader'
 import { MainPageContent } from '@/components/MainPageContent'
@@ -238,9 +239,16 @@ export function MainPage(): JSX.Element {
   }
 
   const handleLogout = (): void => {
-    let url = '/logout'
-    if (accountId) url += `?account_id=${accountId}`
-    window.location.href = url
+    void (async () => {
+      const formData = new FormData()
+      if (accountId) formData.append('account_id', accountId)
+      try {
+        const response = await apiFetch('/logout', { method: 'POST', body: formData })
+        window.location.href = response.redirected && response.url ? response.url : '/'
+      } catch {
+        window.location.href = '/'
+      }
+    })()
   }
 
   return (

@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
+from . import runtime as _runtime
 from .responses import _json_error
 from .runtime import (
     CSRF_COOKIE_NAME,
@@ -169,9 +170,10 @@ class SessionMiddleware(BaseHTTPMiddleware):
             _daily_refresh_session_if_needed(ctx)
         response = await call_next(request)
         current_ctx = getattr(request.state, "session_ctx", None)
+        secure = bool(_runtime.COOKIE_SECURE)
         if getattr(request.state, "delete_session_cookie", False):
-            response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
-            response.delete_cookie(key=CSRF_COOKIE_NAME, path="/")
+            response.delete_cookie(key=SESSION_COOKIE_NAME, path="/", secure=secure)
+            response.delete_cookie(key=CSRF_COOKIE_NAME, path="/", secure=secure)
         elif current_ctx is not None:
             csrf_token = _ensure_csrf_token(current_ctx)
             response.set_cookie(
@@ -181,6 +183,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
                 httponly=True,
                 samesite="lax",
                 path="/",
+                secure=secure,
             )
             response.set_cookie(
                 key=CSRF_COOKIE_NAME,
@@ -189,6 +192,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
                 httponly=False,
                 samesite="lax",
                 path="/",
+                secure=secure,
             )
         return response
 

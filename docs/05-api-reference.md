@@ -10,7 +10,7 @@
 - 失败响应通常包含 `status: "error"` 和 `message`。
 - 多账号上下文通过 `account_id` 查询参数或请求体字段指定。
 - 前端 `apiPostJson` 会自动添加 `x-csrf-token`。
-- 访问上游接口失败时，后端会尽量返回上游错误信息或通用错误文案。
+- 访问上游接口失败时，后端返回稳定的公开错误文案，不回传异常详情或上游响应体。
 
 ## 公开静态资源
 
@@ -47,7 +47,7 @@
 | 路径 | 方法 | 请求 | 说明 |
 | --- | --- | --- | --- |
 | `/api/cmn/check` | GET | Query: `account_id`, `subscriptionId` | 查询是否有 CMN 换号资格。 |
-| `/api/cmn/numbers` | GET/POST | Query 或 Form: `account_id`, `subscriptionId` | 向上游锁定候选号码 15 分钟并返回号码列表。当前请求上游数量为 10。 |
+| `/api/cmn/numbers` | POST | Form: `account_id`, `subscriptionId` | 向上游锁定候选号码 15 分钟并返回号码列表。需 CSRF。当前请求上游数量为 9。 |
 | `/api/cmn/purchase` | POST | JSON: `account_id`, `subscriptionId`, `selectedNumber`, `offerId`, `price`, `txnAmount`, `paymentType` | 创建换号购买订单，成功时返回 `paymentUrl`。 |
 
 ## 资源转移
@@ -56,18 +56,25 @@
 | --- | --- | --- | --- |
 | `/api/sim/transfer` | POST | JSON: `account_id`, `subscriptionId`, `sourceMsisdn`, `targetMsisdn`, `productFamily`, `userOfferId`, `balanceResourceId`, `unit`, `amount` | 执行数据或语音资源转移。 |
 
+## 会话
+
+| 路径 | 方法 | 请求 | 说明 |
+| --- | --- | --- | --- |
+| `/logout` | POST | Form 可选: `account_id`；Header: `x-csrf-token`（有 session 时） | 退出全部或指定账号。GET 返回 405。 |
+
 ## 维护接口
 
 | 路径 | 方法 | 请求 | 说明 |
 | --- | --- | --- | --- |
-| `/internal/session-cleanup` | POST | Header: `x-session-secret` | 检查 Redis 可用性。该接口应只允许内部调用。 |
+| `/internal/session-cleanup` | POST | Header: `x-session-secret` | 检查 Redis 可用性。该接口应只允许内部调用。内部密钥比较使用恒定时间比较。 |
 
 ## CSRF 说明
 
-登录成功后，后端会设置 `csrf_token` Cookie。前端非 GET/HEAD 请求通过 `x-csrf-token` 发送同一个值。以下接口会校验 CSRF：
+登录成功后，后端会设置 `csrf_token` Cookie。前端非 GET/HEAD 请求通过 `x-csrf-token` 发送同一个值。当 `COOKIE_SECURE=true` 时，`session` 与 `csrf_token` 均带 `Secure`。以下接口会校验 CSRF：
 
+- `/logout`
 - `/api/purchase`
-- `/api/cmn/numbers` 的 POST 请求
+- `/api/cmn/numbers`
 - `/api/cmn/purchase`
 - `/api/sim/transfer`
 

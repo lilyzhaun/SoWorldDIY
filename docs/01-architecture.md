@@ -69,10 +69,10 @@ FastAPI 后端
 - `routes/account_pages.py` — `/main` 和 `/main/{account_id}` 页面路由。
 - `routes/profile.py` — `GET /api/profile`，调用 `services_profile.fetch_and_build_profile`。
 - `routes/commerce.py` — `GET /api/plans`、`GET /api/balance`、`POST /api/purchase`。
-- `routes/cmn.py` — CMN 换号：`GET /api/cmn/check`（资格查询）、`GET /api/cmn/numbers` 和 `POST /api/cmn/numbers`（候选号码，GET 用 query 参数，POST 用 form 字段并校验 CSRF）、`POST /api/cmn/purchase`（创建换号购买订单，Pydantic 校验请求体）。
+- `routes/cmn.py` — CMN 换号：`GET /api/cmn/check`（资格查询）、`POST /api/cmn/numbers`（候选号码，form 字段并校验 CSRF；不再提供状态变更 GET）、`POST /api/cmn/purchase`（创建换号购买订单，Pydantic 校验请求体）。
 - `routes/transfer.py` — `POST /api/sim/transfer`（资源转移，Pydantic 校验请求体）。
 - `routes/messages.py` — `GET /api/inbox`（收件箱）和 `GET /api/history`（交易记录）。
-- `routes/session.py` — `/logout` 和 `POST /internal/session-cleanup`（维护入口）。
+- `routes/session.py` — `POST /logout`（CSRF）和 `POST /internal/session-cleanup`（维护入口，恒定时间密钥比较）。
 
 ### 服务模块
 

@@ -53,7 +53,7 @@ npm run build
 | `/` | GET | 登录页或已有账号的主页面跳转入口。带 `?add=1` 时显示新增账号登录页。 | `routes/system.py` |
 | `/main` | GET | 登录后跳转到第一个账号。 | `routes/account_pages.py` |
 | `/main/{account_id}` | GET | 主控制台页面。 | `routes/account_pages.py` |
-| `/logout` | GET | 清理全部账号或指定账号 session。 | `routes/session.py` |
+| `/logout` | POST | 清理全部账号或指定账号 session。需有效 session 时校验 CSRF；Form 字段可选 `account_id`。 | `routes/session.py` |
 | `/manifest.json` | GET | PWA manifest。 | `routes/system.py` |
 | `/sw.js` | GET | Service Worker。 | `routes/system.py` |
 

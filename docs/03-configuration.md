@@ -9,6 +9,7 @@
 | 变量 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- |
 | `SESSION_SECRET` | 是 | 无 | 服务端 session、内部维护接口和默认加密回退使用的密钥。必须使用强随机值。 |
+| `COOKIE_SECURE` | 是 | 无 | 是否为 `session` 与 `csrf_token` Cookie 设置 `Secure`。生产必须为 `true`；本地 HTTP 与 CI/测试设为 `false`。仅接受字面量 `true`/`false`。 |
 | `PASSWORD_ENCRYPTION_KEY` | 否 | `SESSION_SECRET` | session 内密码加密密钥。建议与 `SESSION_SECRET` 使用不同强随机值。 |
 | `REDIS_URL` | 否 | `redis://127.0.0.1:6379/0` | Redis 连接地址。生产环境建议使用受控网络和密码。 |
 | `REDIS_SESSION_PREFIX` | 否 | `session:` | Redis session key 前缀。多环境共享 Redis 时需要区分。 |

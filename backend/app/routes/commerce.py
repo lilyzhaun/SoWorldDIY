@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from starlette.responses import Response
 
 from ..brand import INVALID_BRAND_CODE, InvalidBrandError, parse_brand, plans_cache_path
+from ..public_errors import AUTH_FAILED, INTERNAL_ERROR, INVALID_REQUEST
 from ..schemas import PurchaseRequest
 from ..services_commerce import (
     build_plan_purchase_payload,
@@ -96,12 +97,11 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
             data = r.json() if r and r.status_code == 200 else []
             balance = parse_wallet_balance(data)
             return deps._json_success({"status": "success", "balance": balance})
-        except Exception:
-            logger.exception(
-                "get_balance failed brand=%s sid=%s account_id=%s",
+        except Exception as exc:
+            logger.error(
+                "get_balance failed error_class=%s brand=%s",
+                type(exc).__name__,
                 target_brand,
-                sid,
-                req_ident,
             )
             return deps._json_success({"status": "success", "balance": 0})
 
@@ -117,15 +117,15 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
         raw = await request.json()
         try:
             body = PurchaseRequest.model_validate(raw)
-        except ValidationError as exc:
-            return deps._json_error(str(exc), 400)
+        except ValidationError:
+            return deps._json_error(INVALID_REQUEST.message, 400)
 
         req_ident = body.account_id or request.query_params.get("account_id")
         account_ctx = deps.get_account_context(
             ctx, str(req_ident) if req_ident is not None else None
         )
         if not account_ctx:
-            return deps._json_error("Auth failed", 401)
+            return deps._json_error(AUTH_FAILED.message, 401)
 
         sid = body.subscriptionId
         target_brand = deps.get_brand_by_sub_id(ctx, str(sid), str(req_ident))
@@ -164,12 +164,16 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
                 return deps._json_success(
                     {"status": "success", "paymentUrl": r.json()["paymentUrl"]}
                 )
-            return deps._upstream_error(r, "购买请求失败，请稍后重试", 400)
-        except Exception as exc:
-            logger.exception(
-                "purchase_plan failed brand=%s sid=%s account_id=%s",
-                target_brand,
-                sid,
-                req_ident,
+            return deps._upstream_error(
+                r,
+                "购买请求失败，请稍后重试",
+                400,
+                operation="purchase_plan",
             )
-            return deps._json_error(str(exc), 500)
+        except Exception as exc:
+            logger.error(
+                "purchase_plan failed error_class=%s brand=%s",
+                type(exc).__name__,
+                target_brand,
+            )
+            return deps._json_error(INTERNAL_ERROR.message, 500)

@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from pydantic import ValidationError
 from starlette.responses import Response
 
+from ..public_errors import INTERNAL_ERROR, INVALID_REQUEST
 from ..schemas import CmnPurchaseRequest
 from ..services_commerce import build_cmn_purchase_payload
 from ..upstream_urls import simworld_url
@@ -76,22 +77,6 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
         numbers = sorted(set(r.json().get("lineList", [])))[:9]
         return deps._json_success({"status": "success", "numbers": numbers})
 
-    @app.get(
-        "/api/cmn/numbers",
-        name="get_cmn_numbers",
-        operation_id="get_cmn_numbers",
-    )
-    async def get_cmn_numbers(request: Request) -> Response:
-        ctx = deps._require_login(request)
-        if not ctx:
-            return deps._redirect_to_login()
-        return await _build_cmn_numbers(
-            request,
-            ctx=ctx,
-            req_ident=request.query_params.get("account_id"),
-            sid=request.query_params.get("subscriptionId"),
-        )
-
     @app.post(
         "/api/cmn/numbers",
         name="post_cmn_numbers",
@@ -126,8 +111,8 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
         raw = await request.json()
         try:
             body = CmnPurchaseRequest.model_validate(raw)
-        except ValidationError as exc:
-            return deps._json_error(str(exc), 400)
+        except ValidationError:
+            return deps._json_error(INVALID_REQUEST.message, 400)
 
         req_ident = str(body.account_id)
         account_ctx = deps.get_account_context(ctx, req_ident)
@@ -172,12 +157,16 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
                 return deps._json_success(
                     {"status": "success", "paymentUrl": r.json()["paymentUrl"]}
                 )
-            return deps._upstream_error(r, "换号购买请求失败，请稍后重试", 400)
-        except Exception as exc:
-            logger.exception(
-                "purchase_cmn failed brand=%s sid=%s account_id=%s",
-                target_brand,
-                sid,
-                req_ident,
+            return deps._upstream_error(
+                r,
+                "换号购买请求失败，请稍后重试",
+                400,
+                operation="purchase_cmn",
             )
-            return deps._json_error(str(exc), 500)
+        except Exception as exc:
+            logger.error(
+                "purchase_cmn failed error_class=%s brand=%s",
+                type(exc).__name__,
+                target_brand,
+            )
+            return deps._json_error(INTERNAL_ERROR.message, 500)

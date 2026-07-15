@@ -35,13 +35,12 @@ EXPECTED_API_ROUTES: list[tuple[str, list[str], str]] = [
     ("/api/balance", ["GET"], "get_balance"),
     ("/api/purchase", ["POST"], "purchase_plan"),
     ("/api/cmn/check", ["GET"], "check_cmn"),
-    ("/api/cmn/numbers", ["GET"], "get_cmn_numbers"),
     ("/api/cmn/numbers", ["POST"], "post_cmn_numbers"),
     ("/api/cmn/purchase", ["POST"], "purchase_cmn"),
     ("/api/sim/transfer", ["POST"], "transfer_resource"),
     ("/api/inbox", ["GET"], "get_inbox"),
     ("/api/history", ["GET"], "get_transaction_history"),
-    ("/logout", ["GET"], "logout"),
+    ("/logout", ["POST"], "logout"),
     ("/internal/session-cleanup", ["POST"], "session_cleanup"),
 ]
 
@@ -119,11 +118,11 @@ def test_openapi_paths_match_registered_api_routes() -> None:
     assert paths == EXPECTED_OPENAPI_PATHS
 
 
-def test_cmn_numbers_route_operation_ids_are_distinct() -> None:
+def test_cmn_numbers_route_is_post_only() -> None:
     cmn_openapi = main.app.openapi()["paths"].get("/api/cmn/numbers", {})
-    assert "get" in cmn_openapi
+    assert "get" not in cmn_openapi
     assert "post" in cmn_openapi
-    assert cmn_openapi["get"]["operationId"] != cmn_openapi["post"]["operationId"]
+    assert cmn_openapi["post"]["operationId"] == "post_cmn_numbers"
 
 
 def test_middleware_includes_session_middleware() -> None:

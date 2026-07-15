@@ -47,6 +47,6 @@ describe('CMN hook scope lifecycle in real Chromium', () => {
     expect(stdout).toContain('data-auto-request-aborted="true"')
     expect(stdout).toContain('data-cancel-reset="true"')
     expect(stdout).toContain('/api/cmn/check?subscriptionId=subscription-1&amp;account_id=account-1')
-    expect(stdout).toContain('/api/cmn/numbers?subscriptionId=subscription-2&amp;account_id=account-2')
+    expect(stdout).toContain('POST /api/cmn/numbers')
   }, 20_000)
 })

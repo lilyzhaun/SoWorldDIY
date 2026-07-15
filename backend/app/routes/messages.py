@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
+from ..public_errors import INTERNAL_ERROR
 from ..upstream_urls import simworld_url
 from .deps import RouteDeps
 
@@ -44,9 +45,11 @@ def register_messages_routes(app: FastAPI, deps: RouteDeps) -> None:
                     if msg_id not in seen:
                         messages.append(msg)
                         seen.add(msg_id)
-        except Exception:
-            logger.exception(
-                "get_inbox failed brand=%s account_id=%s", brand, req_ident
+        except Exception as exc:
+            logger.error(
+                "get_inbox failed error_class=%s brand=%s",
+                type(exc).__name__,
+                brand,
             )
         return deps._json_success(
             {
@@ -90,10 +93,9 @@ def register_messages_routes(app: FastAPI, deps: RouteDeps) -> None:
                 return deps._json_success({"status": "success", "data": r.json()})
             return JSONResponse(status_code=400, content={"status": "error"})
         except Exception as exc:
-            logger.exception(
-                "get_transaction_history failed brand=%s sid=%s account_id=%s",
+            logger.error(
+                "get_transaction_history failed error_class=%s brand=%s",
+                type(exc).__name__,
                 target_brand,
-                sid,
-                req_ident,
             )
-            return deps._json_error(str(exc), 500)
+            return deps._json_error(INTERNAL_ERROR.message, 500)

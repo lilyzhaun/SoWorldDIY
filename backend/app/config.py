@@ -29,6 +29,18 @@ def _get_required_env(name: str) -> str:
     return value
 
 
+def _get_required_bool_env(name: str) -> bool:
+    raw = os.environ.get(name)
+    if raw is None or not str(raw).strip():
+        raise RuntimeError(f"{name} is required")
+    value = str(raw).strip().lower()
+    if value == "true":
+        return True
+    if value == "false":
+        return False
+    raise RuntimeError(f"{name} must be true or false")
+
+
 @dataclass(frozen=True)
 class Settings:
     base_dir: Path
@@ -37,6 +49,7 @@ class Settings:
     redis_session_prefix: str
     proxy_url: str
     password_encryption_key: str
+    cookie_secure: bool
 
     @property
     def proxies(self) -> dict[str, str] | None:
@@ -60,4 +73,5 @@ def load_settings() -> Settings:
         redis_session_prefix=os.environ.get("REDIS_SESSION_PREFIX", "session:"),
         proxy_url=os.environ.get("PROXY_URL", "").strip(),
         password_encryption_key=password_encryption_key,
+        cookie_secure=_get_required_bool_env("COOKIE_SECURE"),
     )

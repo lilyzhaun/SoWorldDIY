@@ -19,7 +19,8 @@ Date.now = (): number => realDateNow() + clockOffset
 
 window.fetch = async (input, init): Promise<Response> => {
   const url = String(input)
-  requestUrls.push(url)
+  const method = (init?.method || 'GET').toUpperCase()
+  requestUrls.push(`${method} ${url}`)
 
   if (url.includes('/api/cmn/check')) {
     eligibilityRequestCount += 1

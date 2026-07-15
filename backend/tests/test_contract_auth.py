@@ -22,7 +22,7 @@ def test_protected_routes_redirect_to_login_when_anonymous() -> None:
         ("/api/inbox?account_id=a@b.com", "GET"),
         ("/api/history?account_id=a@b.com&subscriptionId=s", "GET"),
         ("/api/cmn/check?account_id=a@b.com&subscriptionId=s", "GET"),
-        ("/api/cmn/numbers?account_id=a@b.com&subscriptionId=s", "GET"),
+        ("/api/cmn/numbers", "POST"),
         ("/api/sim/transfer", "POST"),
         ("/api/purchase", "POST"),
         ("/api/cmn/purchase", "POST"),
@@ -284,4 +284,4 @@ def test_login_session_save_failure_returns_503(monkeypatch: MonkeyPatch) -> Non
         body=b"login_type=password&identifier=a@b.com&auth_code=C&password=p",
     )
     assert resp.status == 503
-    assert resp.json == {"status": "error", "message": "Redis save failed"}
+    assert resp.json == {"status": "error", "message": "服务暂时不可用"}

@@ -9,6 +9,12 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
+from ..public_errors import (
+    ACCOUNT_CHECK_FAILED,
+    INTERNAL_ERROR,
+    INVALID_REQUEST,
+    SERVICE_UNAVAILABLE,
+)
 from ..schemas import CheckUserRequest, SendOtpRequest
 from ..upstream_urls import THREE_EXISTING_CUST_DIPPING, simworld_url
 from .deps import RouteDeps
@@ -22,9 +28,10 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
         raw = await request.json()
         try:
             body = CheckUserRequest.model_validate(raw)
-        except ValidationError as exc:
+        except ValidationError:
             return JSONResponse(
-                status_code=500, content={"status": "error", "message": str(exc)}
+                status_code=500,
+                content={"status": "error", "message": INVALID_REQUEST.message},
             )
         try:
             identifier = body.identifier
@@ -47,9 +54,13 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                     )
                 return JSONResponse(status_code=400, content={"status": "error"})
         except Exception as exc:
-            logger.exception("check_user failed identifier=%s", raw.get("identifier"))
+            logger.error(
+                "check_user failed error_class=%s",
+                type(exc).__name__,
+            )
             return JSONResponse(
-                status_code=500, content={"status": "error", "message": str(exc)}
+                status_code=500,
+                content={"status": "error", "message": INTERNAL_ERROR.message},
             )
 
     @app.post("/api/send-otp")
@@ -57,8 +68,8 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
         raw = await request.json()
         try:
             body = SendOtpRequest.model_validate(raw)
-        except ValidationError as exc:
-            return deps._json_error(str(exc), 400)
+        except ValidationError:
+            return deps._json_error(INVALID_REQUEST.message, 400)
 
         valid, message = deps.verify_auth_code(body.auth_code, False)
         if not valid:
@@ -79,11 +90,10 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                     timeout=5,
                 )
                 sub_brand = r.json().get("subBrand", "THREE")
-        except Exception:
+        except Exception as exc:
             logger.warning(
-                "send_otp brand lookup failed identifier=%s; defaulting brand",
-                ident,
-                exc_info=True,
+                "send_otp brand lookup failed error_class=%s; defaulting brand",
+                type(exc).__name__,
             )
 
         try:
@@ -97,11 +107,21 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                 )
                 if r.status_code in [200, 204]:
                     return deps._json_success({"status": "success"})
-                return deps._upstream_error(r, "验证码发送失败，请稍后重试", 400)
+                return deps._upstream_error(
+                    r,
+                    "验证码发送失败，请稍后重试",
+                    400,
+                    operation="send_otp",
+                )
         except Exception as exc:
-            logger.exception("send_otp failed identifier=%s brand=%s", ident, sub_brand)
+            logger.error(
+                "send_otp failed error_class=%s brand=%s",
+                type(exc).__name__,
+                sub_brand,
+            )
             return JSONResponse(
-                status_code=500, content={"status": "error", "message": str(exc)}
+                status_code=500,
+                content={"status": "error", "message": INTERNAL_ERROR.message},
             )
 
     @app.post("/login")
@@ -137,8 +157,11 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                 else:
                     return deps._json_error("账号无效或网络错误", 400)
         except Exception as exc:
-            logger.exception("login brand check failed identifier=%s", identifier)
-            return deps._json_error(f"账号检查失败: {exc}", 500)
+            logger.error(
+                "login brand check failed error_class=%s",
+                type(exc).__name__,
+            )
+            return deps._json_error(ACCOUNT_CHECK_FAILED.message, 500)
 
         if login_type == "password":
             login_url = simworld_url("THREE", "user/login/")
@@ -170,7 +193,11 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                             request.state.session_ctx = ctx
                             request.state.delete_session_cookie = False
                     except RuntimeError as exc:
-                        return deps._json_error(str(exc), 503)
+                        logger.error(
+                            "login create_session failed error_class=%s",
+                            type(exc).__name__,
+                        )
+                        return deps._json_error(SERVICE_UNAVAILABLE.message, 503)
                     cookies = requests.utils.dict_from_cookiejar(r.cookies)
                     accounts = ctx.data.get("accounts", {})
                     account_payload: dict[str, Any] = {
@@ -188,17 +215,20 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                     try:
                         deps._save_session(ctx)
                     except RuntimeError as exc:
-                        return deps._json_error(str(exc), 503)
+                        logger.error(
+                            "login save_session failed error_class=%s",
+                            type(exc).__name__,
+                        )
+                        return deps._json_error(SERVICE_UNAVAILABLE.message, 503)
 
                     try:
                         deps.notify(
                             f"🚀 新用户登录\n账号: {identifier}\n模式: {login_type}\n品牌: {sub_brand}\n当前共 {len(accounts)} 个账号",
                         )
-                    except Exception:
+                    except Exception as exc:
                         logger.warning(
-                            "login notify failed identifier=%s",
-                            identifier,
-                            exc_info=True,
+                            "login notify failed error_class=%s",
+                            type(exc).__name__,
                         )
 
                     return deps._json_success(
@@ -207,7 +237,9 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
 
             return deps._json_error("登录失败，请检查密码或OTP", 401)
         except Exception as exc:
-            logger.exception(
-                "login failed identifier=%s login_type=%s", identifier, login_type
+            logger.error(
+                "login failed error_class=%s login_type=%s",
+                type(exc).__name__,
+                login_type,
             )
-            return deps._json_error(str(exc), 500)
+            return deps._json_error(INTERNAL_ERROR.message, 500)

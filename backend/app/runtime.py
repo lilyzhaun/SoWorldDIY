@@ -53,6 +53,7 @@ SESSION_LIFETIME_SECONDS = int(timedelta(days=7).total_seconds())
 SESSION_DAILY_REFRESH_SECONDS = 86400
 SESSION_KEY_PREFIX = "3hk_user_"
 SESSION_SECRET = settings.session_secret
+COOKIE_SECURE = settings.cookie_secure
 REDIS_URL = settings.redis_url
 REDIS_SESSION_PREFIX = settings.redis_session_prefix
 PROXIES = settings.proxies

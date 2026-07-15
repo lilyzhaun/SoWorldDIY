@@ -134,15 +134,24 @@ def test_plans_serves_cached_brand_file(
 
 def test_logout_no_session_redirects_to_root(monkeypatch: MonkeyPatch) -> None:
     _install_fake_store(monkeypatch)
-    resp = invoke("/logout")
+    resp = invoke("/logout", method="POST")
     assert resp.status == 302
     assert resp.header("location") == ["/"]
 
 
 def test_logout_last_account_clears_session(monkeypatch: MonkeyPatch) -> None:
     store = _install_fake_store(monkeypatch)
-    sid, _ = _authed_session(store, accounts={"a@b.com": {"sub_brand": "THREE"}})
-    resp = invoke("/logout?account_id=a@b.com", headers={"cookie": f"session={sid}"})
+    sid, csrf = _authed_session(store, accounts={"a@b.com": {"sub_brand": "THREE"}})
+    resp = invoke(
+        "/logout",
+        method="POST",
+        headers={
+            "cookie": f"session={sid}",
+            "x-csrf-token": csrf,
+            "content-type": "application/x-www-form-urlencoded",
+        },
+        body=b"account_id=a%40b.com",
+    )
     assert resp.status == 302
     assert resp.header("location") == ["/"]
     assert sid not in store.sessions
@@ -152,7 +161,7 @@ def test_logout_last_account_clears_session(monkeypatch: MonkeyPatch) -> None:
 
 def test_logout_remaining_account_redirects_to_first(monkeypatch: MonkeyPatch) -> None:
     store = _install_fake_store(monkeypatch)
-    sid, _ = _authed_session(
+    sid, csrf = _authed_session(
         store,
         accounts={
             "first@x.com": {"sub_brand": "THREE"},
@@ -160,7 +169,14 @@ def test_logout_remaining_account_redirects_to_first(monkeypatch: MonkeyPatch) -
         },
     )
     resp = invoke(
-        "/logout?account_id=second@x.com", headers={"cookie": f"session={sid}"}
+        "/logout",
+        method="POST",
+        headers={
+            "cookie": f"session={sid}",
+            "x-csrf-token": csrf,
+            "content-type": "application/x-www-form-urlencoded",
+        },
+        body=b"account_id=second%40x.com",
     )
     assert resp.status == 302
     assert resp.header("location") == ["/main/first@x.com"]

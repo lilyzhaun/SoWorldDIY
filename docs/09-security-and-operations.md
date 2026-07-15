@@ -19,9 +19,10 @@
 
 ## 会话安全
 
-- session 数据保存在 Redis，浏览器只持有 `session_id`。
-- `session_id` Cookie 使用 `httponly` 和 `samesite=lax`。
-- CSRF token 存在 session 和 Cookie 中，非 GET/HEAD 请求需要 `x-csrf-token`。
+- session 数据保存在 Redis，浏览器只持有 `session` Cookie。
+- `session` Cookie 使用 `httponly` 和 `samesite=lax`；当 `COOKIE_SECURE=true` 时，`session` 与 `csrf_token` 均设置 `Secure`。
+- CSRF token 存在 session 和 Cookie 中，状态变更请求（含 `/logout`、`POST /api/cmn/numbers`）需要 `x-csrf-token`。
+- 公开错误响应使用稳定文案，不返回异常字符串或上游响应体；日志只记录 operation/status/error class/correlation id。
 - 如果 `SESSION_SECRET` 泄露，应清理现有 session 并轮换密钥。
 
 ## 密码处理
@@ -64,7 +65,7 @@
 
 ## 日志与排错
 
-日志中不应输出密码、OTP、cookies 或鉴权码。排查问题时优先记录状态码、请求路径、账号标识的脱敏版本和上游错误摘要。
+日志中不应输出密码、OTP、cookies、鉴权码、账号标识、原始 URL query 或上游响应体。排查问题时优先记录 operation、HTTP 状态、错误类名和 correlation id。
 
 ---
 

@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from pydantic import ValidationError
 from starlette.responses import Response
 
+from ..public_errors import INTERNAL_ERROR, INVALID_REQUEST
 from ..schemas import TransferRequest
 from ..services_transfer import (
     build_transfer_payload,
@@ -33,8 +34,8 @@ def register_transfer_routes(app: FastAPI, deps: RouteDeps) -> None:
         raw = await request.json()
         try:
             body = TransferRequest.model_validate(raw)
-        except ValidationError as exc:
-            return deps._json_error(str(exc), 400)
+        except ValidationError:
+            return deps._json_error(INVALID_REQUEST.message, 400)
 
         req_ident = str(body.account_id)
         account_ctx = deps.get_account_context(ctx, req_ident)
@@ -85,12 +86,16 @@ def register_transfer_routes(app: FastAPI, deps: RouteDeps) -> None:
             if r and r.status_code == 200:
                 deps.delete_cache(f"profile_{req_ident}")
                 return deps._json_success({"status": "success"})
-            return deps._upstream_error(r, "资源转移请求失败，请稍后重试", 400)
-        except Exception as exc:
-            logger.exception(
-                "transfer_resource failed brand=%s sid=%s account_id=%s",
-                target_brand,
-                sid,
-                req_ident,
+            return deps._upstream_error(
+                r,
+                "资源转移请求失败，请稍后重试",
+                400,
+                operation="transfer_resource",
             )
-            return deps._json_error(str(exc), 500)
+        except Exception as exc:
+            logger.error(
+                "transfer_resource failed error_class=%s brand=%s",
+                type(exc).__name__,
+                target_brand,
+            )
+            return deps._json_error(INTERNAL_ERROR.message, 500)

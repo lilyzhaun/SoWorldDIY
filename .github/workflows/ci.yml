@@ -17,6 +17,7 @@ jobs:
     env:
       SESSION_SECRET: ci-test-secret
       PASSWORD_ENCRYPTION_KEY: ci-test-encryption-key
+      COOKIE_SECURE: "false"
     services:
       redis:
         image: redis:7

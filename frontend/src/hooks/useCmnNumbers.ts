@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
 
-import { apiGet } from '@/api/client'
+import { apiFetch } from '@/api/client'
 import { toUserFacingApiError } from '@/utils'
 import type { CmnRefreshOutcome } from '@/utils/cmnAutoRefresh'
-import { getApiUrl } from '@/utils/mainPage'
 
 type ShowAlert = (text: string, title?: string) => void
 type RefreshMode = 'manual' | 'auto'
@@ -81,10 +80,36 @@ export function useCmnNumbers({ accountId, currentSubId, lifecycle }: CmnNumbers
       if (mode === 'manual') setCmnNumbers([])
 
       try {
-        const url = getApiUrl(`/api/cmn/numbers?subscriptionId=${currentSubId}`, accountId)
-        const data = await apiGet<{ status?: string; numbers?: string[]; message?: string }>(url, {
+        const formData = new FormData()
+        formData.append('subscriptionId', currentSubId)
+        if (accountId) formData.append('account_id', accountId)
+        const response = await apiFetch('/api/cmn/numbers', {
+          method: 'POST',
+          body: formData,
           signal: requestSignal,
         })
+        if (!response.ok) {
+          const bodyText = await response.text()
+          let message = '获取号码失败'
+          const parsedMessage = (() => {
+            try {
+              const parsed = JSON.parse(bodyText) as { message?: string }
+              return parsed.message
+            } catch {
+              return undefined
+            }
+          })()
+          if (parsedMessage) message = parsedMessage
+          if (!isCurrent()) return { kind: 'unavailable' }
+          setCmnCanRefresh(true)
+          if (mode === 'manual') showAlert(message)
+          return { kind: 'error' }
+        }
+        const data = (await response.json()) as {
+          status?: string
+          numbers?: string[]
+          message?: string
+        }
         if (!isCurrent()) return { kind: 'unavailable' }
         if (data.status !== 'success') {
           setCmnCanRefresh(true)
