@@ -12,8 +12,12 @@ from redis.exceptions import RedisError
 
 from app.auth_code_keys import (
     MIN_HMAC_KEY_BYTES,
+    V2_DIGEST_HEX_LEN,
     AuthCodeKeyMode,
     fingerprint_from_digest,
+    is_legacy_redis_key,
+    is_reserved_v2_shaped_code,
+    is_v2_redis_key,
     parse_auth_code_hmac_key,
     parse_auth_code_key_mode,
     v2_redis_key,
@@ -518,3 +522,130 @@ def test_logging_never_includes_hmac_key_or_code(tmp_path: Path) -> None:
     assert SENTINEL_CODE not in log_text
     assert HMAC_SECRET.decode() not in log_text
     assert "error_class=RedisError" in log_text
+
+
+# --- v2 key shape hardening -------------------------------------------------
+
+
+def test_is_v2_redis_key_requires_exact_64_lowercase_hex() -> None:
+    valid = "auth_code:v2:" + ("ab" * 32)
+    assert is_v2_redis_key(valid) is True
+    assert is_legacy_redis_key("auth_code:v2:NOTHEX_SUFFIX") is True
+    assert is_v2_redis_key("auth_code:v2:NOTHEX_SUFFIX") is False
+    assert is_v2_redis_key("auth_code:v2:" + ("AB" * 32)) is False
+    assert is_v2_redis_key("auth_code:v2:" + ("ab" * 31)) is False
+
+
+def test_reserved_v2_shaped_code_detection() -> None:
+    reserved = "v2:" + ("cd" * 32)
+    assert is_reserved_v2_shaped_code(reserved) is True
+    assert is_reserved_v2_shaped_code("v2:NOTHEX") is False
+    assert is_reserved_v2_shaped_code("plain") is False
+
+
+def test_create_rejects_reserved_v2_shaped_code() -> None:
+    store = make_store(FakeRedis())
+    reserved = "v2:" + ("ef" * 32)
+    with pytest.raises(ValueError, match="reserved v2 key shape"):
+        store.create(reserved, usage_limit=1)
+
+
+def test_legacy_list_includes_malformed_v2_prefix_as_code() -> None:
+    redis_client = FakeRedis()
+    code = "v2:NOTAVALIDHEXDIGEST"
+    redis_client.data[f"auth_code:{code}"] = {
+        "usage_limit": "2",
+        "times_used": "1",
+    }
+    store = make_store(redis_client)
+    listed = store.list_codes()
+    assert listed == [
+        {"code": code, "usage_limit": 2, "times_used": 1},
+    ]
+
+
+def test_dual_list_malformed_v2_prefix_uses_hmac_fingerprint_not_suffix() -> None:
+    redis_client = FakeRedis()
+    code = "v2:NOTAVALIDHEXDIGEST_SENTINEL"
+    redis_client.data[f"auth_code:{code}"] = {
+        "usage_limit": "3",
+        "times_used": "0",
+    }
+    store = make_store(redis_client, mode=AuthCodeKeyMode.DUAL, hmac_key=HMAC_SECRET)
+    listed = store.list_codes()
+    assert listed == [
+        {
+            "fingerprint": expected_fingerprint(code),
+            "usage_limit": 3,
+            "times_used": 0,
+        }
+    ]
+    assert code not in str(listed)
+    assert "NOTAVALIDHEX" not in str(listed)
+
+
+def test_dual_list_keeps_distinct_digests_sharing_presentation_fingerprint() -> None:
+    redis_client = FakeRedis()
+    shared = "a" * 12
+    digest_a = shared + ("0" * (V2_DIGEST_HEX_LEN - 12))
+    digest_b = shared + ("1" * (V2_DIGEST_HEX_LEN - 12))
+    redis_client.data[f"auth_code:v2:{digest_a}"] = {
+        "usage_limit": "4",
+        "times_used": "1",
+    }
+    redis_client.data[f"auth_code:v2:{digest_b}"] = {
+        "usage_limit": "5",
+        "times_used": "2",
+    }
+    store = make_store(redis_client, mode=AuthCodeKeyMode.DUAL, hmac_key=HMAC_SECRET)
+    listed = store.list_codes()
+    assert len(listed) == 2
+    assert {item["fingerprint"] for item in listed} == {shared}
+    assert {item["usage_limit"] for item in listed} == {4, 5}
+    assert {item["times_used"] for item in listed} == {1, 2}
+
+
+def test_dual_list_does_not_hide_legacy_when_presentation_fingerprint_collides() -> (
+    None
+):
+    redis_client = FakeRedis()
+    code = "LEGACY_COLLIDE"
+    fp = expected_fingerprint(code)
+    foreign_digest = fp + ("9" * (V2_DIGEST_HEX_LEN - 12))
+    redis_client.data[f"auth_code:v2:{foreign_digest}"] = {
+        "usage_limit": "9",
+        "times_used": "9",
+    }
+    redis_client.data[f"auth_code:{code}"] = {
+        "usage_limit": "2",
+        "times_used": "1",
+    }
+    store = make_store(redis_client, mode=AuthCodeKeyMode.DUAL, hmac_key=HMAC_SECRET)
+    listed = store.list_codes()
+    assert len(listed) == 2
+    by_usage = {item["usage_limit"]: item for item in listed}
+    assert by_usage[9]["fingerprint"] == fp
+    assert by_usage[2]["fingerprint"] == fp
+    assert by_usage[2]["times_used"] == 1
+    assert code not in str(listed)
+
+
+def test_hmac_list_ignores_malformed_v2_prefix_keys() -> None:
+    redis_client = FakeRedis()
+    redis_client.data["auth_code:v2:NOTHEX"] = {
+        "usage_limit": "1",
+        "times_used": "0",
+    }
+    redis_client.data[expected_v2_key("GOOD")] = {
+        "usage_limit": "2",
+        "times_used": "0",
+    }
+    store = make_store(redis_client, mode=AuthCodeKeyMode.HMAC, hmac_key=HMAC_SECRET)
+    listed = store.list_codes()
+    assert listed == [
+        {
+            "fingerprint": expected_fingerprint("GOOD"),
+            "usage_limit": 2,
+            "times_used": 0,
+        }
+    ]

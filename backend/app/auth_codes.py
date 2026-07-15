@@ -13,9 +13,11 @@ from .auth_code_keys import (
     fingerprint_for_code,
     fingerprint_from_digest,
     is_legacy_redis_key,
+    is_reserved_v2_shaped_code,
     is_v2_redis_key,
     legacy_code_from_key,
     legacy_redis_key,
+    v2_digest,
     v2_digest_from_key,
     v2_redis_key,
 )
@@ -121,6 +123,10 @@ class AuthCodeStore:
     def create(self, auth_code: str, usage_limit: int, times_used: int = 0) -> None:
         if not auth_code:
             raise ValueError("auth_code is required")
+        if is_reserved_v2_shaped_code(auth_code):
+            raise ValueError(
+                "auth_code collides with the reserved v2 key shape and cannot be created"
+            )
         if usage_limit <= 0:
             raise ValueError("usage_limit must be positive")
         if times_used < 0:
@@ -241,31 +247,41 @@ class AuthCodeStore:
         return sorted(result, key=lambda item: str(item["code"]))
 
     def _list_fingerprints(self) -> list[dict[str, str | int]]:
+        """List dual/hmac entries keyed by full digest; present 12-hex fingerprints.
+
+        Identity and dedupe use the full 64-hex digest so distinct digests that
+        share a presentation fingerprint never hide each other.
+        """
         assert self.hmac_key is not None
-        by_fp: dict[str, dict[str, str | int]] = {}
+        by_digest: dict[str, dict[str, str | int]] = {}
         for raw_key in self.redis_client.scan_iter(f"{self.key_prefix}*"):
             key = str(raw_key)
-            if is_v2_redis_key(key):
-                fp = fingerprint_from_digest(v2_digest_from_key(key))
-                entry = self.redis_client.hgetall(key)
-                by_fp[fp] = {
-                    "fingerprint": fp,
-                    "usage_limit": int(entry.get("usage_limit", 0)),
-                    "times_used": int(entry.get("times_used", 0)),
-                }
+            if not is_v2_redis_key(key):
+                continue
+            digest = v2_digest_from_key(key)
+            entry = self.redis_client.hgetall(key)
+            by_digest[digest] = {
+                "fingerprint": fingerprint_from_digest(digest),
+                "usage_limit": int(entry.get("usage_limit", 0)),
+                "times_used": int(entry.get("times_used", 0)),
+            }
         if self.key_mode is AuthCodeKeyMode.DUAL:
             for raw_key in self.redis_client.scan_iter(f"{self.key_prefix}*"):
                 key = str(raw_key)
                 if not is_legacy_redis_key(key, self.key_prefix):
                     continue
                 code = legacy_code_from_key(key, self.key_prefix)
-                fp = fingerprint_for_code(self.hmac_key, code)
-                if fp in by_fp:
+                digest = v2_digest(self.hmac_key, code)
+                if digest in by_digest:
                     continue
                 entry = self.redis_client.hgetall(key)
-                by_fp[fp] = {
-                    "fingerprint": fp,
+                by_digest[digest] = {
+                    "fingerprint": fingerprint_from_digest(digest),
                     "usage_limit": int(entry.get("usage_limit", 0)),
                     "times_used": int(entry.get("times_used", 0)),
                 }
-        return sorted(by_fp.values(), key=lambda item: str(item["fingerprint"]))
+        ordered = sorted(
+            by_digest.items(),
+            key=lambda pair: (str(pair[1]["fingerprint"]), pair[0]),
+        )
+        return [row for _, row in ordered]

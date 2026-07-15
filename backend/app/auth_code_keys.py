@@ -13,8 +13,11 @@ from typing import Final
 
 LEGACY_KEY_PREFIX: Final[str] = "auth_code:"
 V2_KEY_PREFIX: Final[str] = "auth_code:v2:"
+V2_CODE_SHAPE_PREFIX: Final[str] = "v2:"
+V2_DIGEST_HEX_LEN: Final[int] = 64
 FINGERPRINT_HEX_LEN: Final[int] = 12
 MIN_HMAC_KEY_BYTES: Final[int] = 32
+_HEX_LOWER: Final[str] = "0123456789abcdef"
 
 
 class AuthCodeKeyMode(StrEnum):
@@ -84,8 +87,16 @@ def fingerprint_for_code(hmac_key: bytes, auth_code: str) -> str:
     return fingerprint_from_digest(v2_digest(hmac_key, auth_code))
 
 
+def is_lowercase_hex(value: str, *, length: int) -> bool:
+    return len(value) == length and all(ch in _HEX_LOWER for ch in value)
+
+
 def is_v2_redis_key(key: str) -> bool:
-    return key.startswith(V2_KEY_PREFIX)
+    """True only for canonical v2 keys: prefix + exactly 64 lowercase hex chars."""
+    if not key.startswith(V2_KEY_PREFIX):
+        return False
+    digest = key.removeprefix(V2_KEY_PREFIX)
+    return is_lowercase_hex(digest, length=V2_DIGEST_HEX_LEN)
 
 
 def is_legacy_redis_key(key: str, prefix: str = LEGACY_KEY_PREFIX) -> bool:
@@ -97,4 +108,19 @@ def legacy_code_from_key(key: str, prefix: str = LEGACY_KEY_PREFIX) -> str:
 
 
 def v2_digest_from_key(key: str) -> str:
+    if not is_v2_redis_key(key):
+        raise ValueError("not a canonical v2 auth code redis key")
     return key.removeprefix(V2_KEY_PREFIX)
+
+
+def is_reserved_v2_shaped_code(auth_code: str) -> bool:
+    """Reject codes that collide with the canonical v2 redis key suffix shape.
+
+    A legacy key is ``auth_code:{code}``. If ``code`` is exactly ``v2:`` plus
+    64 lowercase hex digits, the resulting redis key is indistinguishable from a
+    real v2 key and must not be created as a plaintext code.
+    """
+    if not auth_code.startswith(V2_CODE_SHAPE_PREFIX):
+        return False
+    digest = auth_code.removeprefix(V2_CODE_SHAPE_PREFIX)
+    return is_lowercase_hex(digest, length=V2_DIGEST_HEX_LEN)
