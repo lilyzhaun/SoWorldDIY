@@ -33,11 +33,16 @@ def _load_resolver() -> _ResolveProxiesFn | None:
 
 
 def resolve_proxies(url: str, default: dict[str, str] | None) -> dict[str, str] | None:
-    """Return a requests-compatible proxy mapping (or None).
+    """Resolve HTTP proxies for outbound requests.
 
-    Runtime values are unchanged: the optional local override is consulted when
-    present; otherwise ``default`` is returned as-is. Non-dict mappings from a
-    local override are copied into a plain ``dict`` for requests 2.34+.
+    Contract (requests 2.34+ ``proxies`` parameter):
+    - No local override module: return ``default`` by identity (``None`` or ``dict``).
+    - Local override returns ``None``: return ``None``.
+    - Local override returns a ``dict``: return that same object (identity preserved).
+    - Local override returns a non-dict ``Mapping``: return a new plain ``dict`` copy.
+    - Local override returns any other type: raise ``TypeError``.
+
+    The optional local seam remains ``app.request_overrides_local.resolve_proxies``.
     """
     local_resolver = _load_resolver()
     if local_resolver is None:
@@ -48,4 +53,9 @@ def resolve_proxies(url: str, default: dict[str, str] | None) -> dict[str, str] 
         return None
     if isinstance(resolved, dict):
         return resolved
-    return dict(resolved)
+    if isinstance(resolved, Mapping):
+        return dict(resolved)
+    raise TypeError(
+        "app.request_overrides_local.resolve_proxies must return "
+        "Mapping[str, str] | None"
+    )
