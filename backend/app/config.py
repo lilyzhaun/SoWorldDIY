@@ -4,6 +4,12 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from .auth_code_keys import (
+    AuthCodeKeyMode,
+    parse_auth_code_key_mode,
+    require_hmac_key_for_mode,
+)
+
 ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
@@ -50,6 +56,8 @@ class Settings:
     proxy_url: str
     password_encryption_key: str
     cookie_secure: bool
+    auth_code_key_mode: AuthCodeKeyMode
+    auth_code_hmac_key: bytes | None
 
     @property
     def proxies(self) -> dict[str, str] | None:
@@ -66,6 +74,16 @@ def load_settings() -> Settings:
     if not password_encryption_key:
         password_encryption_key = session_secret
 
+    try:
+        auth_code_key_mode = parse_auth_code_key_mode(
+            os.environ.get("AUTH_CODE_KEY_MODE")
+        )
+        auth_code_hmac_key = require_hmac_key_for_mode(
+            auth_code_key_mode, os.environ.get("AUTH_CODE_HMAC_KEY")
+        )
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
+
     return Settings(
         base_dir=Path(__file__).resolve().parent.parent,
         session_secret=session_secret,
@@ -74,4 +92,6 @@ def load_settings() -> Settings:
         proxy_url=os.environ.get("PROXY_URL", "").strip(),
         password_encryption_key=password_encryption_key,
         cookie_secure=_get_required_bool_env("COOKIE_SECURE"),
+        auth_code_key_mode=auth_code_key_mode,
+        auth_code_hmac_key=auth_code_hmac_key,
     )

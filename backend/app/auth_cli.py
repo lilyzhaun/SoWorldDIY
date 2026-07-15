@@ -5,8 +5,9 @@ import json
 
 import redis
 
+from .auth_code_keys import AuthCodeKeyMode
 from .auth_codes import AuthCodeStore
-from .config import load_settings
+from .config import Settings, load_settings
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -27,15 +28,28 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def build_store(settings: Settings) -> AuthCodeStore:
+    client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
+    return AuthCodeStore(
+        client,
+        seed_file=settings.base_dir / "auth_codes.json",
+        key_mode=settings.auth_code_key_mode,
+        hmac_key=settings.auth_code_hmac_key,
+    )
+
+
 def main() -> None:
     args = build_parser().parse_args()
     settings = load_settings()
-    client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
-    store = AuthCodeStore(client, seed_file=settings.base_dir / "auth_codes.json")
+    store = build_store(settings)
 
     if args.command == "create":
         store.create(args.code, usage_limit=args.limit, times_used=args.used)
-        print(json.dumps({"status": "ok", "code": args.code}, ensure_ascii=False))
+        if settings.auth_code_key_mode is AuthCodeKeyMode.LEGACY:
+            payload: dict[str, object] = {"status": "ok", "code": args.code}
+        else:
+            payload = {"status": "ok", "fingerprint": store.fingerprint(args.code)}
+        print(json.dumps(payload, ensure_ascii=False))
     elif args.command == "list":
         print(json.dumps(store.list_codes(), ensure_ascii=False, indent=2))
     elif args.command == "revoke":

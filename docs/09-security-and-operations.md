@@ -41,6 +41,9 @@
 - 设置有限使用次数。
 - 定期清理不再使用的 code。
 - 不把真实 code 写入文档、issue 或聊天记录。
+- 生产切到 `hmac` 后使用 `AUTH_CODE_HMAC_KEY` 派生 Redis key；`list` 仅展示 fingerprint。
+- `legacy`/`dual` 仅用于迁移窗口；不要把明文 key 当作长期设计。
+- 不得在日志、指标或证据文件中记录 `AUTH_CODE_HMAC_KEY` 或鉴权码明文。
 
 ## 上游服务风险
 

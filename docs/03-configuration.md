@@ -13,6 +13,8 @@
 | `PASSWORD_ENCRYPTION_KEY` | 否 | `SESSION_SECRET` | session 内密码加密密钥。建议与 `SESSION_SECRET` 使用不同强随机值。 |
 | `REDIS_URL` | 否 | `redis://127.0.0.1:6379/0` | Redis 连接地址。生产环境建议使用受控网络和密码。 |
 | `REDIS_SESSION_PREFIX` | 否 | `session:` | Redis session key 前缀。多环境共享 Redis 时需要区分。 |
+| `AUTH_CODE_KEY_MODE` | 否 | `legacy` | 鉴权码 Redis key 模式：`legacy`（明文 `auth_code:<code>`）、`dual`（读 legacy/v2，只写 v2）、`hmac`（仅 v2）。`legacy`/`dual` 仅用于有界迁移窗口，不是永久静默回退。 |
+| `AUTH_CODE_HMAC_KEY` | dual/hmac 必填 | 无 | 派生 `auth_code:v2:<HMAC-SHA256 hex>` 的专用密钥，至少 32 字节随机值；无默认回退。不得写入日志或提交仓库。 |
 | `PROXY_URL` | 否 | 空 | 访问 3HK/SIMWorld 上游接口时使用的 HTTP/HTTPS 代理。 |
 | `CMN_PROXY_URL` | 否 | 空 | CMN 换号接口 (`/mnms/holdAvailableNumbersFor15m/`) 专用代理。仅在该路径的请求上覆盖 `PROXY_URL`，留空则回退到 `PROXY_URL`。 |
 | `external_delivery_token` | 否 | 空 | 本地通知扩展 external_delivery Bot Token。仅在 `delivery_extension_local.py` 存在时生效。 |
@@ -34,6 +36,7 @@ cp .env.example backend/.env
 
 - `SESSION_SECRET` 至少使用 32 字节以上随机值。
 - `PASSWORD_ENCRYPTION_KEY` 建议独立生成，不要复用 Redis 密码或其他账号密码。
+- `AUTH_CODE_HMAC_KEY` 在 `dual`/`hmac` 模式下必须独立生成（`openssl rand -hex 32` 等），不得复用 `SESSION_SECRET` 或 Redis 密码；缺失或不足 32 字节时启动失败。
 - 如果密钥曾经进入聊天记录、日志、公开仓库、构建产物或发布包，应立即轮换。
 
 ## Redis 配置

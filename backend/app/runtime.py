@@ -93,7 +93,12 @@ session_store = RedisSessionStore(
     sid_prefix=SESSION_KEY_PREFIX,
 )
 password_cipher = create_password_cipher(settings.password_encryption_key)
-auth_code_store = AuthCodeStore(redis_client=redis_client, seed_file=AUTH_CODES_FILE)
+auth_code_store = AuthCodeStore(
+    redis_client=redis_client,
+    seed_file=AUTH_CODES_FILE,
+    key_mode=settings.auth_code_key_mode,
+    hmac_key=settings.auth_code_hmac_key,
+)
 
 
 def set_cache(key: str, value: Any, timeout: int = CACHE_DEFAULT_TIMEOUT) -> None:

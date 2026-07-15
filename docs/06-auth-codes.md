@@ -6,12 +6,22 @@
 
 ## 存储方式
 
-运行时鉴权码存储在 Redis 中，key 前缀由 `AuthCodeStore` 管理。每个鉴权码包含：
+运行时鉴权码存储在 Redis 中，由 `AuthCodeStore` 与 `AUTH_CODE_KEY_MODE` 管理。每个鉴权码 hash 字段包含：
 
 - `usage_limit`：允许使用次数。
 - `times_used`：已经使用次数。
 
-登录时会校验鉴权码。实际登录提交会消耗使用次数；发送 OTP 时只校验，不消耗。
+### Key 模式（有界迁移）
+
+| 模式 | 读 | 写 | 说明 |
+| --- | --- | --- | --- |
+| `legacy`（默认） | `auth_code:<code>` | 同左 | 迁移前兼容模式；不需要 `AUTH_CODE_HMAC_KEY`。 |
+| `dual` | 优先 `auth_code:v2:<hmac>`，回退 legacy | 仅 v2 | 迁移窗口；要求 `AUTH_CODE_HMAC_KEY`（≥32 字节）。 |
+| `hmac` | 仅 v2 | 仅 v2 | 目标模式；拒绝 legacy 明文 key。 |
+
+v2 key 形式为 `auth_code:v2:` + 小写 `HMAC-SHA256(AUTH_CODE_HMAC_KEY, code)` 十六进制摘要。密钥与鉴权码本身永不写入日志。
+
+登录时会校验鉴权码。实际登录提交会消耗使用次数；发送 OTP 时只校验，不消耗。消耗路径在定位到具体 Redis key 后通过 Lua 原子 `HINCRBY` 更新。
 
 ## CLI 命令
 
@@ -40,11 +50,16 @@ python -m app.auth_cli create CODE --limit 10 --used 2
 python -m app.auth_cli list
 ```
 
+- `legacy`：输出包含明文 `code` 与计数（兼容迁移前运维习惯）。
+- `dual` / `hmac`：只输出稳定的 12 位十六进制 `fingerprint` 与计数，**从不**打印鉴权码本身。`create` 成功时同样只回显 fingerprint。
+
 ### 撤销鉴权码
 
 ```bash
 python -m app.auth_cli revoke CODE
 ```
+
+`dual` 会同时删除 legacy 与 v2 两个版本的 key。
 
 ### 从文件导入种子
 
