@@ -67,7 +67,12 @@ def _json_error(message: str, status_code: int = 400) -> JSONResponse:
     )
 
 
-def _public_error(error: PublicError, status_code: int) -> JSONResponse:
+def _public_error(
+    error: PublicError,
+    status_code: int,
+    *,
+    headers: Mapping[str, str] | None = None,
+) -> JSONResponse:
     """Return a stable public error without internal details."""
     return JSONResponse(
         status_code=status_code,
@@ -76,6 +81,7 @@ def _public_error(error: PublicError, status_code: int) -> JSONResponse:
             "message": error.message,
             "code": str(error.code),
         },
+        headers=dict(headers) if headers else None,
     )
 
 

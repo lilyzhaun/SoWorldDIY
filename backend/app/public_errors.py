@@ -20,6 +20,7 @@ class PublicErrorCode(StrEnum):
     SERVICE_UNAVAILABLE = "service_unavailable"
     INTERNAL_ERROR = "internal_error"
     UPSTREAM_ERROR = "upstream_error"
+    RATE_LIMITED = "rate_limited"
 
 
 @dataclass(frozen=True, slots=True)
@@ -61,4 +62,8 @@ ACCOUNT_CHECK_FAILED: Final = PublicError(
 REDIS_UNAVAILABLE: Final = PublicError(
     PublicErrorCode.SERVICE_UNAVAILABLE,
     "Redis unavailable",
+)
+RATE_LIMITED: Final = PublicError(
+    PublicErrorCode.RATE_LIMITED,
+    "请求过于频繁，请稍后再试",
 )

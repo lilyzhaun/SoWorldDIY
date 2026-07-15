@@ -15,6 +15,7 @@ from ..public_errors import (
     INVALID_REQUEST,
     SERVICE_UNAVAILABLE,
 )
+from ..rate_limit_http import client_ip, guard
 from ..responses import _public_error
 from ..schemas import CheckUserRequest, SendOtpRequest
 from ..upstream_urls import THREE_EXISTING_CUST_DIPPING, simworld_url
@@ -26,6 +27,10 @@ logger = logging.getLogger(__name__)
 def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.post("/api/check-user")
     async def check_user(request: Request) -> JSONResponse:
+        ip = client_ip(request, deps.TRUSTED_PROXY_IPS)
+        blocked = guard(deps.rate_limiter.check_user_ip(ip))
+        if blocked is not None:
+            return blocked
         try:
             raw = await request.json()
         except ValueError:
@@ -55,10 +60,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                     )
                 return JSONResponse(status_code=400, content={"status": "error"})
         except Exception as exc:
-            logger.error(
-                "check_user failed error_class=%s",
-                type(exc).__name__,
-            )
+            logger.error("check_user failed error_class=%s", type(exc).__name__)
             return _public_error(INTERNAL_ERROR, 500)
 
     @app.post("/api/send-otp")
@@ -71,6 +73,11 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
             body = SendOtpRequest.model_validate(raw)
         except ValidationError:
             return _public_error(INVALID_REQUEST, 400)
+
+        ip = client_ip(request, deps.TRUSTED_PROXY_IPS)
+        blocked = guard(deps.rate_limiter.send_otp(ip=ip, identifier=body.identifier))
+        if blocked is not None:
+            return blocked
 
         valid, message = deps.verify_auth_code(body.auth_code, False)
         if not valid:
@@ -93,8 +100,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                 sub_brand = r.json().get("subBrand", "THREE")
         except Exception as exc:
             logger.warning(
-                "send_otp brand lookup failed error_class=%s; defaulting brand",
-                type(exc).__name__,
+                "send_otp brand lookup failed error_class=%s", type(exc).__name__
             )
 
         try:
@@ -109,16 +115,11 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                 if r.status_code in [200, 204]:
                     return deps._json_success({"status": "success"})
                 return deps._upstream_error(
-                    r,
-                    "验证码发送失败，请稍后重试",
-                    400,
-                    operation="send_otp",
+                    r, "验证码发送失败，请稍后重试", 400, operation="send_otp"
                 )
         except Exception as exc:
             logger.error(
-                "send_otp failed error_class=%s brand=%s",
-                type(exc).__name__,
-                sub_brand,
+                "send_otp failed error_class=%s brand=%s", type(exc).__name__, sub_brand
             )
             return _public_error(INTERNAL_ERROR, 500)
 
@@ -129,13 +130,21 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
         login_type = str(form.get("login_type", ""))
         identifier = str(form.get("identifier", ""))
         auth_code = str(form.get("auth_code", ""))
-        password_raw = form.get("password")
-        otp_raw = form.get("otp")
+        password_raw, otp_raw = form.get("password"), form.get("otp")
         password = str(password_raw) if password_raw is not None else None
         otp = str(otp_raw) if otp_raw is not None else None
 
+        ip = client_ip(request, deps.TRUSTED_PROXY_IPS)
+        blocked = guard(deps.rate_limiter.login_ip(ip))
+        if blocked is not None:
+            return blocked
+        blocked = guard(deps.rate_limiter.peek_login_fail_identifier(identifier))
+        if blocked is not None:
+            return blocked
+
         valid, message = deps.verify_auth_code(auth_code, True)
         if not valid:
+            deps.rate_limiter.record_login_failure(identifier)
             return deps._json_error(message, 400)
 
         sub_brand = "THREE"
@@ -153,12 +162,10 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                 if r_check.status_code == 200:
                     sub_brand = r_check.json().get("subBrand", "THREE")
                 else:
+                    deps.rate_limiter.record_login_failure(identifier)
                     return deps._json_error("账号无效或网络错误", 400)
         except Exception as exc:
-            logger.error(
-                "login brand check failed error_class=%s",
-                type(exc).__name__,
-            )
+            logger.error("login brand check failed error_class=%s", type(exc).__name__)
             return _public_error(ACCOUNT_CHECK_FAILED, 500)
 
         if login_type == "password":
@@ -221,18 +228,19 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
 
                     try:
                         deps.notify(
-                            f"🚀 新用户登录\n账号: {identifier}\n模式: {login_type}\n品牌: {sub_brand}\n当前共 {len(accounts)} 个账号",
+                            f"login ok accounts={len(accounts)} type={login_type}"
                         )
                     except Exception as exc:
                         logger.warning(
-                            "login notify failed error_class=%s",
-                            type(exc).__name__,
+                            "login notify failed error_class=%s", type(exc).__name__
                         )
 
+                    deps.rate_limiter.clear_login_fail_identifier(identifier)
                     return deps._json_success(
                         {"status": "success", "redirect": f"/main/{identifier}"}
                     )
 
+            deps.rate_limiter.record_login_failure(identifier)
             return deps._json_error("登录失败，请检查密码或OTP", 401)
         except Exception as exc:
             logger.error(

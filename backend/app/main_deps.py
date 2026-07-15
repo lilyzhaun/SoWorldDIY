@@ -20,6 +20,7 @@ import redis
 import requests
 from fastapi import Request
 
+from .rate_limit import RateLimiter
 from .responses import (
     JsonErrorFn,
     JsonSuccessFn,
@@ -73,6 +74,8 @@ class MainModuleSource(Protocol):
     PLANS_CACHE_DIR: Path
     SESSION_SECRET: str
     redis_client: redis.Redis
+    rate_limiter: RateLimiter
+    TRUSTED_PROXY_IPS: frozenset[str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,3 +235,11 @@ class MainDepsAdapter:
     @property
     def redis_client(self) -> redis.Redis:
         return self.source.redis_client
+
+    @property
+    def rate_limiter(self) -> RateLimiter:
+        return self.source.rate_limiter
+
+    @property
+    def TRUSTED_PROXY_IPS(self) -> frozenset[str]:
+        return self.source.TRUSTED_PROXY_IPS

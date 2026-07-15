@@ -8,6 +8,7 @@ import redis
 import requests
 from fastapi import Request
 
+from ..rate_limit import RateLimiter
 from ..responses import (
     JsonErrorFn,
     JsonSuccessFn,
@@ -124,3 +125,9 @@ class RouteDeps(Protocol):
 
     @property
     def redis_client(self) -> redis.Redis: ...
+
+    @property
+    def rate_limiter(self) -> RateLimiter: ...
+
+    @property
+    def TRUSTED_PROXY_IPS(self) -> frozenset[str]: ...

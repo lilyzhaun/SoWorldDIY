@@ -15,6 +15,8 @@
 | `REDIS_SESSION_PREFIX` | 否 | `session:` | Redis session key 前缀。多环境共享 Redis 时需要区分。 |
 | `REDIS_MIGRATE_DEST_URL` | 否 | `redis://127.0.0.1:6380/0` | 仅迁移 CLI 使用：目标专用 Redis URL。不进入应用运行时配置。 |
 | `AUTH_CODE_KEY_MODE` | 否 | `legacy` | 鉴权码 Redis key 模式：`legacy`（明文 `auth_code:<code>`）、`dual`（读 legacy/v2，只写 v2）、`hmac`（仅 v2）。`legacy`/`dual` 仅用于有界迁移窗口，不是永久静默回退。 |
+| `TRUSTED_PROXY_IPS` | 否 | `127.0.0.1,::1,localhost` | 允许设置 `X-Forwarded-For` 的直连代理 IP 列表（逗号分隔）。非信任对端忽略 XFF。 |
+| `RATE_LIMIT_*` | 否 | 见安全方案默认值 | 覆盖 check-user / send-otp / login 的限流阈值与窗口（秒）。 |
 | `AUTH_CODE_HMAC_KEY` | dual/hmac 必填 | 无 | 派生 `auth_code:v2:<HMAC-SHA256 hex>` 的专用密钥，至少 32 字节随机值；无默认回退。不得写入日志或提交仓库。 |
 | `PROXY_URL` | 否 | 空 | 访问 3HK/SIMWorld 上游接口时使用的 HTTP/HTTPS 代理。 |
 | `CMN_PROXY_URL` | 否 | 空 | CMN 换号接口 (`/mnms/holdAvailableNumbersFor15m/`) 专用代理。仅在该路径的请求上覆盖 `PROXY_URL`，留空则回退到 `PROXY_URL`。 |

@@ -15,6 +15,7 @@ from .auth_codes import AuthCodeStore
 from .brand import SUPPORTED_BRANDS
 from .cache_store import MemoryCache
 from .config import load_settings
+from .rate_limit import RateLimiter
 from .security import (
     create_password_cipher,
 )
@@ -57,6 +58,7 @@ COOKIE_SECURE = settings.cookie_secure
 REDIS_URL = settings.redis_url
 REDIS_SESSION_PREFIX = settings.redis_session_prefix
 PROXIES = settings.proxies
+TRUSTED_PROXY_IPS = settings.trusted_proxy_ips
 
 BASE_HEADERS: dict[str, str] = {
     "Host": "www.three.com.hk",
@@ -99,6 +101,7 @@ auth_code_store = AuthCodeStore(
     key_mode=settings.auth_code_key_mode,
     hmac_key=settings.auth_code_hmac_key,
 )
+rate_limiter = RateLimiter(redis_client, settings.rate_limit)
 
 
 def set_cache(key: str, value: Any, timeout: int = CACHE_DEFAULT_TIMEOUT) -> None:

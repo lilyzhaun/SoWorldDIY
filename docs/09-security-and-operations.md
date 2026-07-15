@@ -52,6 +52,10 @@
 - 从共享 Redis 迁出时使用 `python -m app.redis_migrate`；切流与回滚须同时变更 `REDIS_URL` 与 `AUTH_CODE_KEY_MODE`。
 - 迁移与运维**禁止**触碰 DB 15，禁止 `FLUSHALL`/`FLUSHDB`。
 
+## 速率限制
+
+鉴权入口使用 Redis `ratelimit:` 键做固定窗口限流。标识符仅以 SHA-256 形式进入 Redis key，鉴权码从不进入限流键或日志。
+
 ## 上游服务风险
 
 项目会代理访问 3HK/SIMWorld 相关接口，并可能发起购买、换号和资源转移操作。使用者需要自行确认：

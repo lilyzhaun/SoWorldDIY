@@ -9,6 +9,8 @@ from .auth_code_keys import (
     parse_auth_code_key_mode,
     require_hmac_key_for_mode,
 )
+from .client_ip import parse_trusted_proxy_ips
+from .rate_limit import RateLimitConfig, load_rate_limit_config_from_env
 
 ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
@@ -58,6 +60,8 @@ class Settings:
     cookie_secure: bool
     auth_code_key_mode: AuthCodeKeyMode
     auth_code_hmac_key: bytes | None
+    trusted_proxy_ips: frozenset[str]
+    rate_limit: RateLimitConfig
 
     @property
     def proxies(self) -> dict[str, str] | None:
@@ -94,4 +98,6 @@ def load_settings() -> Settings:
         cookie_secure=_get_required_bool_env("COOKIE_SECURE"),
         auth_code_key_mode=auth_code_key_mode,
         auth_code_hmac_key=auth_code_hmac_key,
+        trusted_proxy_ips=parse_trusted_proxy_ips(os.environ.get("TRUSTED_PROXY_IPS")),
+        rate_limit=load_rate_limit_config_from_env(os.environ.get),
     )

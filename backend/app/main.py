@@ -38,6 +38,7 @@ from .runtime import (
     PROXIES,  # noqa: F401 — re-exported for monkeypatch seam
     SESSION_SECRET,  # noqa: F401 — re-exported for monkeypatch seam
     SUB_BRANDS,  # noqa: F401 — re-exported for monkeypatch seam
+    TRUSTED_PROXY_IPS,  # noqa: F401 — re-exported for monkeypatch seam
     auth_code_store,
     decrypt_password,  # noqa: F401 — re-exported for monkeypatch seam
     delete_cache,  # noqa: F401 — re-exported for monkeypatch seam
@@ -46,6 +47,7 @@ from .runtime import (
     get_isolated_session,  # noqa: F401 — re-exported for monkeypatch seam
     plans_refresh_lock,  # noqa: F401 — re-exported for monkeypatch seam
     plans_refreshing,  # noqa: F401 — re-exported for monkeypatch seam
+    rate_limiter,  # noqa: F401 — re-exported for monkeypatch seam
     redis_client,  # noqa: F401 — re-exported for monkeypatch seam
     session_store,  # noqa: F401 — re-exported for monkeypatch seam
     set_cache,  # noqa: F401 — re-exported for monkeypatch seam
