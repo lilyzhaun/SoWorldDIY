@@ -240,3 +240,50 @@ def test_readiness_reports_checks_shape(monkeypatch: MonkeyPatch) -> None:
     ]:
         assert key in checks
     assert checks["redis"] is True
+
+
+def test_metrics_missing_secret_returns_404() -> None:
+    resp = invoke("/metrics")
+    assert resp.status == 404
+
+
+def test_metrics_wrong_secret_returns_403(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(main, "METRICS_SECRET", "expected-secret")
+    resp = invoke("/metrics", headers={"x-metrics-secret": "wrong"})
+    assert resp.status == 403
+    assert resp.json["code"] == "unauthorized"
+
+
+def test_metrics_correct_secret_returns_prometheus_text(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(main, "METRICS_SECRET", "expected-secret")
+    # generate some traffic first
+    invoke("/_health")
+    resp = invoke("/metrics", headers={"x-metrics-secret": "expected-secret"})
+    assert resp.status == 200
+    body = (
+        resp.body.decode("utf-8")
+        if isinstance(resp.body, (bytes, bytearray))
+        else str(resp.body)
+    )
+    assert "http_requests_total" in body
+    assert "SENTINEL_PII_should_not_appear" not in body
+
+
+def test_metrics_excludes_pii_from_labels(monkeypatch: MonkeyPatch) -> None:
+    monkeypatch.setattr(main, "METRICS_SECRET", "expected-secret")
+    # Hit a path that looks like an account id (will 302/redirect or 404 without session)
+    invoke("/main/user@pii-example.com")
+    resp = invoke(
+        "/metrics",
+        headers={"x-metrics-secret": "expected-secret"},
+    )
+    assert resp.status == 200
+    body = (
+        resp.body.decode("utf-8")
+        if isinstance(resp.body, (bytes, bytearray))
+        else str(resp.body)
+    )
+    assert "user@pii-example.com" not in body
+    assert "pii-example" not in body

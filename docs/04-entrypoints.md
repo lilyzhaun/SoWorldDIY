@@ -75,3 +75,14 @@ npm run build
 ---
 
 [← 配置说明](03-configuration.md) · [API 参考 →](05-api-reference.md)
+
+
+## Metrics
+
+`GET /metrics` 暴露 Prometheus 文本指标，需请求头 `x-metrics-secret: <METRICS_SECRET>`。
+
+- 无密钥：404（不广告端点）
+- 错误密钥：403
+- 正确密钥：Prometheus exposition 格式
+
+指标标签仅含 method / route 模板 / status_class，不含账号、SID、鉴权码、query 或原始路径。告警规则见 `deploy/monitoring/alerts.yml`。

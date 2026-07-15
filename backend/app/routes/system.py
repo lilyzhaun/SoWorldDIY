@@ -3,10 +3,18 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import (
+    FileResponse,
+    JSONResponse,
+    PlainTextResponse,
+    RedirectResponse,
+)
 from redis.exceptions import RedisError
 from starlette.responses import Response
 
+from ..metrics import authorize_metrics, render_metrics, set_redis_ready
+from ..public_errors import UNAUTHORIZED
+from ..responses import _public_error
 from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
@@ -32,6 +40,7 @@ def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
             checks["redis"] = bool(deps.redis_client.ping())
         except RedisError:
             checks["redis"] = False
+        set_redis_ready(bool(checks["redis"]))
         status_code = 200 if all(checks.values()) else 503
         return JSONResponse(
             status_code=status_code,
@@ -40,6 +49,20 @@ def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
                 "checks": checks,
             },
         )
+
+    @app.get("/metrics")
+    async def metrics(request: Request) -> Response:
+        decision = authorize_metrics(
+            request.headers.get("x-metrics-secret"),
+            deps.METRICS_SECRET,
+        )
+        if decision == "missing":
+            # Do not advertise the endpoint without a secret.
+            return Response(status_code=404)
+        if decision != "ok":
+            return _public_error(UNAUTHORIZED, 403)
+        body, content_type = render_metrics()
+        return PlainTextResponse(content=body.decode("utf-8"), media_type=content_type)
 
     @app.get("/manifest.json")
     async def manifest() -> FileResponse:

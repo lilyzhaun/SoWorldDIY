@@ -52,6 +52,12 @@
 - 从共享 Redis 迁出时使用 `python -m app.redis_migrate`；切流与回滚须同时变更 `REDIS_URL` 与 `AUTH_CODE_KEY_MODE`。
 - 迁移与运维**禁止**触碰 DB 15，禁止 `FLUSHALL`/`FLUSHDB`。
 
+## Prometheus 指标
+
+- 端点：`GET /metrics`，鉴权头 `x-metrics-secret`（`METRICS_SECRET`）。
+- 禁止在标签中记录账号、电话、鉴权码、品牌、query、原始路径或上游响应体。
+- 告警规则模板：`deploy/monitoring/alerts.yml`（readiness、5xx、p95 延迟、限流突增、Redis、进程内存）。
+
 ## 速率限制
 
 鉴权入口使用 Redis `ratelimit:` 键做固定窗口限流。标识符仅以 SHA-256 形式进入 Redis key，鉴权码从不进入限流键或日志。

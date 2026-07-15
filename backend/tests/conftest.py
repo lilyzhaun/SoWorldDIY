@@ -8,6 +8,7 @@ import pytest
 
 # Required before app.config / runtime import. Tests always use non-Secure cookies.
 os.environ["COOKIE_SECURE"] = "false"
+os.environ.setdefault("METRICS_SECRET", "test-metrics-secret-not-for-prod")
 
 ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:

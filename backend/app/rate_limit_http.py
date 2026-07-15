@@ -6,6 +6,7 @@ from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from .client_ip import resolve_client_ip
+from .metrics import observe_rate_limit
 from .public_errors import RATE_LIMITED, SERVICE_UNAVAILABLE
 from .rate_limit import RateLimitDecision
 from .responses import _public_error
@@ -32,8 +33,12 @@ def redis_unavailable_response() -> JSONResponse:
     return _public_error(SERVICE_UNAVAILABLE, 503)
 
 
-def guard(decision: RateLimitDecision) -> JSONResponse | None:
-    """Map a rate-limit decision to an HTTP response, or None if allowed."""
+def guard(
+    decision: RateLimitDecision, *, endpoint: str = "unknown"
+) -> JSONResponse | None:
+    observe_rate_limit(
+        endpoint, allowed=decision.allowed, redis_error=decision.redis_error
+    )
     if decision.redis_error:
         return redis_unavailable_response()
     if not decision.allowed:

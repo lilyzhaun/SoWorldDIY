@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from .main_deps import MainDepsAdapter, MainModuleSource
+from .metrics import MetricsMiddleware
 from .delivery_extension import send as notify  # noqa: F401 — re-exported for monkeypatch seam
 from .request_overrides import (
     resolve_proxies,  # noqa: F401 — re-exported for monkeypatch seam
@@ -34,6 +35,7 @@ from .runtime import (
     BASE_HEADERS,  # noqa: F401 — re-exported for monkeypatch seam
     FRONTEND_DIST_DIR,
     FRONTEND_STATIC_DIR,
+    METRICS_SECRET,  # noqa: F401 — re-exported for monkeypatch seam
     PLANS_CACHE_DIR,  # noqa: F401 — re-exported for monkeypatch seam
     PROXIES,  # noqa: F401 — re-exported for monkeypatch seam
     SESSION_SECRET,  # noqa: F401 — re-exported for monkeypatch seam
@@ -130,6 +132,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         lifespan=lifespan,
     )
+    app.add_middleware(MetricsMiddleware)
     app.add_middleware(SessionMiddleware)
 
     if FRONTEND_STATIC_DIR.exists():

@@ -131,3 +131,6 @@ class RouteDeps(Protocol):
 
     @property
     def TRUSTED_PROXY_IPS(self) -> frozenset[str]: ...
+
+    @property
+    def METRICS_SECRET(self) -> str: ...

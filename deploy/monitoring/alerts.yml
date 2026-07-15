@@ -1,0 +1,59 @@
+groups:
+  - name: 3hk-new
+    rules:
+      - alert: ThreeHKReadinessFailure
+        expr: probe_success{job="3hk-new-ready"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "3HK readiness check failing"
+
+      - alert: ThreeHKHigh5xxRate
+        expr: |
+          sum(rate(http_requests_total{status_class="5xx"}[5m]))
+            /
+          clamp_min(sum(rate(http_requests_total[5m])), 1e-9)
+            > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated 5xx rate on 3HK app"
+
+      - alert: ThreeHKHighLatencyP95
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route)
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p95 latency above 2s"
+
+      - alert: ThreeHKRateLimitSurge
+        expr: |
+          sum(rate(app_rate_limit_decisions_total{result="limited"}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Rate-limit rejections surging"
+
+      - alert: ThreeHKRedisDown
+        expr: app_redis_ready == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "App Redis readiness is down"
+
+      - alert: ThreeHKHighProcessMemory
+        expr: process_resident_memory_bytes > 4.5e8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Process RSS above ~450MB"

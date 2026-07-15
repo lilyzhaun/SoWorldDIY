@@ -62,6 +62,7 @@ class Settings:
     auth_code_hmac_key: bytes | None
     trusted_proxy_ips: frozenset[str]
     rate_limit: RateLimitConfig
+    metrics_secret: str
 
     @property
     def proxies(self) -> dict[str, str] | None:
@@ -100,4 +101,5 @@ def load_settings() -> Settings:
         auth_code_hmac_key=auth_code_hmac_key,
         trusted_proxy_ips=parse_trusted_proxy_ips(os.environ.get("TRUSTED_PROXY_IPS")),
         rate_limit=load_rate_limit_config_from_env(os.environ.get),
+        metrics_secret=_get_required_env("METRICS_SECRET"),
     )

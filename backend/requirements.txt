@@ -7,3 +7,4 @@ urllib3==2.7.0
 idna==3.18
 cryptography==48.0.1
 redis==5.2.1
+prometheus-client==0.25.0

@@ -21,6 +21,7 @@ from app.main import application, create_app
 EXPECTED_API_ROUTES: list[tuple[str, list[str], str]] = [
     ("/_health", ["GET"], "healthcheck"),
     ("/_ready", ["GET"], "readiness"),
+    ("/metrics", ["GET"], "metrics"),
     ("/manifest.json", ["GET"], "manifest"),
     ("/sw.js", ["GET"], "service_worker"),
     ("/favicon.ico", ["GET"], "favicon"),

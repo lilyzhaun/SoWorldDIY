@@ -76,6 +76,7 @@ class MainModuleSource(Protocol):
     redis_client: redis.Redis
     rate_limiter: RateLimiter
     TRUSTED_PROXY_IPS: frozenset[str]
+    METRICS_SECRET: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -243,3 +244,7 @@ class MainDepsAdapter:
     @property
     def TRUSTED_PROXY_IPS(self) -> frozenset[str]:
         return self.source.TRUSTED_PROXY_IPS
+
+    @property
+    def METRICS_SECRET(self) -> str:
+        return self.source.METRICS_SECRET

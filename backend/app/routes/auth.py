@@ -28,7 +28,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.post("/api/check-user")
     async def check_user(request: Request) -> JSONResponse:
         ip = client_ip(request, deps.TRUSTED_PROXY_IPS)
-        blocked = guard(deps.rate_limiter.check_user_ip(ip))
+        blocked = guard(deps.rate_limiter.check_user_ip(ip), endpoint="check_user")
         if blocked is not None:
             return blocked
         try:
@@ -75,7 +75,10 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
             return _public_error(INVALID_REQUEST, 400)
 
         ip = client_ip(request, deps.TRUSTED_PROXY_IPS)
-        blocked = guard(deps.rate_limiter.send_otp(ip=ip, identifier=body.identifier))
+        blocked = guard(
+            deps.rate_limiter.send_otp(ip=ip, identifier=body.identifier),
+            endpoint="send_otp",
+        )
         if blocked is not None:
             return blocked
 
@@ -135,10 +138,12 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
         otp = str(otp_raw) if otp_raw is not None else None
 
         ip = client_ip(request, deps.TRUSTED_PROXY_IPS)
-        blocked = guard(deps.rate_limiter.login_ip(ip))
+        blocked = guard(deps.rate_limiter.login_ip(ip), endpoint="login")
         if blocked is not None:
             return blocked
-        blocked = guard(deps.rate_limiter.peek_login_fail_identifier(identifier))
+        blocked = guard(
+            deps.rate_limiter.peek_login_fail_identifier(identifier), endpoint="login"
+        )
         if blocked is not None:
             return blocked
 

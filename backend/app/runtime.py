@@ -59,6 +59,7 @@ REDIS_URL = settings.redis_url
 REDIS_SESSION_PREFIX = settings.redis_session_prefix
 PROXIES = settings.proxies
 TRUSTED_PROXY_IPS = settings.trusted_proxy_ips
+METRICS_SECRET = settings.metrics_secret
 
 BASE_HEADERS: dict[str, str] = {
     "Host": "www.three.com.hk",
