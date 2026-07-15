@@ -49,7 +49,7 @@
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/your-org/3hk_new.git
+git clone <repository-url> 3hk_new
 cd 3hk_new
 ```
 
@@ -233,3 +233,11 @@ npm run build
 ## 许可证
 
 本项目基于 [MIT License](LICENSE) 开源。
+
+## Coverage, CI, and releases
+
+- Backend: `cd backend && .venv/bin/pytest --cov=app --cov-branch --cov-fail-under=84`
+- Frontend: `cd frontend && npm run test:coverage`
+- Policy: `python3 scripts/check_docs_consistency.py` and `python3 scripts/check_security_policy.py`
+- CI: `.github/workflows/ci.yml` (pinned Actions, audits, Trivy, coverage)
+- Release: tag `vX.Y.Z` → `.github/workflows/release.yml` (GHCR + GitHub Release); `workflow_dispatch` dry-run does not publish

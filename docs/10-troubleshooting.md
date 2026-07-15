@@ -110,3 +110,10 @@ cd backend
 ---
 
 [← 安全与运维](09-security-and-operations.md) · [文档首页 →](README.md)
+
+## Coverage or CI gate failures
+
+- Backend: re-run `pytest --cov=app --cov-branch --cov-fail-under=84`; do not lower `fail_under` without re-measuring.
+- Frontend: re-run `npm run test:coverage`; thresholds live in `frontend/vite.config.ts`.
+- Unpinned Action: `python3 scripts/check_actions_pinned.py` must pass before merge.
+- Docs/security policy: `python3 scripts/check_docs_consistency.py` and `python3 scripts/check_security_policy.py`.

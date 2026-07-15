@@ -150,3 +150,33 @@ git status --short
 ## 行为准则
 
 参与本项目即表示你同意遵守 [行为准则](CODE_OF_CONDUCT.md)。请在所有交流中保持友善和尊重。
+
+## Coverage and supply-chain gates
+
+Backend coverage (branch + fail_under from `backend/pyproject.toml`):
+
+```bash
+cd backend
+.venv/bin/pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
+.venv/bin/pip-audit -r requirements.txt --strict
+```
+
+Frontend coverage and audit:
+
+```bash
+cd frontend
+npm run test:coverage
+npm audit --audit-level=moderate
+```
+
+Repository policy checks (run from repo root):
+
+```bash
+python3 scripts/check_actions_pinned.py
+python3 scripts/check_release_policy.py
+python3 scripts/check_docs_consistency.py
+python3 scripts/check_security_policy.py
+actionlint -color .github/workflows/*.yml
+```
+
+Releases: push a semver tag `vX.Y.Z` to trigger `.github/workflows/release.yml` (GHCR + GitHub Release). Use `workflow_dispatch` with dry-run for local-equivalent validation without publishing. Do not add SSH/`systemctl` deploy steps to release automation.

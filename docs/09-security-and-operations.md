@@ -90,3 +90,10 @@
 ---
 
 [← 部署说明](08-deploy.md) · [故障排查 →](10-troubleshooting.md)
+
+## CI supply chain
+
+- Workflows pin third-party Actions to 40-hex SHAs (`scripts/check_actions_pinned.py`).
+- Dependabot weekly updates: pip (`/backend`), npm (`/frontend`), Docker (`/`), GitHub Actions (`/`).
+- CI runs coverage, `pip-audit`, `npm audit`, actionlint, Gitleaks, and Trivy filesystem/image scans.
+- Base-image OS findings accepted only with documented IDs/rationale/expiry in `deploy/compose/trivy-exceptions.md`.

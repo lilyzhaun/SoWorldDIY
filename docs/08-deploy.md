@@ -198,3 +198,10 @@ curl http://127.0.0.1:8888/_ready
 ---
 
 [← 测试说明](07-testing.md) · [安全与运维 →](09-security-and-operations.md)
+
+## Container and GHCR
+
+- Portable stack: `docker compose up -d --wait` (see `docker-compose.yml`; app on `127.0.0.1:18888`).
+- Image build: digest-pinned multi-stage `Dockerfile`.
+- Releases: semver tags `v*.*.*` run `.github/workflows/release.yml` to publish `ghcr.io/<repository>` with SBOM/provenance. Manual `workflow_dispatch` is dry-run only (no publish).
+- Do not bake secrets into images; use Compose env / runtime `.env` outside git.

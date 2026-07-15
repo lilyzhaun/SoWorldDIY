@@ -28,3 +28,8 @@
 ## 附加信息
 
 <!-- 其他需要说明的内容 -->
+
+- [ ] Coverage gates pass (`pytest --cov...`, `npm run test:coverage`)
+- [ ] `python3 scripts/check_docs_consistency.py` and `python3 scripts/check_security_policy.py` pass
+- [ ] Actions remain SHA-pinned; no deploy/SSH in release workflow
+- [ ] No secrets, local delivery_extension files, or `frontend/dist` staged
