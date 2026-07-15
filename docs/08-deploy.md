@@ -94,6 +94,34 @@ systemctl restart 3hk-new.service
 - 根据业务需要配置持久化。
 - 备份前确认备份文件不会公开。
 
+### 专用实例（推荐生产）
+
+仓库提供 `deploy/redis/` 模板，用于在本机 **127.0.0.1:6380** 运行项目专用 Redis 8 实例：
+
+| 文件 | 用途 |
+| --- | --- |
+| `deploy/redis/redis.conf.example` | 仅绑定回环、AOF/RDB、ACL 文件路径 |
+| `deploy/redis/users.acl.example` | `3hk-app` 最小权限用户 + 可选迁移用户（占位密码） |
+| `deploy/redis/3hk-new-redis.service` | systemd 单元模板 |
+| `deploy/redis/README.md` | 安装与冒烟检查说明 |
+
+应用只使用 DB **0** 的 `session:*`、`cache:*`、`auth_code:v2:*`、`ratelimit:*`。迁移工具**不得**读写 DB **15**。
+
+### 迁移 CLI
+
+在 `backend/` 激活 venv，并设置 `AUTH_CODE_HMAC_KEY`（≥32 字节）后：
+
+```bash
+python -m app.redis_migrate plan \
+  --source-url redis://127.0.0.1:6379/0 \
+  --dest-url redis://127.0.0.1:6380/0
+python -m app.redis_migrate apply --source-url ... --dest-url ...
+python -m app.redis_migrate verify --source-url ... --dest-url ...
+python -m app.redis_migrate rollback-plan
+```
+
+`plan` 只输出计数、前缀与 TTL，不打印密码、鉴权码或 key 值。`session:*`/`cache:*` 用 DUMP/PTTL/RESTORE 复制；legacy `auth_code:<code>` 重写为 `auth_code:v2:<hmac>`。回滚时必须**同时**恢复 `REDIS_URL` 与 `AUTH_CODE_KEY_MODE`。
+
 ## 健康检查
 
 ### 本地检查

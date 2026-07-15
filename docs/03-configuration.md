@@ -11,8 +11,9 @@
 | `SESSION_SECRET` | 是 | 无 | 服务端 session、内部维护接口和默认加密回退使用的密钥。必须使用强随机值。 |
 | `COOKIE_SECURE` | 是 | 无 | 是否为 `session` 与 `csrf_token` Cookie 设置 `Secure`。生产必须为 `true`；本地 HTTP 与 CI/测试设为 `false`。仅接受字面量 `true`/`false`。 |
 | `PASSWORD_ENCRYPTION_KEY` | 否 | `SESSION_SECRET` | session 内密码加密密钥。建议与 `SESSION_SECRET` 使用不同强随机值。 |
-| `REDIS_URL` | 否 | `redis://127.0.0.1:6379/0` | Redis 连接地址。生产环境建议使用受控网络和密码。 |
+| `REDIS_URL` | 否 | `redis://127.0.0.1:6379/0` | Redis 连接地址。生产建议专用实例（如 `redis://127.0.0.1:6380/0` + ACL 用户），勿暴露公网。 |
 | `REDIS_SESSION_PREFIX` | 否 | `session:` | Redis session key 前缀。多环境共享 Redis 时需要区分。 |
+| `REDIS_MIGRATE_DEST_URL` | 否 | `redis://127.0.0.1:6380/0` | 仅迁移 CLI 使用：目标专用 Redis URL。不进入应用运行时配置。 |
 | `AUTH_CODE_KEY_MODE` | 否 | `legacy` | 鉴权码 Redis key 模式：`legacy`（明文 `auth_code:<code>`）、`dual`（读 legacy/v2，只写 v2）、`hmac`（仅 v2）。`legacy`/`dual` 仅用于有界迁移窗口，不是永久静默回退。 |
 | `AUTH_CODE_HMAC_KEY` | dual/hmac 必填 | 无 | 派生 `auth_code:v2:<HMAC-SHA256 hex>` 的专用密钥，至少 32 字节随机值；无默认回退。不得写入日志或提交仓库。 |
 | `PROXY_URL` | 否 | 空 | 访问 3HK/SIMWorld 上游接口时使用的 HTTP/HTTPS 代理。 |

@@ -45,6 +45,13 @@
 - `legacy`/`dual` 仅用于迁移窗口；不要把明文 key 当作长期设计。
 - 不得在日志、指标或证据文件中记录 `AUTH_CODE_HMAC_KEY` 或鉴权码明文。
 
+## 专用 Redis 与 ACL
+
+- 生产应使用 loopback 专用实例（模板见 `deploy/redis/`），应用用户 `3hk-app` 仅能访问 `session:*`、`cache:*`、`auth_code:v2:*`、`ratelimit:*`。
+- ACL 与配置文件 root-only（0600）；模板中的 `CHANGE_ME_*` 占位符不得以真实密码提交。
+- 从共享 Redis 迁出时使用 `python -m app.redis_migrate`；切流与回滚须同时变更 `REDIS_URL` 与 `AUTH_CODE_KEY_MODE`。
+- 迁移与运维**禁止**触碰 DB 15，禁止 `FLUSHALL`/`FLUSHDB`。
+
 ## 上游服务风险
 
 项目会代理访问 3HK/SIMWorld 相关接口，并可能发起购买、换号和资源转移操作。使用者需要自行确认：

@@ -1,0 +1,13 @@
+# ACL template for the dedicated 3HK Redis instance.
+# Replace CHANGE_ME_APP_PASSWORD with a long random secret (root-only file, mode 0600).
+# Never commit real passwords. Migration/admin uses a separate break-glass user.
+
+user default off
+
+# Break-glass operator for one-shot migration / restore (disable after cutover).
+user 3hk-migrate on >CHANGE_ME_MIGRATE_PASSWORD ~* &* +@all
+
+# Application runtime user: only project keyspaces + required command groups.
+# Key patterns: session:*, cache:*, auth_code:v2:*, ratelimit:*
+# +@read includes SCAN/GET/HGETALL needed by session + auth-code list.
+user 3hk-app on >CHANGE_ME_APP_PASSWORD ~session:* ~cache:* ~auth_code:v2:* ~ratelimit:* &* +@read +@write +@connection +@scripting +@transaction -@dangerous -config -acl -slowlog

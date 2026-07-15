@@ -1,0 +1,45 @@
+# Project-only Redis 8 template for 3HK Assistant.
+# Copy to a root-only path (e.g. /etc/3hk-new/redis/redis.conf) and fill local paths.
+# Bind loopback only. Never publish 6380 on a public interface.
+
+bind 127.0.0.1
+protected-mode yes
+port 6380
+tcp-backlog 511
+timeout 0
+tcp-keepalive 300
+
+daemonize no
+supervised systemd
+pidfile /run/3hk-new-redis/redis.pid
+loglevel notice
+logfile ""
+
+databases 16
+always-show-logo no
+
+# Persistence (adjust paths for the host)
+dir /var/lib/3hk-new-redis
+dbfilename dump.rdb
+save 900 1
+save 300 10
+save 60 10000
+stop-writes-on-bgsave-error yes
+rdbcompression yes
+rdbchecksum yes
+
+appendonly yes
+appendfilename "appendonly.aof"
+appendfsync everysec
+no-appendfsync-on-rewrite no
+auto-aof-rewrite-percentage 100
+auto-aof-rewrite-min-size 64mb
+
+# ACL file is generated from users.acl.example with a strong password.
+# File mode should be 0600 root:root.
+aclfile /etc/3hk-new/redis/users.acl
+
+# Deny dangerous defaults for the app user via ACL; keep default off in users.acl.
+rename-command FLUSHALL ""
+rename-command FLUSHDB ""
+rename-command DEBUG ""
