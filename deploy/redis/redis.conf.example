@@ -10,7 +10,7 @@ timeout 0
 tcp-keepalive 300
 
 daemonize no
-supervised systemd
+supervised no
 pidfile /run/3hk-new-redis/redis.pid
 loglevel notice
 logfile ""

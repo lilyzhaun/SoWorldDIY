@@ -48,3 +48,7 @@ redis-cli -p 6380 --user 3hk-app -a "$APP_PASSWORD" PING
 redis-cli -p 6380 --user 3hk-app -a "$APP_PASSWORD" GET other:x   # expect NOPERM
 redis-cli -p 6380 --user 3hk-app -a "$APP_PASSWORD" CONFIG GET dir  # expect NOPERM
 ```
+
+## systemd note
+
+Use `Type=simple` when Redis is built without libsystemd notify support; set `supervised no` in redis.conf.
