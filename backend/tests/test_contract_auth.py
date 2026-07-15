@@ -47,7 +47,11 @@ def test_csrf_missing_on_post_returns_403(monkeypatch: MonkeyPatch) -> None:
         body=b'{"account_id":"a@b.com","subscriptionId":"s","items":[]}',
     )
     assert resp.status == 403
-    assert resp.json == {"status": "error", "message": "CSRF token invalid"}
+    assert resp.json == {
+        "status": "error",
+        "message": "CSRF token invalid",
+        "code": "csrf_invalid",
+    }
 
 
 def test_csrf_valid_proceeds_past_csrf_gate(monkeypatch: MonkeyPatch) -> None:
@@ -284,4 +288,8 @@ def test_login_session_save_failure_returns_503(monkeypatch: MonkeyPatch) -> Non
         body=b"login_type=password&identifier=a@b.com&auth_code=C&password=p",
     )
     assert resp.status == 503
-    assert resp.json == {"status": "error", "message": "服务暂时不可用"}
+    assert resp.json == {
+        "status": "error",
+        "message": "服务暂时不可用",
+        "code": "service_unavailable",
+    }

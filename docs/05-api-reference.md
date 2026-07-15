@@ -7,7 +7,7 @@
 ## 通用约定
 
 - 成功响应通常包含 `status: "success"`。
-- 失败响应通常包含 `status: "error"` 和 `message`。
+- 失败响应通常包含 `status: "error"` 和 `message`；由公开错误目录生成的响应还包含稳定 `code`（如 `invalid_request`、`csrf_invalid`、`internal_error`）。
 - 多账号上下文通过 `account_id` 查询参数或请求体字段指定。
 - 前端 `apiPostJson` 会自动添加 `x-csrf-token`。
 - 访问上游接口失败时，后端返回稳定的公开错误文案，不回传异常详情或上游响应体。
@@ -60,7 +60,7 @@
 
 | 路径 | 方法 | 请求 | 说明 |
 | --- | --- | --- | --- |
-| `/logout` | POST | Form 可选: `account_id`；Header: `x-csrf-token`（有 session 时） | 退出全部或指定账号。GET 返回 405。 |
+| `/logout` | POST | Form 可选: `account_id`；Header: `x-csrf-token`（有 session 时必填） | 退出全部或指定账号。仅 Form 字段携带 `account_id`（不接受 query）。失败响应含稳定 `code`。GET 返回 405。 |
 
 ## 维护接口
 

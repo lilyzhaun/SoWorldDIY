@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from starlette.responses import Response
 
 from ..public_errors import INTERNAL_ERROR, INVALID_REQUEST
+from ..responses import _public_error
 from ..schemas import TransferRequest
 from ..services_transfer import (
     build_transfer_payload,
@@ -31,11 +32,14 @@ def register_transfer_routes(app: FastAPI, deps: RouteDeps) -> None:
         if csrf_error:
             return csrf_error
 
-        raw = await request.json()
+        try:
+            raw = await request.json()
+        except ValueError:
+            return _public_error(INVALID_REQUEST, 400)
         try:
             body = TransferRequest.model_validate(raw)
         except ValidationError:
-            return deps._json_error(INVALID_REQUEST.message, 400)
+            return _public_error(INVALID_REQUEST, 400)
 
         req_ident = str(body.account_id)
         account_ctx = deps.get_account_context(ctx, req_ident)
@@ -98,4 +102,4 @@ def register_transfer_routes(app: FastAPI, deps: RouteDeps) -> None:
                 type(exc).__name__,
                 target_brand,
             )
-            return deps._json_error(INTERNAL_ERROR.message, 500)
+            return _public_error(INTERNAL_ERROR, 500)

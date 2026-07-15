@@ -10,6 +10,7 @@ from starlette.responses import Response
 
 from ..brand import INVALID_BRAND_CODE, InvalidBrandError, parse_brand, plans_cache_path
 from ..public_errors import AUTH_FAILED, INTERNAL_ERROR, INVALID_REQUEST
+from ..responses import _public_error
 from ..schemas import PurchaseRequest
 from ..services_commerce import (
     build_plan_purchase_payload,
@@ -114,18 +115,21 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
         if csrf_error:
             return csrf_error
 
-        raw = await request.json()
+        try:
+            raw = await request.json()
+        except ValueError:
+            return _public_error(INVALID_REQUEST, 400)
         try:
             body = PurchaseRequest.model_validate(raw)
         except ValidationError:
-            return deps._json_error(INVALID_REQUEST.message, 400)
+            return _public_error(INVALID_REQUEST, 400)
 
         req_ident = body.account_id or request.query_params.get("account_id")
         account_ctx = deps.get_account_context(
             ctx, str(req_ident) if req_ident is not None else None
         )
         if not account_ctx:
-            return deps._json_error(AUTH_FAILED.message, 401)
+            return _public_error(AUTH_FAILED, 401)
 
         sid = body.subscriptionId
         target_brand = deps.get_brand_by_sub_id(ctx, str(sid), str(req_ident))
@@ -176,4 +180,4 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
                 type(exc).__name__,
                 target_brand,
             )
-            return deps._json_error(INTERNAL_ERROR.message, 500)
+            return _public_error(INTERNAL_ERROR, 500)

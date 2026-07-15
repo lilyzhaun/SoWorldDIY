@@ -131,4 +131,5 @@ def test_cmn_numbers_post_without_csrf_returns_403(monkeypatch: MonkeyPatch) -> 
     assert json.loads(bytes(resp.body)) == {
         "status": "error",
         "message": "CSRF token invalid",
+        "code": "csrf_invalid",
     }

@@ -15,6 +15,7 @@ from ..public_errors import (
     INVALID_REQUEST,
     SERVICE_UNAVAILABLE,
 )
+from ..responses import _public_error
 from ..schemas import CheckUserRequest, SendOtpRequest
 from ..upstream_urls import THREE_EXISTING_CUST_DIPPING, simworld_url
 from .deps import RouteDeps
@@ -25,14 +26,14 @@ logger = logging.getLogger(__name__)
 def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.post("/api/check-user")
     async def check_user(request: Request) -> JSONResponse:
-        raw = await request.json()
+        try:
+            raw = await request.json()
+        except ValueError:
+            return _public_error(INVALID_REQUEST, 400)
         try:
             body = CheckUserRequest.model_validate(raw)
         except ValidationError:
-            return JSONResponse(
-                status_code=500,
-                content={"status": "error", "message": INVALID_REQUEST.message},
-            )
+            return _public_error(INVALID_REQUEST, 500)
         try:
             identifier = body.identifier
             headers = dict(deps.BASE_HEADERS)
@@ -58,18 +59,18 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                 "check_user failed error_class=%s",
                 type(exc).__name__,
             )
-            return JSONResponse(
-                status_code=500,
-                content={"status": "error", "message": INTERNAL_ERROR.message},
-            )
+            return _public_error(INTERNAL_ERROR, 500)
 
     @app.post("/api/send-otp")
     async def send_otp(request: Request) -> JSONResponse:
-        raw = await request.json()
+        try:
+            raw = await request.json()
+        except ValueError:
+            return _public_error(INVALID_REQUEST, 400)
         try:
             body = SendOtpRequest.model_validate(raw)
         except ValidationError:
-            return deps._json_error(INVALID_REQUEST.message, 400)
+            return _public_error(INVALID_REQUEST, 400)
 
         valid, message = deps.verify_auth_code(body.auth_code, False)
         if not valid:
@@ -119,10 +120,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                 type(exc).__name__,
                 sub_brand,
             )
-            return JSONResponse(
-                status_code=500,
-                content={"status": "error", "message": INTERNAL_ERROR.message},
-            )
+            return _public_error(INTERNAL_ERROR, 500)
 
     @app.post("/login")
     async def handle_login(request: Request) -> JSONResponse:
@@ -161,7 +159,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                 "login brand check failed error_class=%s",
                 type(exc).__name__,
             )
-            return deps._json_error(ACCOUNT_CHECK_FAILED.message, 500)
+            return _public_error(ACCOUNT_CHECK_FAILED, 500)
 
         if login_type == "password":
             login_url = simworld_url("THREE", "user/login/")
@@ -197,7 +195,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                             "login create_session failed error_class=%s",
                             type(exc).__name__,
                         )
-                        return deps._json_error(SERVICE_UNAVAILABLE.message, 503)
+                        return _public_error(SERVICE_UNAVAILABLE, 503)
                     cookies = requests.utils.dict_from_cookiejar(r.cookies)
                     accounts = ctx.data.get("accounts", {})
                     account_payload: dict[str, Any] = {
@@ -219,7 +217,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                             "login save_session failed error_class=%s",
                             type(exc).__name__,
                         )
-                        return deps._json_error(SERVICE_UNAVAILABLE.message, 503)
+                        return _public_error(SERVICE_UNAVAILABLE, 503)
 
                     try:
                         deps.notify(
@@ -242,4 +240,4 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                 type(exc).__name__,
                 login_type,
             )
-            return deps._json_error(INTERNAL_ERROR.message, 500)
+            return _public_error(INTERNAL_ERROR, 500)

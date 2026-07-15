@@ -36,7 +36,11 @@ def test_purchase_invalid_account_returns_401(monkeypatch: MonkeyPatch) -> None:
     )
     resp = run_endpoint("/api/purchase", request)
     assert resp.status_code == 401
-    assert json.loads(bytes(resp.body)) == {"status": "error", "message": "Auth failed"}
+    assert json.loads(bytes(resp.body)) == {
+        "status": "error",
+        "message": "Auth failed",
+        "code": "auth_failed",
+    }
 
 
 def test_purchase_access_key_none_returns_400(monkeypatch: MonkeyPatch) -> None:
@@ -162,4 +166,5 @@ def test_purchase_upstream_no_payment_url_returns_400(monkeypatch: MonkeyPatch) 
     assert json.loads(bytes(resp.body)) == {
         "status": "error",
         "message": "购买请求失败，请稍后重试",
+        "code": "upstream_error",
     }

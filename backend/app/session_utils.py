@@ -11,7 +11,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from . import runtime as _runtime
-from .responses import _json_error
+from .public_errors import CSRF_INVALID
+from .responses import _public_error
 from .runtime import (
     CSRF_COOKIE_NAME,
     CSRF_HEADER_NAME,
@@ -143,7 +144,7 @@ def _validate_csrf(request: Request, ctx: SessionContext | None) -> JSONResponse
     expected = ctx.data.get("csrf_token")
     provided = request.headers.get(CSRF_HEADER_NAME)
     if not csrf_token_matches(str(expected) if expected else None, provided):
-        return _json_error("CSRF token invalid", 403)
+        return _public_error(CSRF_INVALID, 403)
     return None
 
 

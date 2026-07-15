@@ -7,12 +7,38 @@ from pydantic import ValidationError
 from starlette.responses import Response
 
 from ..public_errors import INTERNAL_ERROR, INVALID_REQUEST
+from ..responses import _public_error
 from ..schemas import CmnPurchaseRequest
 from ..services_commerce import build_cmn_purchase_payload
 from ..upstream_urls import simworld_url
 from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
+
+_CMN_NUMBERS_OPENAPI = {
+    "parameters": [
+        {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": True,
+            "schema": {"type": "string"},
+        }
+    ],
+    "requestBody": {
+        "required": True,
+        "content": {
+            "application/x-www-form-urlencoded": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "account_id": {"type": "string"},
+                        "subscriptionId": {"type": "string"},
+                    },
+                }
+            }
+        },
+    },
+}
 
 
 def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
@@ -81,6 +107,7 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
         "/api/cmn/numbers",
         name="post_cmn_numbers",
         operation_id="post_cmn_numbers",
+        openapi_extra=_CMN_NUMBERS_OPENAPI,
     )
     async def post_cmn_numbers(request: Request) -> Response:
         ctx = deps._require_login(request)
@@ -108,11 +135,14 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
         if csrf_error:
             return csrf_error
 
-        raw = await request.json()
+        try:
+            raw = await request.json()
+        except ValueError:
+            return _public_error(INVALID_REQUEST, 400)
         try:
             body = CmnPurchaseRequest.model_validate(raw)
         except ValidationError:
-            return deps._json_error(INVALID_REQUEST.message, 400)
+            return _public_error(INVALID_REQUEST, 400)
 
         req_ident = str(body.account_id)
         account_ctx = deps.get_account_context(ctx, req_ident)
@@ -169,4 +199,4 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
                 type(exc).__name__,
                 target_brand,
             )
-            return deps._json_error(INTERNAL_ERROR.message, 500)
+            return _public_error(INTERNAL_ERROR, 500)

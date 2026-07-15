@@ -192,7 +192,11 @@ def test_session_cleanup_wrong_secret_returns_401(monkeypatch: MonkeyPatch) -> N
         headers={"x-session-secret": "wrong"},
     )
     assert resp.status == 401
-    assert resp.json == {"status": "error", "message": "Unauthorized"}
+    assert resp.json == {
+        "status": "error",
+        "message": "Unauthorized",
+        "code": "unauthorized",
+    }
 
 
 def test_health_returns_ok() -> None:

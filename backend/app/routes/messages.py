@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
 from ..public_errors import INTERNAL_ERROR
+from ..responses import _public_error
 from ..upstream_urls import simworld_url
 from .deps import RouteDeps
 
@@ -98,4 +99,4 @@ def register_messages_routes(app: FastAPI, deps: RouteDeps) -> None:
                 type(exc).__name__,
                 target_brand,
             )
-            return deps._json_error(INTERNAL_ERROR.message, 500)
+            return _public_error(INTERNAL_ERROR, 500)

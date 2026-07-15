@@ -112,7 +112,10 @@ class AuthCodeStore:
         try:
             data = json.loads(self.seed_file.read_text(encoding="utf-8"))
         except Exception as exc:
-            logger.warning("Failed to load auth code seed file: %s", exc)
+            logger.warning(
+                "Failed to load auth code seed file operation=auth_code_seed error_class=%s",
+                type(exc).__name__,
+            )
             return 0
         if not isinstance(data, dict):
             return 0
@@ -137,7 +140,10 @@ class AuthCodeStore:
                 )
                 imported += 1
             except RedisError as exc:
-                logger.warning("Failed to seed auth code %s: %s", code, exc)
+                logger.warning(
+                    "Failed to seed auth code operation=auth_code_seed error_class=%s",
+                    type(exc).__name__,
+                )
         return imported
 
     def verify(self, auth_code: str | None, consume: bool = False) -> tuple[bool, str]:
@@ -146,7 +152,10 @@ class AuthCodeStore:
         try:
             return self._verify_redis(auth_code, consume)
         except RedisError as exc:
-            logger.error("Redis auth code verification failed: %s", exc)
+            logger.error(
+                "Redis auth code verification failed operation=auth_code_verify error_class=%s",
+                type(exc).__name__,
+            )
             return False, "鉴权服务暂不可用"
 
     def create(self, auth_code: str, usage_limit: int, times_used: int = 0) -> None:

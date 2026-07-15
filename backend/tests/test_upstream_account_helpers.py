@@ -155,7 +155,11 @@ def test_json_success_shape() -> None:
 def test_upstream_error_with_none_response(monkeypatch: MonkeyPatch) -> None:
     resp = _upstream_error(None, public_message="custom", status_code=400)
     assert resp.status_code == 400
-    assert _json.loads(bytes(resp.body)) == {"status": "error", "message": "custom"}
+    assert _json.loads(bytes(resp.body)) == {
+        "status": "error",
+        "message": "custom",
+        "code": "upstream_error",
+    }
 
 
 def test_upstream_error_with_response(monkeypatch: MonkeyPatch) -> None:
@@ -163,7 +167,11 @@ def test_upstream_error_with_response(monkeypatch: MonkeyPatch) -> None:
         FakeResponse(500, text="srv-err"), public_message="pub", status_code=400
     )
     assert resp.status_code == 400
-    assert _json.loads(bytes(resp.body)) == {"status": "error", "message": "pub"}
+    assert _json.loads(bytes(resp.body)) == {
+        "status": "error",
+        "message": "pub",
+        "code": "upstream_error",
+    }
 
 
 def test_redirect_to_login_shape() -> None:

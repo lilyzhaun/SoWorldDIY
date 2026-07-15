@@ -9,13 +9,42 @@ from redis.exceptions import RedisError
 from starlette.responses import Response
 
 from ..public_errors import REDIS_UNAVAILABLE, UNAUTHORIZED
+from ..responses import _public_error
 from .deps import RouteDeps
 
 logger = logging.getLogger(__name__)
 
+_LOGOUT_OPENAPI = {
+    "parameters": [
+        {
+            "name": "x-csrf-token",
+            "in": "header",
+            "required": False,
+            "schema": {"type": "string"},
+            "description": "CSRF token from csrf_token cookie; required when a session exists.",
+        }
+    ],
+    "requestBody": {
+        "required": False,
+        "content": {
+            "application/x-www-form-urlencoded": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "account_id": {
+                            "type": "string",
+                            "description": "Optional account to remove; omit to clear the whole session.",
+                        }
+                    },
+                }
+            }
+        },
+    },
+}
+
 
 def register_session_routes(app: FastAPI, deps: RouteDeps) -> None:
-    @app.post("/logout")
+    @app.post("/logout", openapi_extra=_LOGOUT_OPENAPI)
     async def logout(request: Request) -> Response:
         ctx = getattr(request.state, "session_ctx", None)
         if ctx is None:
@@ -29,8 +58,6 @@ def register_session_routes(app: FastAPI, deps: RouteDeps) -> None:
         form = await request.form()
         req_ident_raw = form.get("account_id")
         req_ident = str(req_ident_raw) if req_ident_raw else None
-        if not req_ident:
-            req_ident = request.query_params.get("account_id")
 
         if req_ident:
             try:
@@ -58,14 +85,14 @@ def register_session_routes(app: FastAPI, deps: RouteDeps) -> None:
         provided_secret = request.headers.get("x-session-secret", "")
         expected = deps.SESSION_SECRET
         if not secrets.compare_digest(provided_secret, expected):
-            return deps._json_error(UNAUTHORIZED.message, 401)
+            return _public_error(UNAUTHORIZED, 401)
 
         try:
             redis_ok = bool(deps.redis_client.ping())
         except RedisError:
             logger.error(
-                "session_cleanup failed error_class=RedisError",
+                "session_cleanup failed operation=session_cleanup error_class=RedisError",
             )
-            return deps._json_error(REDIS_UNAVAILABLE.message, 503)
+            return _public_error(REDIS_UNAVAILABLE, 503)
 
         return deps._json_success({"redis_ok": redis_ok})

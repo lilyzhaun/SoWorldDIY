@@ -121,10 +121,13 @@ def attempt_silent_relogin(
                     accounts[account_id]["cookies"] = new_cookies
                     ctx.data["accounts"] = accounts
                     d._save_session(ctx)
-                    logger.info("Silent re-login successful for %s", account_id)
+                    logger.info("Silent re-login successful operation=silent_relogin")
                     return True
     except Exception as exc:
-        logger.error("Silent re-login error: %s", exc)
+        logger.error(
+            "Silent re-login failed operation=silent_relogin error_class=%s",
+            type(exc).__name__,
+        )
     return False
 
 
@@ -169,7 +172,9 @@ def make_3hk_request(
                             target_id = uid
                             break
                 if target_id and not _is_retry:
-                    logger.info("401 for %s, trying silent relogin", target_id)
+                    logger.info(
+                        "Upstream unauthorized operation=make_3hk_request status=401"
+                    )
                     if d.attempt_silent_relogin(
                         request, ctx, target_id, account_context
                     ):
@@ -185,7 +190,9 @@ def make_3hk_request(
                             account_context=refreshed_ctx,
                             _is_retry=True,
                         )
-                    logger.warning("Relogin failed for %s", target_id)
+                    logger.warning(
+                        "Silent re-login failed operation=make_3hk_request status=401"
+                    )
                 return response
 
             if response.cookies:
@@ -202,5 +209,8 @@ def make_3hk_request(
 
             return response
     except Exception as exc:
-        logger.error("Request Error: %s", exc)
+        logger.error(
+            "Upstream request failed operation=make_3hk_request error_class=%s",
+            type(exc).__name__,
+        )
         return None

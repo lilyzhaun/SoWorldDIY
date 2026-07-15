@@ -85,7 +85,10 @@ class RedisSessionStore:
         try:
             raw = self.redis_client.get(self._key(sid))
         except RedisError as exc:
-            logger.error("Redis session load failed for %s: %s", sid, exc)
+            logger.error(
+                "Redis session load failed operation=session_load error_class=%s",
+                type(exc).__name__,
+            )
             return None
         if not raw:
             return None
@@ -103,15 +106,21 @@ class RedisSessionStore:
                 json.dumps(data, ensure_ascii=False),
             )
         except RedisError as exc:
-            logger.error("Redis session save failed for %s: %s", sid, exc)
-            raise RuntimeError(f"Redis session save failed: {exc}") from exc
+            logger.error(
+                "Redis session save failed operation=session_save error_class=%s",
+                type(exc).__name__,
+            )
+            raise RuntimeError("Redis session save failed") from exc
 
     def delete(self, sid: str) -> None:
         try:
             self.redis_client.delete(self._key(sid))
         except RedisError as exc:
-            logger.error("Redis session delete failed for %s: %s", sid, exc)
-            raise RuntimeError(f"Redis session delete failed: {exc}") from exc
+            logger.error(
+                "Redis session delete failed operation=session_delete error_class=%s",
+                type(exc).__name__,
+            )
+            raise RuntimeError("Redis session delete failed") from exc
 
     def _key(self, sid: str) -> str:
         return f"{self.key_prefix}{sid}"

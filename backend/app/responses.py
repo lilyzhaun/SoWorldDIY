@@ -5,17 +5,17 @@ import uuid
 from collections.abc import Mapping
 from typing import Any, Protocol
 
-import requests
 from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.responses import Response
 
-from .public_errors import PublicError
+from .public_errors import PublicError, PublicErrorCode
 
 __all__ = [
     "JsonErrorFn",
     "JsonSuccessFn",
     "RedirectToLoginFn",
     "UpstreamErrorFn",
+    "UpstreamStatusResponse",
     "_json_error",
     "_json_success",
     "_public_error",
@@ -38,10 +38,17 @@ class JsonSuccessFn(Protocol):
     def __call__(self, content: Mapping[str, object]) -> JSONResponse: ...
 
 
+class UpstreamStatusResponse(Protocol):
+    """Minimal upstream response surface used for safe error logging."""
+
+    @property
+    def status_code(self) -> int: ...
+
+
 class UpstreamErrorFn(Protocol):
     def __call__(
         self,
-        response: requests.Response | None,
+        response: UpstreamStatusResponse | None,
         public_message: str = "请求失败，请稍后重试",
         status_code: int = 400,
         *,
@@ -62,11 +69,18 @@ def _json_error(message: str, status_code: int = 400) -> JSONResponse:
 
 def _public_error(error: PublicError, status_code: int) -> JSONResponse:
     """Return a stable public error without internal details."""
-    return _json_error(error.message, status_code)
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": "error",
+            "message": error.message,
+            "code": str(error.code),
+        },
+    )
 
 
 def _upstream_error(
-    response: requests.Response | None,
+    response: UpstreamStatusResponse | None,
     public_message: str = "请求失败，请稍后重试",
     status_code: int = 400,
     *,
@@ -87,7 +101,14 @@ def _upstream_error(
             response.status_code,
             cid,
         )
-    return _json_error(public_message, status_code)
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "status": "error",
+            "message": public_message,
+            "code": str(PublicErrorCode.UPSTREAM_ERROR),
+        },
+    )
 
 
 def _json_success(content: dict[str, Any]) -> JSONResponse:

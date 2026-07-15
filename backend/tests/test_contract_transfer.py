@@ -135,4 +135,5 @@ def test_transfer_upstream_non_200_returns_400(monkeypatch: MonkeyPatch) -> None
     assert json.loads(bytes(resp.body)) == {
         "status": "error",
         "message": "资源转移请求失败，请稍后重试",
+        "code": "upstream_error",
     }
