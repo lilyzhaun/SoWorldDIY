@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest'
 import loginPageSource from '../../src/LoginPage.tsx?raw'
 import loginFlowSource from '../../src/hooks/useLoginFlow.ts?raw'
 import mainPageSource from '../../src/MainPage.tsx?raw'
+import mainPageControllerSource from '../../src/hooks/useMainPageController.ts?raw'
+import mainPageViewSource from '../../src/components/MainPageView.tsx?raw'
 import appModalSource from '../../src/hooks/useAppModal.ts?raw'
 import modalActionsSource from '../../src/components/MainModalActions.tsx?raw'
 import mainPageDialogsSource from '../../src/components/MainPageDialogs.tsx?raw'
@@ -45,8 +47,9 @@ describe('semantic feedback flow contracts', () => {
     expect(appModalSource).toContain('export type AlertState = {')
     expect(appModalSource).toContain('readonly text: string')
     expect(appModalSource).toContain('readonly tone?: StatusTone')
-    expect(mainPageSource).toContain("showAlert(`资源已成功转移给 ${target}`, '办理成功', 'success')")
+    expect(mainPageControllerSource).toContain("showAlert(`资源已成功转移给 ${target}`, '办理成功', 'success')")
     expect(mainPageDialogsSource).toContain('<StatusMessage message={frame.alert.text} tone={frame.alert.tone} />')
+    expect(mainPageControllerSource).not.toContain('✅ 资源已成功转移给')
     expect(mainPageSource).not.toContain('✅ 资源已成功转移给')
   })
 
@@ -55,6 +58,6 @@ describe('semantic feedback flow contracts', () => {
     expect(loginPageSource).toContain("submitBusy ? '正在登录…'")
     expect(modalActionsSource).toContain("purchaseDraft?.submitting ? '提交中…'")
     expect(modalActionsSource).toContain("transferSubmitting ? '处理中…'")
-    expect(mainPageSource).toContain('正在同步账户信息…')
+    expect(mainPageViewSource).toContain('正在同步账户信息…')
   })
 })
