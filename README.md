@@ -79,7 +79,7 @@ pip install -r requirements.txt
 HOST=127.0.0.1 PORT=8888 ./start.sh
 ```
 
-`start.sh` 默认监听 `0.0.0.0:8000`，生产环境建议绑定本机地址并通过反向代理对外提供 HTTPS。
+`start.sh` 默认监听 `127.0.0.1:8000`，生产环境建议绑定本机地址并通过反向代理对外提供 HTTPS。
 
 ### 5. 创建鉴权码
 

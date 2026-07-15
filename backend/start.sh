@@ -11,4 +11,5 @@ if [[ ! -x "$UVICORN_BIN" ]]; then
 fi
 
 cd "$SCRIPT_DIR"
-exec "$UVICORN_BIN" run:app --host "${HOST:-0.0.0.0}" --port "${PORT:-8000}"
+# Default to loopback; override with HOST/PORT for local multi-interface debugging.
+exec "$UVICORN_BIN" run:app --host "${HOST:-127.0.0.1}" --port "${PORT:-8000}"

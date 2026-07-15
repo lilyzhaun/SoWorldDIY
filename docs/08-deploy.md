@@ -37,46 +37,48 @@ pip install -r requirements.txt
 HOST=127.0.0.1 PORT=8888 ./start.sh
 ```
 
-`start.sh` 默认监听 `0.0.0.0:8000`，可用 `HOST` 和 `PORT` 环境变量覆盖。生产环境建议只监听内网地址或本机地址，由反向代理对外提供 HTTPS。
+`start.sh` 默认监听 `127.0.0.1:8000`，可用 `HOST` 和 `PORT` 环境变量覆盖。生产环境必须只监听本机地址，由反向代理对外提供 HTTPS。
 
-### systemd 生产部署
+### systemd 生产部署（硬化模板）
 
-生产环境使用 systemd 管理进程。当前部署的 systemd 单元位于 `/etc/systemd/system/3hk-new.service`：
+仓库提供 hardened 单元与日志轮转定义（**不**以 root / `0.0.0.0` 运行）：
 
-```ini
-[Unit]
-Description=3HK New App
-After=network.target
+| 文件 | 用途 |
+| --- | --- |
+| `deploy/systemd/3hk-new.service` | 应用单元：`User=3hk-new`，`127.0.0.1:8888`，资源上限与沙箱 hardening |
+| `deploy/systemd/3hk-new-redis.service` | 专用 Redis 单元（与 `deploy/redis/` 一致） |
+| `deploy/logrotate/3hk-new` | `/var/log/3hk-new/3hk-new.log` 日切、保留 14 天、`copytruncate`、模式 0640 |
+| `scripts/deploy_sync.sh` | 将跟踪文件同步到 `/opt/3hk-new`，**字节级保留**本地 `.env` / `delivery_extension_local.py` / `request_overrides_local.py` / `requirements-local.txt` |
 
-[Service]
-Type=simple
-User=root
-WorkingDirectory=/root/repos/3hk_new/backend
-ExecStart=/root/repos/3hk_new/backend/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8888
-Restart=always
-RestartSec=3
-StandardOutput=append:/var/log/3hk-new.log
-StandardError=append:/var/log/3hk-new.log
+同步示例：
 
-[Install]
-WantedBy=multi-user.target
+```bash
+DEST_ROOT=/opt/3hk-new ./scripts/deploy_sync.sh
+# 仅预演：
+DRY_RUN=1 DEST_ROOT=/tmp/3hk-stage ./scripts/deploy_sync.sh --dry-run
 ```
 
 关键点：
 
-- `WorkingDirectory` 是 `backend/`，Uvicorn 从该目录加载 `app.main:app`。
-- 监听端口 8888，反向代理应转发到该端口。
-- `Restart=always` 确保进程退出后自动重启。
-- 日志追加到 `/var/log/3hk-new.log`。
+- 生产 `WorkingDirectory` 为 `/opt/3hk-new/backend`，监听 **127.0.0.1:8888**。
+- 依赖 `3hk-new-redis.service`；日志写入 `/var/log/3hk-new/3hk-new.log`。
+- 现场切到 `/opt` 与 `3hk-new` 用户属于后续上线步骤（见安全加固 runbook）。
+
+校验：
+
+```bash
+systemd-analyze verify deploy/systemd/3hk-new.service deploy/systemd/3hk-new-redis.service
+logrotate -d deploy/logrotate/3hk-new
+bash -n scripts/deploy_sync.sh backend/start.sh
+```
 
 管理命令：
 
 ```bash
 systemctl daemon-reload
-systemctl enable 3hk-new.service
-systemctl start 3hk-new.service
+systemctl enable 3hk-new-redis.service 3hk-new.service
+systemctl start 3hk-new-redis.service 3hk-new.service
 systemctl status 3hk-new.service
-systemctl restart 3hk-new.service
 ```
 
 ## 反向代理建议

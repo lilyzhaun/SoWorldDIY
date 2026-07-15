@@ -1,0 +1,12 @@
+/var/log/3hk-new/3hk-new.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    create 0640 3hk-new 3hk-new
+    dateext
+    dateformat -%Y%m%d
+}

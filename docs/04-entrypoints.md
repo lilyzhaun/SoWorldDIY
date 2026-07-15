@@ -11,7 +11,7 @@
 | `backend/run.py` | ASGI 入口，`from app.main import app` 后导出 `app`。Uvicorn 使用 `run:app` 加载它。 |
 | `backend/app/__init__.py` | 导出 `app`、`application` 和 `create_app`。 |
 | `backend/app/main.py` | 创建 FastAPI 应用（`create_app`），注册路由，托管前端构建产物和 `/static`、`/assets` 挂载点。 |
-| `backend/start.sh` | 启动脚本。`cd` 到 `backend/` 后执行 `.venv/bin/uvicorn run:app`，默认监听 `0.0.0.0:8000`。 |
+| `backend/start.sh` | 启动脚本。`cd` 到 `backend/` 后执行 `.venv/bin/uvicorn run:app`，默认监听 `127.0.0.1:8000`。 |
 
 本地开发启动：
 

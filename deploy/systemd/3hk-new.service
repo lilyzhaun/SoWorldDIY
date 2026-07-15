@@ -1,0 +1,63 @@
+[Unit]
+Description=3HK New App (hardened)
+After=network-online.target 3hk-new-redis.service
+Wants=network-online.target
+Requires=3hk-new-redis.service
+
+[Service]
+Type=simple
+User=3hk-new
+Group=3hk-new
+UMask=0027
+WorkingDirectory=/opt/3hk-new/backend
+EnvironmentFile=-/opt/3hk-new/backend/.env
+ExecStart=/opt/3hk-new/backend/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8888
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+
+# Logging
+StandardOutput=append:/var/log/3hk-new/3hk-new.log
+StandardError=append:/var/log/3hk-new/3hk-new.log
+SyslogIdentifier=3hk-new
+
+# Resource limits
+MemoryMax=512M
+CPUQuota=100%
+TasksMax=128
+LimitNOFILE=4096
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+CapabilityBoundingSet=
+AmbientCapabilities=
+KeyringMode=private
+ProtectClock=yes
+ProtectHostname=yes
+ProtectProc=invisible
+ProcSubset=pid
+
+# Writable paths only (cache, logs, runtime)
+ReadWritePaths=/var/log/3hk-new /opt/3hk-new/backend/plans_cache /run/3hk-new
+ReadOnlyPaths=/opt/3hk-new
+RuntimeDirectory=3hk-new
+RuntimeDirectoryMode=0750
+
+[Install]
+WantedBy=multi-user.target
