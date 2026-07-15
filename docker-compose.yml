@@ -1,0 +1,90 @@
+# Portable hardened stack: app + dedicated Redis (ACL).
+# Secrets via deploy/compose/.env (ignored). App published on loopback only.
+# Optional: docker compose --profile monitoring up
+
+services:
+  redis:
+    image: redis:8.0-alpine@sha256:5f61955be8ab2ccee9372b84ae4d4da2e2b156f87281e3f218544055e7ee04d4
+    restart: unless-stopped
+    command: ["/bin/sh", "/entrypoint.sh"]
+    environment:
+      REDIS_APP_PASSWORD: ${REDIS_APP_PASSWORD:?set REDIS_APP_PASSWORD in deploy/compose/.env}
+    volumes:
+      - redis-data:/data
+      - ./deploy/compose/redis.conf:/etc/redis/redis.conf:ro
+      - ./deploy/compose/redis-entrypoint.sh:/entrypoint.sh:ro
+    # No host ports — only reachable on compose network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--user", "3hk-app", "-a", "${REDIS_APP_PASSWORD}", "--no-auth-warning", "PING"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - internal
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: 3hk-new:local
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      PASSWORD_ENCRYPTION_KEY: ${PASSWORD_ENCRYPTION_KEY:-}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      AUTH_CODE_KEY_MODE: ${AUTH_CODE_KEY_MODE:-hmac}
+      AUTH_CODE_HMAC_KEY: ${AUTH_CODE_HMAC_KEY:?set AUTH_CODE_HMAC_KEY}
+      METRICS_SECRET: ${METRICS_SECRET:?set METRICS_SECRET}
+      REDIS_URL: redis://3hk-app:${REDIS_APP_PASSWORD}@redis:6379/0
+      REDIS_SESSION_PREFIX: ${REDIS_SESSION_PREFIX:-session:}
+      TRUSTED_PROXY_IPS: ${TRUSTED_PROXY_IPS:-127.0.0.1,::1}
+      PROXY_URL: ${PROXY_URL:-}
+      CMN_PROXY_URL: ${CMN_PROXY_URL:-}
+    ports:
+      - "127.0.0.1:18888:8888"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8888/_health', timeout=3)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 25s
+    networks:
+      - internal
+    read_only: false
+    security_opt:
+      - no-new-privileges:true
+
+  prometheus:
+    profiles: ["monitoring"]
+    image: prom/prometheus:v3.2.1
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - ./deploy/monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./deploy/compose/prometheus-entrypoint.sh:/entrypoint.sh:ro
+      - prometheus-data:/prometheus
+    secrets:
+      - metrics_secret
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    ports:
+      - "127.0.0.1:9090:9090"
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  redis-data:
+  prometheus-data:
+
+secrets:
+  metrics_secret:
+    environment: METRICS_SECRET

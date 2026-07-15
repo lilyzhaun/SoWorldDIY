@@ -1,0 +1,44 @@
+.git
+.omo
+.opencode
+.codegraph
+.ruff_cache
+.pytest_cache
+.mypy_cache
+.idea
+.vscode
+.DS_Store
+
+# Secrets and local-only files
+.env
+.env.*
+!**/.env.example
+backend/.env
+backend/auth_codes.json
+backend/auth_code.txt
+backend/app/delivery_extension_local.py
+backend/app/request_overrides_local.py
+backend/requirements-local.txt
+
+# Dependencies and build outputs (rebuilt in image)
+**/node_modules
+**/dist
+**/.venv
+**/venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.vite
+**/.eslintcache
+
+# Logs and runtime
+**/*.log
+backend/plans_cache/*.json
+frontend/coverage
+backend/.coverage
+htmlcov
+
+# Docs/tests not required for runtime image (keep package manifests)
+**/.github
+**/docs
+deploy/bt
