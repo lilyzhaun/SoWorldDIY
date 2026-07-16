@@ -38,6 +38,7 @@ plans_cache/*.json
 *.log
 
 # Agent/runtime metadata
+/AGENTS.md
 .omo/
 
 # Code intelligence metadata (local only)
