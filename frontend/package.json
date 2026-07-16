@@ -13,7 +13,7 @@
     "lint": "eslint . --max-warnings 0",
     "test": "npm run test:unit && npm run test:browser",
     "test:unit": "vitest run --exclude 'tests/browser/**'",
-    "test:browser": "vitest run tests/browser --no-file-parallelism",
+    "test:browser": "vitest run --config vitest.browser.config.ts --no-file-parallelism",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "preview": "vite preview",
