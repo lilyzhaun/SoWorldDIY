@@ -80,11 +80,6 @@
 
 如果遇到 `CSRF token invalid`，通常是 Cookie 丢失、旧页面缓存、跨域代理配置错误或用户 session 已失效。
 
----
-
-[← 入口与运行方式](04-entrypoints.md) · [鉴权码管理 →](06-auth-codes.md)
-
-
 ## 速率限制
 
 以下入口启用 Redis 固定窗口限流（`ratelimit:` 键，不含鉴权码明文）：
@@ -95,4 +90,8 @@
 | `POST /api/send-otp` | 每标识 3 次 / 10 分钟；每 IP 10 次 / 小时 |
 | `POST /login` | 每 IP 10 次 / 15 分钟；每标识失败 5 次 / 15 分钟（成功清除失败桶） |
 
-超限返回 HTTP **429**，JSON `code=rate_limited`，并带整数 `Retry-After` 头。仅当直连对端属于 `TRUSTED_PROXY_IPS`（默认 loopback）时信任 `X-Forwarded-For`。Redis 不可用时 `check-user` / `send-otp` / `login` 失败关闭（503）。
+超限返回 HTTP **429**，JSON `code=rate_limited`，并带整数 `Retry-After` 头。仅当直连对端属于 `TRUSTED_PROXY_IPS`（默认 loopback）时信任 `X-Forwarded-For`。Redis 不可用时 `check-user`、`send-otp` 和 `login` 失败关闭（503）。
+
+---
+
+[← 入口与运行方式](04-entrypoints.md) · [鉴权码管理 →](06-auth-codes.md)

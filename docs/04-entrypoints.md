@@ -72,17 +72,16 @@ npm run build
 
 生产环境不应把内部维护入口暴露给不可信网络。反向代理应对该路径做网络层限制。
 
----
-
-[← 配置说明](03-configuration.md) · [API 参考 →](05-api-reference.md)
-
-
-## Metrics
+## Prometheus 指标
 
 `GET /metrics` 暴露 Prometheus 文本指标，需请求头 `x-metrics-secret: <METRICS_SECRET>`。
 
-- 无密钥：404（不广告端点）
+- 无密钥：404（不公开端点存在性）
 - 错误密钥：403
 - 正确密钥：Prometheus exposition 格式
 
-指标标签仅含 method / route 模板 / status_class，不含账号、SID、鉴权码、query 或原始路径。告警规则见 `deploy/monitoring/alerts.yml`。
+指标标签仅含 method、route 模板和 status_class，不含账号、SID、鉴权码、query 或原始路径。告警规则见 `deploy/monitoring/alerts.yml`。
+
+---
+
+[← 配置说明](03-configuration.md) · [API 参考 →](05-api-reference.md)

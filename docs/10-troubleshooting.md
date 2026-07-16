@@ -77,7 +77,7 @@ pip install -r requirements.txt
 - 确认账号有换号资格：先调用 `/api/cmn/check`。
 - 确认当前订阅 ID 和品牌正确。
 - 上游可能限流或拒绝当前请求，稍后重试。
-- 当前后端向上游请求锁定 10 个候选号码。
+- 后端当前向上游请求并最多返回 9 个去重后的候选号码；具体数量也可能受上游响应影响。
 
 ## 前端构建失败
 
@@ -107,13 +107,13 @@ cd backend
 
 不要使用未安装项目依赖的系统 Python 直接运行测试。
 
+## 覆盖率或 CI 门禁失败
+
+- 后端：运行 `.venv/bin/pytest --cov=app --cov-branch --cov-fail-under=84`；未重新测量前不要降低 `fail_under`。
+- 前端：运行 `npm run test:coverage`；门槛配置在 `frontend/vite.config.ts`。
+- Action 未固定：运行 `python3 scripts/check_actions_pinned.py`。
+- 文档或安全策略：运行 `python3 scripts/check_docs_consistency.py` 和 `python3 scripts/check_security_policy.py`。
+
 ---
 
 [← 安全与运维](09-security-and-operations.md) · [文档首页 →](README.md)
-
-## Coverage or CI gate failures
-
-- Backend: re-run `pytest --cov=app --cov-branch --cov-fail-under=84`; do not lower `fail_under` without re-measuring.
-- Frontend: re-run `npm run test:coverage`; thresholds live in `frontend/vite.config.ts`.
-- Unpinned Action: `python3 scripts/check_actions_pinned.py` must pass before merge.
-- Docs/security policy: `python3 scripts/check_docs_consistency.py` and `python3 scripts/check_security_policy.py`.
