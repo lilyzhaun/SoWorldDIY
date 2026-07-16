@@ -4,9 +4,7 @@ import { splitInboxTimeTokens } from './inboxTimeTokens'
 
 describe('splitInboxTimeTokens', () => {
   it('returns plain text when no time tokens exist', () => {
-    expect(splitInboxTimeTokens('hello world')).toEqual([
-      { text: 'hello world', nowrap: false },
-    ])
+    expect(splitInboxTimeTokens('hello world')).toEqual([{ text: 'hello world', nowrap: false }])
   })
 
   it('splits Chinese time tokens as nowrap segments', () => {

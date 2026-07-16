@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  CMN_AUTO_REFRESH_COOLDOWN_MS,
-  CMN_AUTO_REFRESH_MAX_ATTEMPTS,
-  runCmnAutoRefresh,
-} from './cmnAutoRefresh'
+import { CMN_AUTO_REFRESH_COOLDOWN_MS, CMN_AUTO_REFRESH_MAX_ATTEMPTS, runCmnAutoRefresh } from './cmnAutoRefresh'
 
 afterEach(() => {
   vi.useRealTimers()
