@@ -109,6 +109,7 @@ log "dry_run=$DRY_RUN"
 # 1) Stage tracked tree (exclude venv, caches, secrets, git, omo)
 rsync -a \
   --delete \
+  --exclude 'AGENTS.md' \
   --exclude '.git/' \
   --exclude '.omo/' \
   --exclude '.venv/' \
