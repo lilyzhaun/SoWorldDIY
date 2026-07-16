@@ -27,26 +27,14 @@ export default defineConfig({
   },
   test: {
     environment: 'happy-dom',
-    include: [
-      'tests/**/*.{test,spec}.{ts,tsx}',
-      'src/**/*.{test,spec}.{ts,tsx}',
-    ],
-    exclude: [
-      'tests/browser/**',
-      'node_modules/**',
-    ],
+    include: ['tests/**/*.{test,spec}.{ts,tsx}', 'src/**/*.{test,spec}.{ts,tsx}'],
+    exclude: ['tests/browser/**', 'node_modules/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'lcov'],
       reportsDirectory: './coverage',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: [
-        'src/**/*.{test,spec}.{ts,tsx}',
-        'src/**/*.d.ts',
-        'src/main.tsx',
-        'src/login.tsx',
-        '**/*.css',
-      ],
+      exclude: ['src/**/*.{test,spec}.{ts,tsx}', 'src/**/*.d.ts', 'src/main.tsx', 'src/login.tsx', '**/*.css'],
       // Floor of measured post-task-13 coverage (line/branch already >=70).
       thresholds: {
         lines: 83,
