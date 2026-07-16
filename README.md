@@ -119,12 +119,13 @@ curl http://127.0.0.1:8888/_ready
 
 ```bash
 cd backend
+.venv/bin/pip-audit -r requirements.txt --strict
 .venv/bin/python -m compileall -q app
 PYTHONWARNINGS=error .venv/bin/python -c "from app.main import create_app; create_app().openapi()"
 basedpyright --project pyrightconfig.json
 .venv/bin/ruff format --check app tests
 .venv/bin/ruff check app tests
-.venv/bin/pytest
+.venv/bin/pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
 ```
 
 前端 CI gates：
@@ -135,9 +136,11 @@ npm audit --audit-level=moderate
 npm run format:check
 npm run lint
 npm run typecheck
-npm test
+npm run test:coverage
 npm run build
 ```
+
+`npm test` 还会执行真实 Chromium 测试，适合本地完整回归；当前 CI 的单元测试步骤使用 `npm run test:coverage`。
 
 详见 [测试说明](docs/07-testing.md) 和 [贡献指南](CONTRIBUTING.md)。
 
@@ -234,10 +237,10 @@ npm run build
 
 本项目基于 [MIT License](LICENSE) 开源。
 
-## Coverage, CI, and releases
+## 覆盖率、CI 与发布
 
-- Backend: `cd backend && .venv/bin/pytest --cov=app --cov-branch --cov-fail-under=84`
-- Frontend: `cd frontend && npm run test:coverage`
-- Policy: `python3 scripts/check_docs_consistency.py` and `python3 scripts/check_security_policy.py`
-- CI: `.github/workflows/ci.yml` (pinned Actions, audits, Trivy, coverage)
-- Release: tag `vX.Y.Z` → `.github/workflows/release.yml` (GHCR + GitHub Release); `workflow_dispatch` dry-run does not publish
+- 后端覆盖率：`cd backend && .venv/bin/pytest --cov=app --cov-branch --cov-fail-under=84`
+- 前端覆盖率：`cd frontend && npm run test:coverage`
+- 仓库策略：`python3 scripts/check_docs_consistency.py` 和 `python3 scripts/check_security_policy.py`
+- CI：`.github/workflows/ci.yml`（Action SHA 固定、依赖审计、Trivy、覆盖率）
+- 发布：推送 `vX.Y.Z` 标签触发 `.github/workflows/release.yml`；`workflow_dispatch` 仅执行 dry-run，不发布 GHCR 或 GitHub Release

@@ -52,22 +52,23 @@
 
 ```bash
 cd backend
+.venv/bin/pip-audit -r requirements.txt --strict
 .venv/bin/python -m compileall -q app
 PYTHONWARNINGS=error .venv/bin/python -c "from app.main import create_app; create_app().openapi()"
 basedpyright --project pyrightconfig.json
 .venv/bin/ruff format --check app tests
 .venv/bin/ruff check app tests
-.venv/bin/pytest
+.venv/bin/pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
 ```
 
 各 gate 说明：
 
-1. `compileall` 确认 `app/` 下所有 Python 文件可编译，无语法错误。
-2. OpenAPI warnings-as-errors 以 `PYTHONWARNINGS=error` 调用 `create_app().openapi()`，确保 FastAPI 路由注册不产生 deprecation warning，OpenAPI schema 可正常生成。
-3. `basedpyright` 类型检查，配置在 `backend/pyrightconfig.json`，`typeCheckingMode` 为 `basic`，include 范围 `app`，排除 `tests` 和 `.venv`。`basedpyright` 安装在 `requirements-dev.txt` 中。
-4. `ruff format --check app tests` 验证 Python 格式，配置在 `backend/pyproject.toml`。
-5. `ruff check app tests` lint，当前规则选择 `E`、`F`、`I`、`UP`、`B`，忽略 `E501`。
-6. `pytest` 运行全部后端测试。
+1. `pip-audit` 检查生产依赖的已知漏洞。
+2. `compileall` 确认 `app/` 下所有 Python 文件可编译，无语法错误。
+3. OpenAPI warnings-as-errors 以 `PYTHONWARNINGS=error` 调用 `create_app().openapi()`，确保 FastAPI 路由注册不产生 deprecation warning，OpenAPI schema 可正常生成。
+4. `basedpyright` 类型检查，配置在 `backend/pyrightconfig.json`，`typeCheckingMode` 为 `basic`，include 范围 `app`，排除 `tests` 和 `.venv`。
+5. `ruff format` 和 `ruff check` 验证格式与 lint。
+6. `pytest --cov` 运行全部后端测试并执行覆盖率门槛。
 
 前端 CI gates：
 
@@ -77,11 +78,11 @@ npm audit --audit-level=moderate
 npm run format:check
 npm run lint
 npm run typecheck
-npm test
+npm run test:coverage
 npm run build
 ```
 
-`npm audit --audit-level=moderate` 阻止已知中高危依赖进入分支；`npm run format:check` 验证 Prettier 格式；`npm run lint` 执行 `eslint . --max-warnings 0`；`npm run typecheck` 执行 `tsc --noEmit`。`npm run build` 会再次运行类型检查后执行 Vite 构建。
+`npm run test:coverage` 是当前 CI 的测试步骤；本地完整回归可额外运行 `npm test`，它还会执行真实 Chromium 测试。
 
 通用检查：
 
@@ -115,6 +116,7 @@ git status --short
 
 本地工具与运行时元数据：
 
+- `AGENTS.md`（本机 agent 协作说明，不跟踪）
 - `.omo/`
 - `.codegraph/`（本地代码索引，不应提交）
 - `.opencode/`、`.idea/`、`.vscode/`、`.DS_Store`
@@ -151,9 +153,9 @@ git status --short
 
 参与本项目即表示你同意遵守 [行为准则](CODE_OF_CONDUCT.md)。请在所有交流中保持友善和尊重。
 
-## Coverage and supply-chain gates
+## 覆盖率与供应链门禁
 
-Backend coverage (branch + fail_under from `backend/pyproject.toml`):
+后端覆盖率和生产依赖审计：
 
 ```bash
 cd backend
@@ -161,7 +163,7 @@ cd backend
 .venv/bin/pip-audit -r requirements.txt --strict
 ```
 
-Frontend coverage and audit:
+前端覆盖率和依赖审计：
 
 ```bash
 cd frontend
@@ -169,7 +171,7 @@ npm run test:coverage
 npm audit --audit-level=moderate
 ```
 
-Repository policy checks (run from repo root):
+仓库策略检查（从仓库根目录运行）：
 
 ```bash
 python3 scripts/check_actions_pinned.py
@@ -179,4 +181,4 @@ python3 scripts/check_security_policy.py
 actionlint -color .github/workflows/*.yml
 ```
 
-Releases: push a semver tag `vX.Y.Z` to trigger `.github/workflows/release.yml` (GHCR + GitHub Release). Use `workflow_dispatch` with dry-run for local-equivalent validation without publishing. Do not add SSH/`systemctl` deploy steps to release automation.
+发布时推送语义化版本标签 `vX.Y.Z`，触发 `.github/workflows/release.yml`（GHCR + GitHub Release）。`workflow_dispatch` 只执行 dry-run。发布工作流不得加入 SSH 或 `systemctl` 部署步骤。
