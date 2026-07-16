@@ -16,7 +16,10 @@ describe('useSubscriptionBootstrap', () => {
       vi.fn().mockImplementation(async (url: string) => {
         const body = String(url).includes('/api/balance')
           ? { status: 'success', balance: 12.5 }
-          : { status: 'success', plans: [{ offerId: 'o1', name: 'p', price: 3, validity: '1d', desc: 'd', category: 'LOCAL' }] }
+          : {
+              status: 'success',
+              plans: [{ offerId: 'o1', name: 'p', price: 3, validity: '1d', desc: 'd', category: 'LOCAL' }],
+            }
         return {
           ok: true,
           status: 200,

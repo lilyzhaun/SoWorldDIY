@@ -13,10 +13,14 @@ describe('usePurchaseCart', () => {
     const showAlert = vi.fn()
     const { result } = renderHook(() => usePurchaseCart('acc', 'sub1', '10'))
     act(() => {
-      result.current.openAddToCart(
-        { stopPropagation() {} } as React.MouseEvent,
-        { offerId: 'o1', name: 'Plan', price: 5, validity: '1d', desc: 'd', category: 'LOCAL' },
-      )
+      result.current.openAddToCart({ stopPropagation() {} } as React.MouseEvent, {
+        offerId: 'o1',
+        name: 'Plan',
+        price: 5,
+        validity: '1d',
+        desc: 'd',
+        category: 'LOCAL',
+      })
     })
     expect(result.current.cartQtyDraft?.offerId).toBe('o1')
     act(() => {
@@ -45,10 +49,14 @@ describe('usePurchaseCart', () => {
     expect(result.current.cart).toHaveLength(0)
 
     act(() => {
-      result.current.openAddToCart(
-        { stopPropagation() {} } as React.MouseEvent,
-        { offerId: 'o2', name: 'P2', price: 1, validity: '1d', desc: 'd', category: 'LOCAL' },
-      )
+      result.current.openAddToCart({ stopPropagation() {} } as React.MouseEvent, {
+        offerId: 'o2',
+        name: 'P2',
+        price: 1,
+        validity: '1d',
+        desc: 'd',
+        category: 'LOCAL',
+      })
     })
     act(() => {
       result.current.confirmAddToCart(showAlert)
@@ -90,18 +98,21 @@ describe('usePurchaseCart', () => {
         ok: true,
         status: 200,
         statusText: 'OK',
-        text: async () =>
-          JSON.stringify({ status: 'success', paymentUrl: 'https://pay.example/1' }),
+        text: async () => JSON.stringify({ status: 'success', paymentUrl: 'https://pay.example/1' }),
         json: async () => ({ status: 'success', paymentUrl: 'https://pay.example/1' }),
       }),
     )
     document.cookie = 'csrf_token=tok'
     const { result } = renderHook(() => usePurchaseCart('acc', 'sub1', '20'))
     act(() => {
-      result.current.openAddToCart(
-        { stopPropagation() {} } as React.MouseEvent,
-        { offerId: 'o1', name: 'Plan', price: 5, validity: '1d', desc: 'd', category: 'LOCAL' },
-      )
+      result.current.openAddToCart({ stopPropagation() {} } as React.MouseEvent, {
+        offerId: 'o1',
+        name: 'Plan',
+        price: 5,
+        validity: '1d',
+        desc: 'd',
+        category: 'LOCAL',
+      })
       result.current.confirmAddToCart(vi.fn())
       result.current.openPurchaseModal('t', 5, 'cart', vi.fn())
     })
@@ -165,8 +176,7 @@ describe('usePurchaseCart', () => {
         ok: true,
         status: 200,
         statusText: 'OK',
-        text: async () =>
-          JSON.stringify({ status: 'success', paymentUrl: 'https://pay.example/cmn' }),
+        text: async () => JSON.stringify({ status: 'success', paymentUrl: 'https://pay.example/cmn' }),
         json: async () => ({ status: 'success', paymentUrl: 'https://pay.example/cmn' }),
       }),
     )
