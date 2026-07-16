@@ -62,7 +62,7 @@ DRY_RUN=1 DEST_ROOT=/tmp/3hk-stage ./scripts/deploy_sync.sh --dry-run
 
 - 生产 `WorkingDirectory` 为 `/opt/3hk-new/backend`，监听 **127.0.0.1:8888**。
 - 依赖 `3hk-new-redis.service`；日志写入 `/var/log/3hk-new/3hk-new.log`。
-- 现场切到 `/opt` 与 `3hk-new` 用户属于后续上线步骤（见安全加固 runbook）。
+- systemd 部署以 `/opt/3hk-new` 和 `3hk-new` 用户为标准目标；同步后重启服务并复测 health、ready 与 metrics 鉴权。
 
 校验：
 
@@ -195,13 +195,20 @@ curl http://127.0.0.1:8888/_ready
 
 `deploy/bt/` 下保留了宝塔/虚拟主机风格部署的遗留说明。根目录不再保留 `.htaccess` 或 `.user.ini`，避免污染应用代码目录。如果仍使用这类环境，可参考 `deploy/bt/.user.ini.example` 按线上路径手动创建。
 
+## 容器与 GHCR
+
+```bash
+cp deploy/compose/env.example deploy/compose/.env
+# 编辑密钥后启动；应用仅发布到 127.0.0.1:18888
+docker compose --env-file deploy/compose/.env up -d --build --wait
+```
+
+- 镜像由 digest 固定的多阶段 `Dockerfile` 构建。
+- Redis 不发布宿主机端口；应用只发布到 `127.0.0.1:18888`。
+- 语义化版本标签 `v*.*.*` 触发 `.github/workflows/release.yml`，向 `ghcr.io/<repository>` 发布带 SBOM/provenance 的镜像。
+- 手动 `workflow_dispatch` 只执行 dry-run，不发布镜像或 GitHub Release。
+- 不得把密钥写入镜像；使用 `deploy/compose/.env` 或运行时环境文件。
+
 ---
 
 [← 测试说明](07-testing.md) · [安全与运维 →](09-security-and-operations.md)
-
-## Container and GHCR
-
-- Portable stack: `docker compose up -d --wait` (see `docker-compose.yml`; app on `127.0.0.1:18888`).
-- Image build: digest-pinned multi-stage `Dockerfile`.
-- Releases: semver tags `v*.*.*` run `.github/workflows/release.yml` to publish `ghcr.io/<repository>` with SBOM/provenance. Manual `workflow_dispatch` is dry-run only (no publish).
-- Do not bake secrets into images; use Compose env / runtime `.env` outside git.

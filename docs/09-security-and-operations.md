@@ -87,13 +87,13 @@
 
 日志中不应输出密码、OTP、cookies、鉴权码、账号标识、原始 URL query 或上游响应体。排查问题时优先记录 operation、HTTP 状态、错误类名和 correlation id。
 
+## CI 供应链
+
+- 第三方 GitHub Actions 固定到 40 位提交 SHA，由 `scripts/check_actions_pinned.py` 检查。
+- Dependabot 每周检查 pip（`/backend`）、npm（`/frontend`）、Docker（`/`）和 GitHub Actions（`/`）。
+- CI 执行覆盖率、`pip-audit`、`npm audit`、actionlint、Gitleaks，以及 Trivy 文件系统和镜像扫描。
+- 基础镜像 OS 漏洞只有在 `deploy/compose/trivy-exceptions.md` 记录 ID、理由和复查期限后才能例外处理。
+
 ---
 
 [← 部署说明](08-deploy.md) · [故障排查 →](10-troubleshooting.md)
-
-## CI supply chain
-
-- Workflows pin third-party Actions to 40-hex SHAs (`scripts/check_actions_pinned.py`).
-- Dependabot weekly updates: pip (`/backend`), npm (`/frontend`), Docker (`/`), GitHub Actions (`/`).
-- CI runs coverage, `pip-audit`, `npm audit`, actionlint, Gitleaks, and Trivy filesystem/image scans.
-- Base-image OS findings accepted only with documented IDs/rationale/expiry in `deploy/compose/trivy-exceptions.md`.
