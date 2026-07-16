@@ -42,8 +42,7 @@ describe('useCmnEligibility', () => {
         ok: true,
         status: 200,
         statusText: 'OK',
-        text: async () =>
-          JSON.stringify({ status: 'success', data: { offerId: 'o1', price: 10 } }),
+        text: async () => JSON.stringify({ status: 'success', data: { offerId: 'o1', price: 10 } }),
         json: async () => ({ status: 'success', data: { offerId: 'o1', price: 10 } }),
       }),
     )

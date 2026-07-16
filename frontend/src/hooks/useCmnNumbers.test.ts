@@ -62,9 +62,7 @@ describe('useCmnNumbers', () => {
 
   it('handles http error with message and status error paths', async () => {
     const lc = lifecycle()
-    const { result } = renderHook(() =>
-      useCmnNumbers({ accountId: 'a1', currentSubId: 'sub-1', lifecycle: lc }),
-    )
+    const { result } = renderHook(() => useCmnNumbers({ accountId: 'a1', currentSubId: 'sub-1', lifecycle: lc }))
     const showAlert = vi.fn()
 
     apiFetch.mockResolvedValueOnce({
@@ -91,9 +89,7 @@ describe('useCmnNumbers', () => {
 
   it('handles network error and aborted request', async () => {
     const lc = lifecycle()
-    const { result } = renderHook(() =>
-      useCmnNumbers({ accountId: 'a1', currentSubId: 'sub-1', lifecycle: lc }),
-    )
+    const { result } = renderHook(() => useCmnNumbers({ accountId: 'a1', currentSubId: 'sub-1', lifecycle: lc }))
     const showAlert = vi.fn()
 
     apiFetch.mockRejectedValueOnce(new Error('network'))
@@ -153,9 +149,7 @@ describe('useCmnNumbers', () => {
 
   it('ticks cooldown down to re-enable refresh', async () => {
     const lc = lifecycle()
-    const { result } = renderHook(() =>
-      useCmnNumbers({ accountId: 'a1', currentSubId: 'sub-1', lifecycle: lc }),
-    )
+    const { result } = renderHook(() => useCmnNumbers({ accountId: 'a1', currentSubId: 'sub-1', lifecycle: lc }))
     apiFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({ status: 'success', numbers: ['1'] }),
