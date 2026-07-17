@@ -125,8 +125,11 @@ PYTHONWARNINGS=error .venv/bin/python -c "from app.main import create_app; creat
 basedpyright --project pyrightconfig.json
 .venv/bin/ruff format --check app tests
 .venv/bin/ruff check app tests
-.venv/bin/pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
+python3.11 -m pytest
+python3.12 -m pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
 ```
+
+Python 3.11 是最低支持版本，CI 会在该版本运行完整兼容性测试；覆盖率门槛在 Python 3.12 上测量，以避开 CPython 3.11 对部分异步路径的 trace event 漏报。CI 还会安装 `redis-server` 和 `redis-tools`，确保 Redis 迁移集成测试不会被跳过。
 
 前端 CI gates：
 
@@ -239,7 +242,7 @@ npm run build
 
 ## 覆盖率、CI 与发布
 
-- 后端覆盖率：`cd backend && .venv/bin/pytest --cov=app --cov-branch --cov-fail-under=84`
+- 后端兼容性与覆盖率：Python 3.11 运行完整测试，Python 3.12 执行 `--cov=app --cov-branch --cov-fail-under=84`
 - 前端覆盖率：`cd frontend && npm run test:coverage`
 - 仓库策略：`python3 scripts/check_docs_consistency.py` 和 `python3 scripts/check_security_policy.py`
 - CI：`.github/workflows/ci.yml`（Action SHA 固定、依赖审计、Trivy、覆盖率）

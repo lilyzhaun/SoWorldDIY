@@ -58,7 +58,8 @@ PYTHONWARNINGS=error .venv/bin/python -c "from app.main import create_app; creat
 basedpyright --project pyrightconfig.json
 .venv/bin/ruff format --check app tests
 .venv/bin/ruff check app tests
-.venv/bin/pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
+python3.11 -m pytest
+python3.12 -m pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
 ```
 
 各 gate 说明：
@@ -68,7 +69,8 @@ basedpyright --project pyrightconfig.json
 3. OpenAPI warnings-as-errors 以 `PYTHONWARNINGS=error` 调用 `create_app().openapi()`，确保 FastAPI 路由注册不产生 deprecation warning，OpenAPI schema 可正常生成。
 4. `basedpyright` 类型检查，配置在 `backend/pyrightconfig.json`，`typeCheckingMode` 为 `basic`，include 范围 `app`，排除 `tests` 和 `.venv`。
 5. `ruff format` 和 `ruff check` 验证格式与 lint。
-6. `pytest --cov` 运行全部后端测试并执行覆盖率门槛。
+6. Python 3.11 运行完整兼容性测试；Python 3.12 运行相同测试并执行覆盖率门槛。CPython 3.11 会漏报部分异步路径的 trace event，因此覆盖率固定在 Python 3.12 测量。
+7. CI 安装 `redis-server` 和 `redis-tools`，确保 Redis 迁移集成测试不会因缺少本地服务端二进制而跳过。
 
 前端 CI gates：
 
@@ -159,7 +161,8 @@ git status --short
 
 ```bash
 cd backend
-.venv/bin/pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
+python3.11 -m pytest
+python3.12 -m pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
 .venv/bin/pip-audit -r requirements.txt --strict
 ```
 

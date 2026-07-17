@@ -16,7 +16,8 @@ PYTHONWARNINGS=error .venv/bin/python -c "from app.main import create_app; creat
 basedpyright --project pyrightconfig.json
 .venv/bin/ruff format --check app tests
 .venv/bin/ruff check app tests
-.venv/bin/pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
+python3.11 -m pytest
+python3.12 -m pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
 ```
 
 - `pip-audit` 检查生产依赖中的已知漏洞。
@@ -24,7 +25,8 @@ basedpyright --project pyrightconfig.json
 - OpenAPI warnings-as-errors 确认路由注册和 schema 生成不产生 warning。
 - `basedpyright` 按 `backend/pyrightconfig.json` 执行类型检查。
 - Ruff 验证格式与 lint。
-- pytest 运行后端测试并执行覆盖率门槛。
+- Python 3.11 运行完整兼容性测试；Python 3.12 执行相同测试并检查覆盖率门槛。CPython 3.11 会漏报部分异步路径的 trace event，因此不用于生成覆盖率结果。
+- CI 安装 `redis-server` 和 `redis-tools`；前者用于运行 Redis 迁移集成测试，避免因缺少二进制文件而跳过。
 
 ## 后端测试结构
 
@@ -78,6 +80,7 @@ npm test
 ### 后端
 
 - Provider：`pytest-cov==7.1.0`，`backend/pyproject.toml` 启用 branch coverage。
+- Python 3.11 是最低支持版本并运行完整兼容性测试；覆盖率在 Python 3.12 上测量。
 - `[tool.coverage.report] fail_under = 84`。
 - 行覆盖率与分支覆盖率都不得低于 70%。
 
