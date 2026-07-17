@@ -1,8 +1,12 @@
 {
   "include": ["app"],
-  "exclude": ["**/__pycache__", "tests", ".venv"],
-  "venvPath": ".",
-  "venv": ".venv",
+  "exclude": [
+    "**/__pycache__",
+    "tests",
+    ".venv",
+    "app/delivery_extension_local.example.py",
+    "app/request_overrides_local.example.py"
+  ],
   "pythonVersion": "3.11",
   "typeCheckingMode": "basic",
   "reportMissingImports": true,
