@@ -28,6 +28,24 @@ jobs:
   validate:
     name: validate
     runs-on: ubuntu-latest
+    env:
+      SESSION_SECRET: ci-test-secret
+      PASSWORD_ENCRYPTION_KEY: ci-test-encryption-key
+      COOKIE_SECURE: "false"
+      METRICS_SECRET: ci-test-metrics-secret
+      AUTH_CODE_KEY_MODE: legacy
+      REDIS_APP_PASSWORD: ci-redis-app-pass
+      REDIS_URL: redis://3hk-app:ci-redis-app-pass@127.0.0.1:6379/0
+    services:
+      redis:
+        image: redis:7@sha256:a8f08480e1f88f2647fed492d1178c06abb0d0c1fbf02c682a61e2f483fb3954
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -77,26 +95,36 @@ jobs:
           npm run typecheck
           npm run test:coverage
           npm run build
-      - name: Setup Python (backend gate)
+      - name: Setup Python 3.11 (backend gate)
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.11"
-      - name: Backend checks
+      - name: Install Redis tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends redis-server redis-tools
+      - name: Initialize Redis ACL
+        run: bash deploy/ci/redis-acl-init.sh
+      - name: Backend checks on Python 3.11
         working-directory: backend
-        env:
-          SESSION_SECRET: ci-test-secret
-          PASSWORD_ENCRYPTION_KEY: ci-test-encryption-key
-          COOKIE_SECURE: "false"
-          METRICS_SECRET: ci-test-metrics-secret
-          AUTH_CODE_KEY_MODE: legacy
         run: |
           set -euo pipefail
-          pip install -r requirements.txt -r requirements-dev.txt
+          python -m pip install -r requirements.txt -r requirements-dev.txt
           pip-audit -r requirements.txt --strict
           basedpyright --project pyrightconfig.json
           ruff format --check app tests
           ruff check app tests
-          pytest --cov=app --cov-branch --cov-fail-under=84 -q
+          python -m pytest -q
+      - name: Setup Python 3.12 (coverage gate)
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.12"
+      - name: Backend coverage on Python 3.12
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          python -m pip install -r requirements.txt -r requirements-dev.txt
+          python -m pytest --cov=app --cov-branch --cov-fail-under=84 -q
       - name: Upload release notes artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
