@@ -24,16 +24,6 @@ class FetchPlansBackgroundFn(Protocol):
     ) -> None: ...
 
 
-class SendPurchaseeventsFn(Protocol):
-    def __call__(
-        self,
-        payment_url: str,
-        sub_id: str,
-        amount_pay: float,
-        account_id: str,
-    ) -> None: ...
-
-
 @runtime_checkable
 class ServiceDepsProtocol(Protocol):
     """Read-only dependency surface for service helpers.
@@ -50,9 +40,6 @@ class ServiceDepsProtocol(Protocol):
     def get_account_context(
         self,
     ) -> Callable[[SessionContext, str | None], dict[str, Any] | None]: ...
-
-    @property
-    def notify(self) -> Callable[[str], None]: ...
 
     @property
     def plans_refreshing(self) -> set[str]: ...
@@ -93,29 +80,6 @@ def get_brand_by_sub_id(
     if account:
         return str(account.get("sub_brand", "THREE"))
     return "THREE"
-
-
-def handle_purchase_event(
-    payment_url: str, sub_id: str, amount_pay: float, account_id: str
-) -> None:
-    _ = amount_pay
-    d = _deps()
-    try:
-        phone = "未知"
-        profile_data = d.get_cache(f"profile_{account_id}")
-        if profile_data and isinstance(profile_data, dict):
-            for sub in profile_data.get("data", {}).get("subscriptions", []):
-                if str(sub.get("subscriptionId")) == str(sub_id):
-                    phone = str(sub.get("primaryMsisdn", "未知"))
-                    break
-        msg = f"💳 新支付请求\n👤 账号: {account_id}\n📱 {phone}\n🔗 {payment_url}"
-        d.notify(msg)
-    except Exception:
-        logger.exception(
-            "handle_purchase_event failed account_id=%s sub_id=%s",
-            account_id,
-            sub_id,
-        )
 
 
 def fetch_and_save_plans_background(

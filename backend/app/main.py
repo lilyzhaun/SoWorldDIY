@@ -10,7 +10,6 @@ from fastapi.staticfiles import StaticFiles
 
 from .main_deps import MainDepsAdapter, MainModuleSource
 from .metrics import MetricsMiddleware
-from .delivery_extension import send as notify  # noqa: F401 — re-exported for monkeypatch seam
 from .request_overrides import (
     resolve_proxies,  # noqa: F401 — re-exported for monkeypatch seam
 )
@@ -59,7 +58,6 @@ from .services import (  # noqa: F401 — re-exported for monkeypatch seam
     configure_service_deps,
     fetch_and_save_plans_background,
     get_brand_by_sub_id,
-    handle_purchase_event,
 )
 from .session_store import SessionContext
 from .session_utils import (  # noqa: F401 — re-exported for monkeypatch seam

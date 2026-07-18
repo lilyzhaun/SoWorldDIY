@@ -28,7 +28,7 @@ from .responses import (
     UpstreamErrorFn,
 )
 from .runtime import SetCacheFn
-from .services import FetchPlansBackgroundFn, SendPurchaseeventsFn
+from .services import FetchPlansBackgroundFn
 from .session_store import SessionContext
 from .session_utils import SessionStoreProtocol, ValidateCsrfFn
 from .upstream import Make3hkRequestFn
@@ -50,7 +50,6 @@ class MainModuleSource(Protocol):
     get_cache: Callable[[str], Any | None]
     set_cache: SetCacheFn
     delete_cache: Callable[[str], None]
-    notify: Callable[[str], None]
     plans_refreshing: set[str]
     verify_auth_code: Callable[[Any, bool], tuple[bool, str]]
     _json_success: JsonSuccessFn
@@ -63,7 +62,6 @@ class MainModuleSource(Protocol):
     fetch_and_save_plans_background: FetchPlansBackgroundFn
     _redirect_to_login: RedirectToLoginFn
     _validate_csrf: ValidateCsrfFn
-    handle_purchase_event: SendPurchaseeventsFn
     internal_logout_account: Callable[[SessionContext, str], bool]
     _mark_session_cookie_for_deletion: Callable[[Request], None]
     _clear_session: Callable[[SessionContext], None]
@@ -140,10 +138,6 @@ class MainDepsAdapter:
         return self.source.delete_cache
 
     @property
-    def notify(self) -> Callable[[str], None]:
-        return self.source.notify
-
-    @property
     def plans_refreshing(self) -> set[str]:
         return self.source.plans_refreshing
 
@@ -192,10 +186,6 @@ class MainDepsAdapter:
     @property
     def _validate_csrf(self) -> ValidateCsrfFn:
         return self.source._validate_csrf
-
-    @property
-    def handle_purchase_event(self) -> SendPurchaseeventsFn:
-        return self.source.handle_purchase_event
 
     @property
     def internal_logout_account(self) -> Callable[[SessionContext, str], bool]:

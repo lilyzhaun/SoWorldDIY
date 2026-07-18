@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from pydantic import ValidationError
 from starlette.responses import Response
 
+from ..hooks import invoke as invoke_local_extension
 from ..public_errors import INTERNAL_ERROR, INVALID_REQUEST
 from ..responses import _public_error
 from ..schemas import CmnPurchaseRequest
@@ -178,11 +179,13 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             )
             if r and r.status_code == 200 and "paymentUrl" in r.json():
                 deps.delete_cache(f"profile_{req_ident}")
-                deps.handle_purchase_event(
-                    r.json()["paymentUrl"],
-                    str(sid),
-                    purchase.payable_amount,
-                    req_ident,
+                invoke_local_extension(
+                    "purchase_created",
+                    payment_url=r.json()["paymentUrl"],
+                    sub_id=str(sid),
+                    amount_pay=purchase.payable_amount,
+                    account_id=req_ident,
+                    get_cache=deps.get_cache,
                 )
                 return deps._json_success(
                     {"status": "success", "paymentUrl": r.json()["paymentUrl"]}

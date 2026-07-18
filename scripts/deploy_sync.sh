@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Stage tracked application files into a deployment root (default /opt/3hk-new).
 # Preserves ignored local files: backend/.env, delivery_extension_local.py,
-# request_overrides_local.py, requirements-local.txt (byte-for-byte when present).
+# extensions_local.py, request_overrides_local.py, requirements-local.txt
+# (byte-for-byte when present).
 # Merges unknown keys from an existing destination .env into the staged copy.
 set -euo pipefail
 
@@ -13,6 +14,7 @@ DRY_RUN="${DRY_RUN:-0}"
 LOCAL_FILES=(
   "backend/.env"
   "backend/app/delivery_extension_local.py"
+  "backend/app/extensions_local.py"
   "backend/app/request_overrides_local.py"
   "backend/requirements-local.txt"
 )
@@ -122,29 +124,23 @@ rsync -a \
   --exclude 'backend/.env' \
   --exclude 'backend/auth_codes.json' \
   --exclude 'backend/app/delivery_extension_local.py' \
+  --exclude 'backend/app/extensions_local.py' \
   --exclude 'backend/app/request_overrides_local.py' \
   --exclude 'backend/requirements-local.txt' \
   --exclude 'frontend/node_modules/' \
   --exclude '**/*.pyc' \
   "$REPO_ROOT/" "$STAGE_ROOT/"
 
-# 2) Preserve local files from DEST if present, else leave absent
+# 2) Preserve local files from DEST if present; otherwise seed from repo when present
 for rel in "${LOCAL_FILES[@]}"; do
   if [[ -e "$DEST_ROOT/$rel" ]]; then
     mkdir -p "$(dirname "$STAGE_ROOT/$rel")"
-    if [[ "$rel" == "backend/.env" && -e "$STAGE_ROOT/backend/.env.example" ]]; then
-      # Start from example only if stage has no .env; merge dest unknowns later
-      :
-    fi
-    if [[ "$rel" == "backend/.env" ]]; then
-      # Copy dest .env into stage then merge any staged template keys carefully:
-      # Prefer: keep dest .env as-is (byte-for-byte) when present.
-      cp -a "$DEST_ROOT/$rel" "$STAGE_ROOT/$rel"
-      log "preserve $rel (byte-for-byte from dest)"
-    else
-      cp -a "$DEST_ROOT/$rel" "$STAGE_ROOT/$rel"
-      log "preserve $rel (byte-for-byte from dest)"
-    fi
+    cp -a "$DEST_ROOT/$rel" "$STAGE_ROOT/$rel"
+    log "preserve $rel (byte-for-byte from dest)"
+  elif [[ -e "$REPO_ROOT/$rel" ]]; then
+    mkdir -p "$(dirname "$STAGE_ROOT/$rel")"
+    cp -a "$REPO_ROOT/$rel" "$STAGE_ROOT/$rel"
+    log "seed $rel (from repo local copy)"
   else
     log "missing_in_dest $rel (not created)"
   fi

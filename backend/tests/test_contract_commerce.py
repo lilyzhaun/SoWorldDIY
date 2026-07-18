@@ -74,7 +74,6 @@ def test_purchase_normal_flow_payload_and_success(monkeypatch: MonkeyPatch) -> N
         return FakeResponse(200, {"accessPurchaseKey": "KEY"})
 
     monkeypatch.setattr(main, "make_3hk_request", fake_make)
-    monkeypatch.setattr(main, "handle_purchase_event", lambda *a, **k: None)
     invalidated: list[str] = []
     monkeypatch.setattr(main, "delete_cache", lambda k: invalidated.append(k))
     resp = run_endpoint(
@@ -119,7 +118,6 @@ def test_purchase_new_line_flow_payload(monkeypatch: MonkeyPatch) -> None:
         return FakeResponse(200, {"accessPurchaseKey": "KEY"})
 
     monkeypatch.setattr(main, "make_3hk_request", fake_make)
-    monkeypatch.setattr(main, "handle_purchase_event", lambda *a, **k: None)
     resp = run_endpoint(
         "/api/purchase",
         _purchase_request(

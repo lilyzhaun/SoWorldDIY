@@ -64,7 +64,6 @@ def test_csrf_valid_proceeds_past_csrf_gate(monkeypatch: MonkeyPatch) -> None:
         return FakeResponse(200, {"accessPurchaseKey": "k"})
 
     monkeypatch.setattr(main, "make_3hk_request", fake_purchase)
-    monkeypatch.setattr(main, "handle_purchase_event", lambda *a, **k: None)
     resp = invoke(
         "/api/purchase",
         method="POST",
@@ -137,7 +136,6 @@ def test_password_login_success_sets_session_and_redirect(
 ) -> None:
     store = _install_fake_store(monkeypatch)
     monkeypatch.setattr(main, "verify_auth_code", lambda code, consume: (True, "OK"))
-    monkeypatch.setattr(main, "notify", lambda msg: None)
     monkeypatch.setattr(
         main,
         "get_isolated_session",
@@ -171,7 +169,6 @@ def test_password_login_success_sets_session_and_redirect(
 def test_password_login_success_saves_session_once(monkeypatch: MonkeyPatch) -> None:
     _install_fake_store(monkeypatch)
     monkeypatch.setattr(main, "verify_auth_code", lambda code, consume: (True, "OK"))
-    monkeypatch.setattr(main, "notify", lambda msg: None)
     monkeypatch.setattr(
         main,
         "get_isolated_session",
@@ -217,7 +214,6 @@ def test_password_login_success_saves_session_once(monkeypatch: MonkeyPatch) -> 
 def test_otp_login_success_uses_dipping_subbrand(monkeypatch: MonkeyPatch) -> None:
     store = _install_fake_store(monkeypatch)
     monkeypatch.setattr(main, "verify_auth_code", lambda code, consume: (True, "OK"))
-    monkeypatch.setattr(main, "notify", lambda msg: None)
     monkeypatch.setattr(
         main,
         "get_isolated_session",
@@ -268,7 +264,6 @@ def test_login_upstream_non_204_returns_401(monkeypatch: MonkeyPatch) -> None:
 def test_login_session_save_failure_returns_503(monkeypatch: MonkeyPatch) -> None:
     store = _install_fake_store(monkeypatch)
     monkeypatch.setattr(main, "verify_auth_code", lambda code, consume: (True, "OK"))
-    monkeypatch.setattr(main, "notify", lambda msg: None)
     monkeypatch.setattr(
         main,
         "get_isolated_session",
