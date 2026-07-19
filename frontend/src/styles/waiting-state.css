@@ -1,0 +1,54 @@
+.waiting-state {
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+}
+.waiting-state-visual {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+.waiting-state-icon {
+  display: block;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.waiting-state[data-waiting-phase='requesting'] .waiting-state-icon {
+  animation: waiting-state-spin 0.75s linear infinite;
+}
+
+.waiting-state[data-waiting-phase='cooldown'] .waiting-state-icon {
+  animation: waiting-state-spin 1.5s linear infinite;
+}
+@keyframes waiting-state-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.waiting-state-marker {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.loader .waiting-state {
+  gap: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .waiting-state[data-waiting-phase='requesting'] .waiting-state-icon,
+  .waiting-state[data-waiting-phase='cooldown'] .waiting-state-icon {
+    animation: none;
+    transform: rotate(45deg);
+  }
+
+  .waiting-state[data-waiting-phase='requesting'] .waiting-state-marker,
+  .waiting-state[data-waiting-phase='cooldown'] .waiting-state-marker {
+    transform: rotate(45deg);
+  }
+}
