@@ -40,17 +40,6 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
-@keyframes cmn-refresh-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-.refresh-btn.is-loading .refresh-btn-icon {
-  animation: cmn-refresh-spin 0.75s linear infinite;
-}
 .cmn-auto-refresh-button {
   min-height: 56px;
   padding: 8px 12px;
@@ -78,12 +67,6 @@
   font-weight: 500;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .refresh-btn.is-loading .refresh-btn-icon {
-    animation: none;
-    transform: none;
-  }
-}
 #cmnBuyBtn {
   width: 100%;
   margin-top: 0;

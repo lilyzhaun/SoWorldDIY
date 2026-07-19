@@ -26,12 +26,23 @@ describe('resolveCmnRefreshButtonState', () => {
   it('lets auto-refresh running take precedence over loading and cooldown', () => {
     expect(
       resolveCmnRefreshButtonState({
-        autoRefresh: { kind: 'running', attempt: 2, message: '正在自动查找第 2 批号码' },
+        autoRefresh: { kind: 'running', attempt: 2, phase: 'requesting', message: '正在自动查找第 2 批号码' },
         canRefresh: false,
         cooldown: 3,
         numbersLoading: true,
       }),
-    ).toEqual({ kind: 'running', attempt: 2 })
+    ).toEqual({ kind: 'running', attempt: 2, phase: 'requesting' })
+  })
+
+  it('carries the auto-refresh cooldown phase into the running state', () => {
+    expect(
+      resolveCmnRefreshButtonState({
+        autoRefresh: { kind: 'running', attempt: 2, phase: 'cooldown', message: '正在自动查找第 2 批号码' },
+        canRefresh: false,
+        cooldown: 0,
+        numbersLoading: false,
+      }),
+    ).toEqual({ kind: 'running', attempt: 2, phase: 'cooldown' })
   })
 
   it('lets loading take precedence over an active cooldown', () => {
@@ -100,6 +111,8 @@ describe('CmnRefreshButton presentation', () => {
     expect(html).toContain('正在获取号码…')
     expect(html).toContain('data-ui-icon="refresh"')
     expect(html).toContain('is-loading')
+    expect(html).toContain('data-waiting-phase="requesting"')
+    expect(html).toContain('waiting-state-marker')
     expect(html).toContain('disabled=""')
     expect(html).toContain('aria-busy="true"')
     expect(html).not.toContain('0s')
@@ -120,6 +133,7 @@ describe('CmnRefreshButton presentation', () => {
 
     expect(html).toContain('正在换一批…')
     expect(html).toContain('is-loading')
+    expect(html).toContain('data-waiting-phase="requesting"')
     expect(html).toContain('aria-busy="true"')
     expect(html).toContain('disabled=""')
     expect(html).not.toContain('0s')
@@ -129,6 +143,7 @@ describe('CmnRefreshButton presentation', () => {
     const html = renderButton({ canRefresh: false, cooldown: seconds })
 
     expect(html).toContain(`换一批（<span class="cmn-refresh-countdown" id="refresh-timer">${seconds}s</span>）`)
+    expect(html).toContain('data-waiting-phase="cooldown"')
     expect(html).toContain('disabled=""')
     expect(html).not.toContain('aria-busy')
     expect(html).not.toContain('is-loading')
@@ -143,9 +158,16 @@ describe('CmnRefreshButton presentation', () => {
     expect(html).not.toContain('refresh-timer')
   })
 
+  it('keeps the idle state free of any waiting phase marker', () => {
+    const html = renderButton()
+
+    expect(html).not.toContain('data-waiting-phase')
+    expect(html).not.toContain('waiting-state-marker')
+  })
+
   it('keeps the running attempt and cancel copy with cancel semantics', () => {
     const html = renderButton({
-      autoRefresh: { kind: 'running', attempt: 4, message: '正在自动查找第 4 批号码' },
+      autoRefresh: { kind: 'running', attempt: 4, phase: 'requesting', message: '正在自动查找第 4 批号码' },
       canRefresh: false,
       cooldown: 2,
       numbersLoading: true,
@@ -154,9 +176,21 @@ describe('CmnRefreshButton presentation', () => {
     expect(html).toContain('自动查找 4/20')
     expect(html).toContain('点击取消')
     expect(html).toContain('is-running')
+    expect(html).toContain('data-waiting-phase="requesting"')
     expect(html).toContain('aria-busy="true"')
     expect(html).not.toContain('disabled=""')
     expect(html).not.toContain('正在换一批')
+  })
+
+  it('exposes the auto-refresh cooldown phase while waiting between attempts', () => {
+    const html = renderButton({
+      autoRefresh: { kind: 'running', attempt: 4, phase: 'cooldown', message: '正在自动查找第 4 批号码' },
+    })
+
+    expect(html).toContain('自动查找 4/20')
+    expect(html).toContain('data-waiting-phase="cooldown"')
+    expect(html).toContain('is-running')
+    expect(html).not.toContain('disabled=""')
   })
 
   it('narrows aria-describedby to the status region when the pattern is invalid', () => {

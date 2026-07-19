@@ -2,11 +2,12 @@ import { useEffect, useLayoutEffect, useRef } from 'react'
 
 import type { CmnAutoRefreshState, CmnNumbersMode } from '@/hooks/useCmn'
 import { UiIcon } from './UiIcon'
+import { WaitingState, type WaitingPhase } from './WaitingState'
 
 const LONG_PRESS_MS = 550
 
 export type CmnRefreshButtonState =
-  | { readonly kind: 'running'; readonly attempt: number }
+  | { readonly kind: 'running'; readonly attempt: number; readonly phase: WaitingPhase }
   | { readonly kind: 'loading' }
   | { readonly kind: 'cooldown'; readonly seconds: number }
   | { readonly kind: 'idle' }
@@ -25,7 +26,7 @@ export function resolveCmnRefreshButtonState({
   cooldown,
   numbersLoading,
 }: CmnRefreshButtonStateInput): CmnRefreshButtonState {
-  if (autoRefresh.kind === 'running') return { kind: 'running', attempt: autoRefresh.attempt }
+  if (autoRefresh.kind === 'running') return { kind: 'running', attempt: autoRefresh.attempt, phase: autoRefresh.phase }
   if (numbersLoading) return { kind: 'loading' }
   if (!canRefresh && cooldown > 0) return { kind: 'cooldown', seconds: cooldown }
   return { kind: 'idle' }
@@ -183,6 +184,16 @@ export function CmnRefreshButton({
       ? [validPattern ? 'cmn-auto-refresh-hint' : '', 'cmn-auto-refresh-status'].filter(Boolean).join(' ')
       : undefined
 
+  const waitingPhase: WaitingPhase | null =
+    state.kind === 'running'
+      ? state.phase
+      : state.kind === 'loading'
+        ? 'requesting'
+        : state.kind === 'cooldown'
+          ? 'cooldown'
+          : null
+  const timerId = mode === 'subsequent' ? 'refresh-timer' : undefined
+
   return (
     <button
       type="button"
@@ -198,8 +209,16 @@ export function CmnRefreshButton({
       onPointerCancel={handlePointerEnd}
       onLostPointerCapture={handlePointerEnd}
     >
-      <UiIcon className="refresh-btn-icon" name={state.kind === 'idle' && mode === 'initial' ? 'search' : 'refresh'} />
-      {renderCopy(state, mode, mode === 'subsequent' ? 'refresh-timer' : undefined)}
+      {waitingPhase === null ? (
+        <>
+          <UiIcon className="refresh-btn-icon" name={mode === 'initial' ? 'search' : 'refresh'} />
+          {renderCopy(state, mode, timerId)}
+        </>
+      ) : (
+        <WaitingState iconClassName="refresh-btn-icon" phase={waitingPhase}>
+          {renderCopy(state, mode, timerId)}
+        </WaitingState>
+      )}
     </button>
   )
 }
