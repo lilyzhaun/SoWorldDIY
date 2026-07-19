@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Waiting state harness</title>
+    <style>
+      html,
+      body,
+      #root {
+        margin: 0;
+      }
+      #waiting-state-harness {
+        padding: 24px;
+        display: grid;
+        gap: 8px;
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        #waiting-state-primitives .waiting-state-icon {
+          animation-iteration-count: 0.25;
+          animation-fill-mode: both;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./waiting-state.tsx"></script>
+  </body>
+</html>

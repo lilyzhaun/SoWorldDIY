@@ -26,7 +26,12 @@ export function Harness(): JSX.Element {
     setStarts((value) => value + 1)
     setNumbers(['66612345'])
     setNumbersLoading(true)
-    setAutoRefresh({ kind: 'running', attempt: 1, message: `正在自动查找第 1 批号码（${callbackVersion}）` })
+    setAutoRefresh({
+      kind: 'running',
+      attempt: 1,
+      phase: 'requesting',
+      message: `正在自动查找第 1 批号码（${callbackVersion}）`,
+    })
   }, [callbackVersion])
 
   return (
@@ -73,7 +78,9 @@ export function Harness(): JSX.Element {
       <button
         id="set-running"
         type="button"
-        onClick={() => setAutoRefresh({ kind: 'running', attempt: 1, message: '正在自动查找第 1 批号码' })}
+        onClick={() =>
+          setAutoRefresh({ kind: 'running', attempt: 1, phase: 'requesting', message: '正在自动查找第 1 批号码' })
+        }
       >
         running
       </button>
