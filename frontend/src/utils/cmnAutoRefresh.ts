@@ -17,11 +17,18 @@ export type CmnAutoRefreshResult =
   | { readonly kind: 'unavailable'; readonly attempts: number }
   | { readonly kind: 'error'; readonly attempts: number }
 
+export type CmnAutoRefreshPhase = 'requesting' | 'cooldown'
+
+export type CmnAutoRefreshProgress = {
+  readonly attempt: number
+  readonly phase: CmnAutoRefreshPhase
+}
+
 type CmnAutoRefreshOptions = {
   readonly pattern: string
   readonly request: CmnAutoRefreshRequest
   readonly signal: AbortSignal
-  readonly onAttemptStart?: (attempt: number) => void
+  readonly onProgress?: (progress: CmnAutoRefreshProgress) => void
 }
 
 function waitForCooldown(signal: AbortSignal): Promise<boolean> {
@@ -44,14 +51,14 @@ export async function runCmnAutoRefresh({
   pattern,
   request,
   signal,
-  onAttemptStart,
+  onProgress,
 }: CmnAutoRefreshOptions): Promise<CmnAutoRefreshResult> {
   let attempts = 0
 
   while (attempts < CMN_AUTO_REFRESH_MAX_ATTEMPTS) {
     if (signal.aborted) return { kind: 'aborted', attempts }
     attempts += 1
-    onAttemptStart?.(attempts)
+    onProgress?.({ attempt: attempts, phase: 'requesting' })
 
     let outcome: CmnRefreshOutcome
     try {
@@ -77,6 +84,7 @@ export async function runCmnAutoRefresh({
     }
 
     if (attempts === CMN_AUTO_REFRESH_MAX_ATTEMPTS) break
+    onProgress?.({ attempt: attempts, phase: 'cooldown' })
     if (!(await waitForCooldown(signal))) return { kind: 'aborted', attempts }
   }
 

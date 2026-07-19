@@ -61,12 +61,12 @@ describe('runCmnAutoRefresh', () => {
 
   it('exhausts attempts when numbers never match', async () => {
     vi.useFakeTimers()
-    const onAttemptStart = vi.fn()
+    const onProgress = vi.fn()
     const promise = runCmnAutoRefresh({
       pattern: '9999',
       request: async () => ({ kind: 'success', numbers: ['11111111'] }),
       signal: new AbortController().signal,
-      onAttemptStart,
+      onProgress,
     })
     // advance cooldowns between attempts
     for (let i = 0; i < CMN_AUTO_REFRESH_MAX_ATTEMPTS; i += 1) {
@@ -76,6 +76,9 @@ describe('runCmnAutoRefresh', () => {
       kind: 'exhausted',
       attempts: CMN_AUTO_REFRESH_MAX_ATTEMPTS,
     })
-    expect(onAttemptStart).toHaveBeenCalled()
+    expect(onProgress).toHaveBeenCalledWith({ attempt: 1, phase: 'requesting' })
+    expect(onProgress).toHaveBeenCalledWith({ attempt: 1, phase: 'cooldown' })
+    expect(onProgress).toHaveBeenCalledWith({ attempt: CMN_AUTO_REFRESH_MAX_ATTEMPTS, phase: 'requesting' })
+    expect(onProgress).not.toHaveBeenCalledWith({ attempt: CMN_AUTO_REFRESH_MAX_ATTEMPTS, phase: 'cooldown' })
   })
 })

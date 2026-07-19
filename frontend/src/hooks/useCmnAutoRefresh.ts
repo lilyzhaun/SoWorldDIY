@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 
 import {
   CMN_AUTO_REFRESH_MAX_ATTEMPTS,
+  type CmnAutoRefreshPhase,
   type CmnAutoRefreshResult,
   type CmnRefreshOutcome,
   runCmnAutoRefresh,
@@ -35,7 +36,12 @@ type CmnAutoRefreshOptions = {
 
 export type CmnAutoRefreshState =
   | { readonly kind: 'idle'; readonly message: string }
-  | { readonly kind: 'running'; readonly attempt: number; readonly message: string }
+  | {
+      readonly kind: 'running'
+      readonly attempt: number
+      readonly phase: CmnAutoRefreshPhase
+      readonly message: string
+    }
 
 export function cmnAutoRefreshResultMessage(result: CmnAutoRefreshResult): string {
   switch (result.kind) {
@@ -96,15 +102,15 @@ export function useCmnAutoRefresh({ accountId, currentSubId, lifecycle, numbers,
       const scope = scopeGenerationRef.current
       autoRunIdRef.current = runId
       autoAbortRef.current = controller
-      setCmnAutoRefresh({ kind: 'running', attempt: 0, message: '自动查找已开始' })
+      setCmnAutoRefresh({ kind: 'running', attempt: 0, phase: 'requesting', message: '自动查找已开始' })
 
       void runCmnAutoRefresh({
         pattern: cmnPattern,
         signal: controller.signal,
         request: (signal) => requestCmnNumbers(showAlert, 'auto', signal),
-        onAttemptStart: (attempt) => {
+        onProgress: ({ attempt, phase }) => {
           if (mountedRef.current && runId === autoRunIdRef.current && scope === scopeGenerationRef.current) {
-            setCmnAutoRefresh({ kind: 'running', attempt, message: `正在自动查找第 ${attempt} 批号码` })
+            setCmnAutoRefresh({ kind: 'running', attempt, phase, message: `正在自动查找第 ${attempt} 批号码` })
           }
         },
       }).then((result) => {

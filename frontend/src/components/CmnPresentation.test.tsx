@@ -146,7 +146,7 @@ describe('CMN presentation contracts', () => {
     )
     const running = renderToStaticMarkup(
       <CmnSection
-        autoRefresh={{ kind: 'running', attempt: 4, message: '正在自动查找第 4 批号码' }}
+        autoRefresh={{ kind: 'running', attempt: 4, phase: 'requesting', message: '正在自动查找第 4 批号码' }}
         canRefresh={false}
         cooldown={2}
         data={{ offerId: 'offer-1', offerSubType: 'CMN', price: 28 }}
