@@ -33,6 +33,7 @@ describe('navigation presentation contracts', () => {
         data={{ offerId: 'offer-1', offerSubType: 'CMN', price: 28 }}
         error=""
         loading={false}
+        numbersMode="initial"
         numbers={[]}
         numbersLoading={false}
         onAutoRefreshCancel={vi.fn()}
@@ -55,6 +56,7 @@ describe('navigation presentation contracts', () => {
         data={{ offerId: 'offer-1', offerSubType: 'CMN', price: 28 }}
         error=""
         loading={false}
+        numbersMode="subsequent"
         numbers={['66612345']}
         numbersLoading={false}
         onAutoRefreshCancel={vi.fn()}
@@ -107,7 +109,7 @@ describe('navigation presentation contracts', () => {
     }
     expect(cmnInitial).toContain('<svg')
     expect(cmnCooldown).toContain('<svg')
-    expect(cmnCooldown).toContain('（8s）')
+    expect(cmnCooldown).toContain('换一批（<span class="cmn-refresh-countdown" id="refresh-timer">8s</span>）')
     expect(activeOffers).toContain('class="plan-card open"')
     expect(activeOffers).toContain(
       '<button type="button" class="plan-card-disclosure" aria-expanded="true" aria-controls="active-offer-details-offer-1"',

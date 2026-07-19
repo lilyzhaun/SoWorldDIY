@@ -33,6 +33,7 @@ describe('presentation shell contracts', () => {
         data={null}
         error=""
         loading={false}
+        numbersMode="initial"
         numbers={[]}
         numbersLoading={false}
         onAutoRefreshCancel={vi.fn()}

@@ -23,16 +23,33 @@
   justify-content: center;
   gap: 6px;
 }
+.refresh-btn .refresh-btn-icon {
+  flex: 0 0 auto;
+  transition:
+    transform var(--motion-fast) var(--motion-ease-standard),
+    opacity var(--motion-fast) var(--motion-ease-standard);
+}
 .refresh-btn:hover:not(:disabled) {
   background: var(--bg-secondary);
   color: var(--text-main);
 }
 .refresh-btn:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 .refresh-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+@keyframes cmn-refresh-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.refresh-btn.is-loading .refresh-btn-icon {
+  animation: cmn-refresh-spin 0.75s linear infinite;
 }
 .cmn-auto-refresh-button {
   min-height: 56px;
@@ -43,6 +60,9 @@
 .cmn-auto-refresh-button.is-running {
   color: var(--cmn-auto-running-text);
   border-color: var(--cmn-auto-running-text);
+}
+.cmn-refresh-countdown {
+  font-variant-numeric: tabular-nums;
 }
 .cmn-auto-refresh-copy {
   display: flex;
@@ -56,6 +76,13 @@
   color: var(--text-sub);
   font-size: 11px;
   font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refresh-btn.is-loading .refresh-btn-icon {
+    animation: none;
+    transform: none;
+  }
 }
 #cmnBuyBtn {
   width: 100%;

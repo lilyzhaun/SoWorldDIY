@@ -31,7 +31,7 @@ afterAll(async () => {
 
 describe('CMN long press in real Chromium', () => {
   it('keeps clicks single, arms only valid patterns, suppresses the compatibility click, cancels explicitly, and highlights the match', async () => {
-    const { stdout } = await dumpBrowserDom(browserExecutable, browserProfile, testUrl, 12_000, '375,900')
+    const { stdout } = await dumpBrowserDom(browserExecutable, browserProfile, testUrl, 20_000, '375,900')
 
     expect(stdout).toContain('data-complete="true"')
     expect(stdout).toContain('data-refreshes="3"')
@@ -45,10 +45,57 @@ describe('CMN long press in real Chromium', () => {
     expect(stdout).toContain('data-armed-contextmenu-prevented="true"')
     expect(stdout).toContain('data-stale-arms-started="0"')
     expect(stdout).toContain('data-keyboard-focused="true"')
+    expect(stdout).toContain('data-keyboard-focus-transferred="true"')
     expect(stdout).toContain('data-keyboard-started="true"')
+    expect(stdout).toContain('data-pointer-focus-preserved="true"')
     expect(stdout).toContain('data-grid-shift-ok="true"')
     expect(stdout).toContain('data-actions-shift-ok="true"')
     expect(stdout).toContain('data-button-height-shift-ok="true"')
-    expect(stdout).toContain('data-viewport-width="375"')
-  }, 20_000)
+    expect(stdout).toContain('data-initial-idle-correct="true"')
+    expect(stdout).toContain('data-initial-loading-correct="true"')
+    expect(stdout).toContain('data-initial-height-stable="true"')
+    expect(stdout).toContain('data-subsequent-loading-correct="true"')
+    expect(stdout).toContain('data-cooldown-correct="true"')
+    expect(stdout).toContain('data-countdown-tabular="true"')
+    expect(stdout).toContain('data-zero-seconds-hidden="true"')
+    expect(stdout).toContain('data-loading-animation-name="cmn-refresh-spin"')
+    expect(stdout).toContain('data-reduced-motion="false"')
+    expect(stdout).toContain('data-viewport-width="500"')
+    expect(stdout).toContain('data-root-fills-viewport="true"')
+  }, 30_000)
+
+  it.each([768, 1280])(
+    'uses the full %ipx responsive viewport',
+    async (viewportWidth) => {
+      const { stdout } = await dumpBrowserDom(
+        browserExecutable,
+        browserProfile,
+        testUrl,
+        20_000,
+        `${viewportWidth},900`,
+      )
+
+      expect(stdout).toContain('data-complete="true"')
+      expect(stdout).toContain(`data-viewport-width="${viewportWidth}"`)
+      expect(stdout).toContain('data-root-fills-viewport="true"')
+    },
+    30_000,
+  )
+
+  it('disables refresh rotation when reduced motion is requested', async () => {
+    const reducedMotionUrl = new URL(testUrl)
+    reducedMotionUrl.searchParams.set('reduced', '1')
+    const { stdout } = await dumpBrowserDom(
+      browserExecutable,
+      browserProfile,
+      reducedMotionUrl.href,
+      4_000,
+      '375,900',
+      ['--force-prefers-reduced-motion=reduce'],
+    )
+
+    expect(stdout).toContain('data-complete="true"')
+    expect(stdout).toContain('data-loading-animation-name="none"')
+    expect(stdout).toContain('data-reduced-motion="true"')
+  }, 30_000)
 })
