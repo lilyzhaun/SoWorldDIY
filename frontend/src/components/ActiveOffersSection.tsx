@@ -1,6 +1,7 @@
 import type { Subscription, TransferDraft } from '@/types'
 import { normalizeUnit, stripHtml } from '@/utils/mainPage'
 import { UiIcon } from './UiIcon'
+import { WaitingState } from './WaitingState'
 
 type ActiveOffersSectionProps = {
   readonly currentSub: Subscription | null
@@ -33,8 +34,22 @@ export function ActiveOffersSection({
           paddingRight: '5px',
         }}
       >
-        <button id="refreshUsageBtn" className="refresh-text-btn" disabled={refreshingUsage} onClick={onRefresh}>
-          <UiIcon className="refresh-text-icon" name="refresh" /> {refreshingUsage ? '同步中…' : '刷新用量'}
+        <button
+          id="refreshUsageBtn"
+          className="refresh-text-btn"
+          aria-busy={refreshingUsage || undefined}
+          disabled={refreshingUsage}
+          onClick={onRefresh}
+        >
+          {refreshingUsage ? (
+            <WaitingState iconClassName="refresh-text-icon" phase="requesting">
+              同步中…
+            </WaitingState>
+          ) : (
+            <>
+              <UiIcon className="refresh-text-icon" name="refresh" /> 刷新用量
+            </>
+          )}
         </button>
       </div>
       <div id="activeOffersList" className="plan-list">
