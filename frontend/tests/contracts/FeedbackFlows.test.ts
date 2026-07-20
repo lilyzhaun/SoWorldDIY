@@ -11,6 +11,10 @@ import mainPageDialogsSource from '../../src/components/MainPageDialogs.tsx?raw'
 import transferSource from '../../src/hooks/useTransfer.ts?raw'
 
 describe('semantic feedback flow contracts', () => {
+  it('keeps the login disclaimer non-interactive', () => {
+    expect(loginPageSource).not.toMatch(/<a(?:\s|>)/)
+  })
+
   it('uses typed login toast tones, plain messages, and unchanged timing contracts', () => {
     expect(loginFlowSource).toContain("import type { StatusTone } from '@/components/StatusMessage'")
     expect(loginFlowSource).toContain('readonly tone: StatusTone')

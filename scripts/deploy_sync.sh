@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # Stage tracked application files into a deployment root (default /opt/3hk-new).
-# Preserves ignored local files: backend/.env, delivery_extension_local.py,
-# extensions_local.py, request_overrides_local.py, requirements-local.txt
-# (byte-for-byte when present).
+# Preserves ignored local files: backend/.env, request_overrides_local.py,
+# requirements-local.txt (byte-for-byte when present).
 # Merges unknown keys from an existing destination .env into the staged copy.
 set -euo pipefail
 
@@ -13,8 +12,6 @@ DRY_RUN="${DRY_RUN:-0}"
 
 LOCAL_FILES=(
   "backend/.env"
-  "backend/app/delivery_extension_local.py"
-  "backend/app/extensions_local.py"
   "backend/app/request_overrides_local.py"
   "backend/requirements-local.txt"
 )
@@ -123,8 +120,6 @@ rsync -a \
   --exclude '.mypy_cache/' \
   --exclude 'backend/.env' \
   --exclude 'backend/auth_codes.json' \
-  --exclude 'backend/app/delivery_extension_local.py' \
-  --exclude 'backend/app/extensions_local.py' \
   --exclude 'backend/app/request_overrides_local.py' \
   --exclude 'backend/requirements-local.txt' \
   --exclude 'frontend/node_modules/' \
@@ -159,10 +154,17 @@ if [[ "$DRY_RUN" == "1" ]]; then
   exit 0
 fi
 
-# 3) Promote stage -> dest (do not use --delete on local files we just restored)
+# 3) Promote stage -> dest. Delete stale source files while protecting runtime state.
 mkdir -p "$DEST_ROOT"
 rsync -a \
+  --delete \
+  --exclude 'backend/.env' \
+  --exclude 'backend/auth_code.txt' \
+  --exclude 'backend/auth_codes.json' \
   --exclude 'backend/.venv/' \
+  --exclude 'backend/app/request_overrides_local.py' \
+  --exclude 'backend/plans_cache/*.json' \
+  --exclude 'backend/requirements-local.txt' \
   --exclude 'frontend/node_modules/' \
   "$STAGE_ROOT/" "$DEST_ROOT/"
 

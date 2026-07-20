@@ -123,9 +123,9 @@ git status --short
 - `.codegraph/`（本地代码索引，不应提交）
 - `.opencode/`、`.idea/`、`.vscode/`、`.DS_Store`
 
-本地覆盖模块（可选集成，不跟踪）：
+本地覆盖文件（可选，不跟踪）：
 
-- `delivery_extension_local.py`、`request_overrides_local.py`、`requirements-local.txt`（`*_local.example.py` 模板可跟踪）
+- `request_overrides_local.py`、`requirements-local.txt`（`request_overrides_local.example.py` 模板可跟踪）
 
 ## 代码风格
 

@@ -26,10 +26,8 @@ __pycache__/
 auth_codes.json
 auth_code.txt
 
-# Local-only modules (events, integrations)
-delivery_extension_local.py
-extensions_local.py
-request_overrides_local.py
+# Local-only modules (never track host-specific overrides)
+*_local.py
 requirements-local.txt
 # Example templates are tracked
 !*_local.example.py

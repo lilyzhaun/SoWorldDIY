@@ -18,7 +18,7 @@ RELEASE_NOTES_FIXTURE: Final = """# Changelog
 ## [Unreleased]
 manual notes
 
-## [1.2.3]
+## [1.2.3] - 2026-07-20
 tag notes
 """
 

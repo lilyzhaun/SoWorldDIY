@@ -9,7 +9,6 @@ from pydantic import ValidationError
 from starlette.responses import Response
 
 from ..brand import INVALID_BRAND_CODE, InvalidBrandError, parse_brand, plans_cache_path
-from ..hooks import invoke as invoke_local_extension
 from ..public_errors import AUTH_FAILED, INTERNAL_ERROR, INVALID_REQUEST
 from ..responses import _public_error
 from ..schemas import PurchaseRequest
@@ -160,14 +159,6 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
             )
             if r and r.status_code == 200 and "paymentUrl" in r.json():
                 deps.delete_cache(f"profile_{req_ident}")
-                invoke_local_extension(
-                    "purchase_created",
-                    payment_url=r.json()["paymentUrl"],
-                    sub_id=str(sid),
-                    amount_pay=purchase.payable_amount,
-                    account_id=str(req_ident),
-                    get_cache=deps.get_cache,
-                )
                 return deps._json_success(
                     {"status": "success", "paymentUrl": r.json()["paymentUrl"]}
                 )

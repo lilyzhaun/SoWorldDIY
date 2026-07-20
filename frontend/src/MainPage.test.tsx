@@ -73,16 +73,14 @@ describe('MainPage rendered contract', () => {
     expect(html).toContain('waiting-state-marker')
   })
 
-  it('preserves account-derived values, links, labels, and hidden initial states', () => {
+  it('preserves account-derived values, labels, and hidden initial states without footer links', () => {
     const html = renderMainPage('/main/account%20name')
 
     expect(html).toContain('id="current-account-id-ref" value="account%20name"')
     expect(html).toContain('aria-label="交易记录"')
     expect(html).toContain('aria-label="收件箱"')
     expect(html).toContain('aria-label="退出登录"')
-    expect(html).toContain('href="https://example.invalid/support"')
-    expect(html).toContain('target="_blank"')
-    expect(html).toContain('rel="noopener noreferrer"')
+    expect(html).not.toMatch(/<a(?:\s|>)/)
     expect(html).toContain('<button type="button" id="cartFab" class="cart-fab" style="display:none"')
     expect(html).toContain('id="activeOffersContainer" style="display:none"')
     expect(html).toContain('id="cmnContainer" style="display:none"')

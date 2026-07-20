@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-07-20
+
 ### Added
 - Dedicated Redis migration CLI and `deploy/redis/` templates for isolated loopback instances
 - Redis-backed endpoint rate limits for auth flows (`ratelimit:` keys)
@@ -28,7 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - HTTP request/response boundary hardening and safe public errors
 - Rate-limit identifiers hashed in Redis keys; auth codes never enter limit keys or logs
 - Metrics endpoint constant-time secret check; 404 when secret missing, 403 when wrong
-- Forbidden external_delivery SDK in core package surface (local delivery_extension seam only)
 
 ### Fixed
 - Auth-code v2 key parsing hardened against reserved shapes and non-hex digests

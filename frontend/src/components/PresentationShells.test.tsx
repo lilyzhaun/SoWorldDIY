@@ -57,7 +57,7 @@ describe('presentation shell contracts', () => {
     expect(cmn).toContain('id="cmnContainer" style="display:none"')
     expect(cmn).toContain('更改电话号码服务')
     expect(footer).toContain('id="mainFooter" class="footer-note-main"')
-    expect(footer).toContain('href="https://example.invalid/support"')
+    expect(footer).not.toMatch(/<a(?:\s|>)/)
     expect(cartFab).toContain('<button type="button" id="cartFab" class="cart-fab" style="display:flex"')
     expect(cartFab).toContain('aria-label="打开购物车，2 件商品，总计 $12.3"')
     expect(cartFab).toContain('id="cartTotalPreview">$12.3</span>')

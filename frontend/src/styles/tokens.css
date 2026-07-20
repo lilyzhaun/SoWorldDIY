@@ -72,9 +72,6 @@
   --otp-btn-text: #ffffff;
   --radius-box: 24px;
   --radius-input: 12px;
-  --support-bg: #f4f4f5;
-  --support-icon: #a1a1aa;
-  --support-hover-bg: #e4e4e7;
   --success-card-bg: rgba(255, 255, 255, 0.96);
   --success-card-border: rgba(22, 163, 74, 0.2);
   --success-card-shadow: 0 12px 32px rgba(24, 24, 27, 0.14), 0 0 0 1px rgba(24, 24, 27, 0.04);
@@ -137,9 +134,6 @@
     --text-footer: #52525b;
     --text-footer-strong: #71717a;
     --otp-btn-bg: #ff7b00;
-    --support-bg: #27272a;
-    --support-icon: #71717a;
-    --support-hover-bg: #3f3f46;
     --success-card-bg: rgba(24, 24, 27, 0.96);
     --success-card-border: rgba(74, 222, 128, 0.18);
     --success-card-shadow: 0 16px 36px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(255, 255, 255, 0.06);

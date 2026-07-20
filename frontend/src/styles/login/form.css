@@ -125,31 +125,3 @@ input::placeholder {
   color: var(--text-footer-strong);
   font-weight: 500;
 }
-
-.support-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 14px;
-  color: var(--support-icon);
-  transition:
-    background-color var(--motion-base) var(--motion-ease-standard),
-    color var(--motion-base) var(--motion-ease-standard),
-    transform var(--motion-fast) var(--motion-ease-standard);
-  cursor: pointer;
-  padding: 10px;
-  background: var(--support-bg);
-  border-radius: 50%;
-}
-.support-link svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
-}
-.support-link:hover {
-  color: #229ed9;
-  background: var(--support-hover-bg);
-}
-.support-link:active {
-  transform: scale(0.97);
-}

@@ -48,7 +48,7 @@ HOST=127.0.0.1 PORT=8888 ./start.sh
 | `deploy/systemd/3hk-new.service` | 应用单元：`User=3hk-new`，`127.0.0.1:8888`，资源上限与沙箱 hardening |
 | `deploy/systemd/3hk-new-redis.service` | 专用 Redis 单元（与 `deploy/redis/` 一致） |
 | `deploy/logrotate/3hk-new` | `/var/log/3hk-new/3hk-new.log` 日切、保留 14 天、`copytruncate`、模式 0640 |
-| `scripts/deploy_sync.sh` | 将跟踪文件同步到 `/opt/3hk-new`，**字节级保留**本地 `.env` / `delivery_extension_local.py` / `request_overrides_local.py` / `requirements-local.txt` |
+| `scripts/deploy_sync.sh` | 将跟踪文件同步到 `/opt/3hk-new`，**字节级保留**本地 `.env` / `request_overrides_local.py` / `requirements-local.txt` |
 
 同步示例：
 

@@ -164,13 +164,12 @@ npm run build
 │   │   ├── auth_cli.py      # 鉴权码 CLI
 │   │   ├── upstream.py       # 上游请求与静默重登
 │   │   ├── upstream_urls.py # 上游 URL 常量与构造
-│   │   ├── services.py       # 品牌识别、套餐后台刷新、购买通知
+│   │   ├── services.py       # 品牌识别、套餐后台刷新
 │   │   ├── services_commerce.py  # 套餐/CMN 购买 payload 与钱包余额解析
 │   │   ├── services_profile.py   # 资料聚合与品牌 profile 合并
 │   │   ├── services_profile_offers.py # active offer 解析
 │   │   ├── services_transfer.py  # 资源转移 offer 选择与 payload 组装
 │   │   ├── responses.py     # JSON/错误/重定向响应函数与 Protocol
-│   │   ├── delivery_extension.py      # 通知发送 seam（默认 no-op）
 │   │   ├── cache_store.py   # 内存缓存
 │   │   ├── request_overrides.py # 代理解析 seam
 │   │   ├── schemas/         # Pydantic 请求体模型

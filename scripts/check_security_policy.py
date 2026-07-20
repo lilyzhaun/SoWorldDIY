@@ -13,7 +13,6 @@ ROOT = Path(__file__).resolve().parents[1]
 
 FORBIDDEN_TRACKED = [
     "backend/.env",
-    "backend/app/delivery_extension_local.py",
     "backend/app/request_overrides_local.py",
     "backend/requirements-local.txt",
     "frontend/dist",
@@ -25,9 +24,6 @@ UNPINNED_ACTION = re.compile(
 )
 PINNED = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[0-9a-f]{40}$")
 BASE_IMAGE = re.compile(r"^\s*FROM\s+(\S+)", re.M | re.I)
-external_delivery_IMPORT = re.compile(
-    r"^\s*(from|import)\s+external_delivery_client\b|import\s+external_delivery_client", re.M
-)
 PUBLIC_BIND = re.compile(r"0\.0\.0\.0:(?!8888\b)\d+|0\.0\.0\.0:8888")
 # Container CMD may bind 0.0.0.0 inside network namespace; host publish must be loopback.
 COMPOSE_PUBLIC = re.compile(r'["\']0\.0\.0\.0:\d+:')
@@ -104,22 +100,6 @@ def main() -> int:
         text = compose.read_text(encoding="utf-8")
         if COMPOSE_PUBLIC.search(text):
             errors.append("insecure_public_bind: docker-compose.yml")
-
-    # Forbidden external_delivery imports in production backend source (delivery_extension_local excluded)
-    app_dir = ROOT / "backend" / "app"
-    for path in app_dir.rglob("*.py"):
-        if path.name.startswith("delivery_extension_local") or path.name.startswith(
-            "request_overrides_local"
-        ):
-            continue
-        text = path.read_text(encoding="utf-8")
-        if external_delivery_IMPORT.search(text):
-            errors.append(f"forbidden_external_delivery_import: {path.relative_to(ROOT)}")
-
-    # requirements must not list external_delivery_client
-    req = ROOT / "backend" / "requirements.txt"
-    if req.is_file() and "external_delivery_client" in req.read_text(encoding="utf-8"):
-        errors.append("forbidden_external_delivery_dependency: requirements.txt")
 
     # Sensitive metric labels
     metrics = ROOT / "backend" / "app" / "metrics.py"

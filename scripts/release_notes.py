@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import Final
 
 SECTION_PATTERN: Final = re.compile(
-    r"^## \[(?P<section>[^]]+)]\s*\n(?P<body>.*?)(?=^## \[|\Z)",
+    r"^## \[(?P<section>[^]]+)]"
+    r"(?:[ \t]+-[ \t]+\d{4}-\d{2}-\d{2})?[ \t]*\n"
+    r"(?P<body>.*?)(?=^## \[|\Z)",
     re.MULTILINE | re.DOTALL,
 )
 

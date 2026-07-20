@@ -40,7 +40,7 @@ RUN apt-get update \
 COPY backend/requirements.txt /app/backend/requirements.txt
 RUN pip install --no-cache-dir -r /app/backend/requirements.txt
 
-# Application source (no local secrets / external_delivery extensions)
+# Application source (no local secrets or host-only extensions)
 COPY backend/app /app/backend/app
 COPY backend/run.py /app/backend/run.py
 COPY backend/start.sh /app/backend/start.sh

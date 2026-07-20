@@ -60,7 +60,7 @@ FastAPI 后端
 - `backend/app/main_deps.py` 定义 `MainDepsAdapter`：一个 frozen dataclass，持有对 `app.main` 模块的引用，每个属性都是 `@property`，在每次访问时重新读取源模块的同名属性。这样 `monkeypatch.setattr(main, ...)` 的替换对路由、upstream 和 services 立即可见，不缓存快照。
 - `backend/app/routes/deps.py` 定义 `RouteDeps` Protocol，描述路由层需要的依赖接口。`MainDepsAdapter` 结构性满足该 Protocol。
 - `backend/app/runtime.py` 在模块导入期装配运行时依赖（Redis 客户端、内存缓存、session_store、auth_code_store、密码加密器等），并定义 `get_cache`/`set_cache`/`delete_cache` 等函数 seam。
-- `backend/app/services.py` 通过 `configure_service_deps` 接收一个返回 `ServiceDepsProtocol` 的 provider；需要保持 late-bound 的缓存、账号上下文和通知 seam 通过 `_deps()` 读取，固定运行时常量仍从 `runtime.py` 导入。
+- `backend/app/services.py` 通过 `configure_service_deps` 接收一个返回 `ServiceDepsProtocol` 的 provider；需要保持 late-bound 的缓存、账号上下文通过 `_deps()` 读取，固定运行时常量仍从 `runtime.py` 导入。
 
 ### 路由模块
 
@@ -103,7 +103,6 @@ FastAPI 后端
 - `backend/app/config.py` 从环境变量和 `backend/.env` 加载配置。
 - `backend/app/auth_codes.py` 使用 Redis 存储鉴权码，并可从 `backend/auth_codes.json` 导入初始数据。
 - `backend/app/security.py` 负责密码加密和 CSRF token 工具。
-- 业务路由只通过 `backend/app/hooks.py` 发出可选本地事件；文案与投递仅存在于 gitignore 的 `extensions_local.py` / `delivery_extension_local.py`。开源 `delivery_extension.py` 保持默认 no-op 投递 seam。
 - `backend/app/cache_store.py` 提供内存缓存。
 - `backend/app/auth_cli.py` 提供鉴权码管理 CLI。
 

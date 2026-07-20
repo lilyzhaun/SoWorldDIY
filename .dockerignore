@@ -17,9 +17,7 @@ AGENTS.md
 backend/.env
 backend/auth_codes.json
 backend/auth_code.txt
-backend/app/delivery_extension_local.py
-backend/app/extensions_local.py
-backend/app/request_overrides_local.py
+backend/app/*_local.py
 backend/requirements-local.txt
 
 # Dependencies and build outputs (rebuilt in image)

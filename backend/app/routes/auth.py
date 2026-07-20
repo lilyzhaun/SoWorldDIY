@@ -9,7 +9,6 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
-from ..hooks import invoke as invoke_local_extension
 from ..public_errors import (
     ACCOUNT_CHECK_FAILED,
     INTERNAL_ERROR,
@@ -231,14 +230,6 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                             type(exc).__name__,
                         )
                         return _public_error(SERVICE_UNAVAILABLE, 503)
-
-                    invoke_local_extension(
-                        "login_success",
-                        identifier=str(identifier),
-                        login_type=str(login_type),
-                        sub_brand=str(sub_brand),
-                        account_count=len(accounts),
-                    )
 
                     deps.rate_limiter.clear_login_fail_identifier(identifier)
                     return deps._json_success(
