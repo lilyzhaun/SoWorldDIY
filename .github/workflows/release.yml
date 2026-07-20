@@ -67,18 +67,7 @@ jobs:
         run: actionlint -color
       - name: Extract notes from CHANGELOG
         id: notes
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          text = Path("CHANGELOG.md").read_text(encoding="utf-8")
-          # Prefer Unreleased section for dry-run; for tags, prefer matching version if present.
-          m = re.search(r"## \[Unreleased\]\n(.*?)(?=\n## |\Z)", text, re.S)
-          body = (m.group(1).strip() if m else "See CHANGELOG.md")
-          Path("/tmp/release-notes.md").write_text(body + "\n", encoding="utf-8")
-          print("notes_bytes", len(body))
-          PY
+        run: python3 scripts/release_notes.py CHANGELOG.md "$GITHUB_REF" /tmp/release-notes.md
       - name: Setup Node (frontend gate)
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:

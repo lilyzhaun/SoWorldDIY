@@ -6,9 +6,21 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from typing import Final
+
+from release_notes import extract_release_notes
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
+RELEASE_NOTES_COMMAND: Final = "python3 scripts/release_notes.py"
+RELEASE_NOTES_FIXTURE: Final = """# Changelog
+
+## [Unreleased]
+manual notes
+
+## [1.2.3]
+tag notes
+"""
 
 # Patterns that must never appear in release automation.
 FORBIDDEN = [
@@ -24,14 +36,28 @@ FORBIDDEN = [
 
 
 def main() -> int:
-    paths = sorted(WORKFLOWS.glob("release*.yml")) + sorted(WORKFLOWS.glob("release*.yaml"))
+    paths = sorted(WORKFLOWS.glob("release*.yml")) + sorted(
+        WORKFLOWS.glob("release*.yaml")
+    )
     if not paths:
         print("ERROR: no release workflow found", file=sys.stderr)
         return 2
 
     violations: list[str] = []
+    if (
+        extract_release_notes(RELEASE_NOTES_FIXTURE, "refs/heads/main")
+        != "manual notes"
+    ):
+        violations.append("release_notes_manual_selection")
+    if extract_release_notes(RELEASE_NOTES_FIXTURE, "refs/tags/v1.2.3") != "tag notes":
+        violations.append("release_notes_tag_selection")
+    if extract_release_notes(RELEASE_NOTES_FIXTURE, "refs/tags/v9.9.9") is not None:
+        violations.append("release_notes_missing_tag_section")
+
     for path in paths:
         text = path.read_text(encoding="utf-8")
+        if RELEASE_NOTES_COMMAND not in text:
+            violations.append(f"{path.relative_to(ROOT)}: RELEASE_NOTES_HELPER")
         for pattern, name in FORBIDDEN:
             if pattern.search(text):
                 violations.append(f"{path.relative_to(ROOT)}: {name}")
