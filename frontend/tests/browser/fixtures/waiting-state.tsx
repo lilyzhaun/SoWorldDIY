@@ -235,6 +235,12 @@ async function run(): Promise<void> {
     String(requestingMarker.getAttribute('data-waiting-marker') === 'true'),
   )
   harness.setAttribute('data-cooldown-marker', String(cooldownMarker.getAttribute('data-waiting-marker') === 'true'))
+  const requestingMarkerStyle = getComputedStyle(requestingMarker)
+  const cooldownMarkerStyle = getComputedStyle(cooldownMarker)
+  harness.setAttribute('data-requesting-marker-background', requestingMarkerStyle.backgroundColor)
+  harness.setAttribute('data-requesting-marker-box-shadow', requestingMarkerStyle.boxShadow)
+  harness.setAttribute('data-cooldown-marker-background', cooldownMarkerStyle.backgroundColor)
+  harness.setAttribute('data-cooldown-marker-box-shadow', cooldownMarkerStyle.boxShadow)
   harness.setAttribute('data-planlist-aria-busy', String(planListBusy))
   harness.setAttribute('data-planlist-live', String(planListLive))
   harness.setAttribute('data-planlist-role', String(planListRole))

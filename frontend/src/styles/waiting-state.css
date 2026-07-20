@@ -51,4 +51,8 @@
   .waiting-state[data-waiting-phase='cooldown'] .waiting-state-marker {
     transform: rotate(45deg);
   }
+  .waiting-state[data-waiting-phase='cooldown'] .waiting-state-marker {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--primary);
+  }
 }

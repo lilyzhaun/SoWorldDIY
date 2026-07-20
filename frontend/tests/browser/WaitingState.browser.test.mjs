@@ -140,5 +140,10 @@ describe('WaitingState in real Chromium', () => {
     expect(readDataAttribute(stdout, 'data-cooldown-icon-visible')).toBe('true')
     expect(readDataAttribute(stdout, 'data-requesting-marker-visible')).toBe('true')
     expect(readDataAttribute(stdout, 'data-cooldown-marker-visible')).toBe('true')
+
+    expect(readDataAttribute(stdout, 'data-requesting-marker-background')).not.toBe('rgba(0, 0, 0, 0)')
+    expect(readDataAttribute(stdout, 'data-requesting-marker-box-shadow')).toBe('none')
+    expect(readDataAttribute(stdout, 'data-cooldown-marker-background')).toBe('rgba(0, 0, 0, 0)')
+    expect(readDataAttribute(stdout, 'data-cooldown-marker-box-shadow')).toContain('inset')
   }, 30_000)
 })
