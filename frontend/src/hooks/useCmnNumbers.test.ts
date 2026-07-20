@@ -133,6 +133,7 @@ describe('useCmnNumbers', () => {
       await result.current.refreshCmnNumbers(vi.fn())
     })
     expect(result.current.cmnNumbers).toEqual(['9'])
+    expect(result.current.cmnNumbersMode).toBe('subsequent')
 
     act(() => {
       result.current.setSelectedNumber('9')
@@ -144,7 +145,80 @@ describe('useCmnNumbers', () => {
       expect(result.current.cmnNumbers).toEqual([])
       expect(result.current.selectedNumber).toBeNull()
       expect(result.current.cmnCanRefresh).toBe(true)
+      expect(result.current.cmnNumbersMode).toBe('initial')
     })
+  })
+
+  it('keeps initial mode during the first load and switches to subsequent after the first success', async () => {
+    const lc = lifecycle()
+    const { result } = renderHook(() => useCmnNumbers({ accountId: 'a1', currentSubId: 'sub-1', lifecycle: lc }))
+    expect(result.current.cmnNumbersMode).toBe('initial')
+
+    const successResponse = { ok: true, json: async () => ({ status: 'success', numbers: ['1', '2'] }) }
+    let resolveFetch: ((value: typeof successResponse) => void) | null = null
+    apiFetch.mockImplementationOnce(
+      () =>
+        new Promise<typeof successResponse>((resolve) => {
+          resolveFetch = resolve
+        }),
+    )
+    await act(async () => {
+      void result.current.refreshCmnNumbers(vi.fn())
+    })
+    expect(result.current.cmnNumbersLoading).toBe(true)
+    expect(result.current.cmnNumbersMode).toBe('initial')
+
+    await act(async () => {
+      resolveFetch?.(successResponse)
+      await Promise.resolve()
+    })
+    expect(result.current.cmnNumbersLoading).toBe(false)
+    expect(result.current.cmnNumbersMode).toBe('subsequent')
+    expect(result.current.cmnCanRefresh).toBe(false)
+    expect(result.current.cmnCooldown).toBe(3)
+  })
+
+  it('keeps subsequent mode during a reload and returns to idle without cooldown on error', async () => {
+    const lc = lifecycle()
+    const { result } = renderHook(() => useCmnNumbers({ accountId: 'a1', currentSubId: 'sub-1', lifecycle: lc }))
+    apiFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ status: 'success', numbers: ['1'] }),
+    })
+    await act(async () => {
+      await result.current.refreshCmnNumbers(vi.fn())
+    })
+    expect(result.current.cmnNumbersMode).toBe('subsequent')
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3500)
+    })
+    expect(result.current.cmnCanRefresh).toBe(true)
+    expect(result.current.cmnCooldown).toBe(0)
+
+    const failureResponse = { ok: false, text: async () => JSON.stringify({ message: '限流' }) }
+    let resolveFetch: ((value: typeof failureResponse) => void) | null = null
+    apiFetch.mockImplementationOnce(
+      () =>
+        new Promise<typeof failureResponse>((resolve) => {
+          resolveFetch = resolve
+        }),
+    )
+    await act(async () => {
+      void result.current.refreshCmnNumbers(vi.fn())
+    })
+    expect(result.current.cmnNumbersLoading).toBe(true)
+    expect(result.current.cmnNumbers).toEqual([])
+    expect(result.current.cmnNumbersMode).toBe('subsequent')
+
+    await act(async () => {
+      resolveFetch?.(failureResponse)
+      await Promise.resolve()
+    })
+    expect(result.current.cmnNumbersLoading).toBe(false)
+    expect(result.current.cmnNumbersMode).toBe('subsequent')
+    expect(result.current.cmnCanRefresh).toBe(true)
+    expect(result.current.cmnCooldown).toBe(0)
   })
 
   it('ticks cooldown down to re-enable refresh', async () => {

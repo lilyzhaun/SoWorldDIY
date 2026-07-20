@@ -1,6 +1,7 @@
 import type { Plan } from '@/types'
 import { stripHtml } from '@/utils/mainPage'
 import { UiIcon } from './UiIcon'
+import { WaitingState } from './WaitingState'
 
 type PlanListProps = {
   readonly filteredPlans: Plan[]
@@ -27,7 +28,9 @@ export function PlanList({
     <div id="planListContainer" style={{ display: visible ? undefined : 'none' }}>
       <div id="planList" className="plan-list">
         {plansLoading ? (
-          <div className="loader">正在加载套餐…</div>
+          <div className="loader" role="status" aria-live="polite" aria-busy={plansLoading}>
+            <WaitingState phase="requesting">正在加载套餐…</WaitingState>
+          </div>
         ) : (
           filteredPlans.map((plan) => {
             const isOpen = selectedPlanId === plan.offerId

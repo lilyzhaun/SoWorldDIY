@@ -6,6 +6,7 @@ import { useCmnNumbers } from './useCmnNumbers'
 
 export type { CmnAutoRefreshState } from './useCmnAutoRefresh'
 export { CMN_REFRESH_COOLDOWN_SECONDS } from './useCmnNumbers'
+export type { CmnNumbersMode } from './useCmnNumbers'
 
 type ShowAlert = (text: string, title?: string) => void
 type OpenPurchase = (title: string, price: number, source: 'cmn') => void
@@ -63,6 +64,7 @@ export function useCmn(accountId: string, currentSubId: string, visible: boolean
     cmnLoading: eligibility.cmnLoading,
     cmnNumbers: numbers.cmnNumbers,
     cmnNumbersLoading: numbers.cmnNumbersLoading,
+    cmnNumbersMode: numbers.cmnNumbersMode,
     cmnPattern: autoRefresh.cmnPattern,
     parsedCmnPattern: autoRefresh.parsedCmnPattern,
     refreshCmnNumbers: numbers.refreshCmnNumbers,

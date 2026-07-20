@@ -60,6 +60,19 @@ describe('MainPage rendered contract', () => {
     expect(categoryText).toEqual(['全部', '本地', '外遊', '已订购', '其他', '更换号码'])
   })
 
+  it('marks the initial plan loading with the requesting waiting phase', () => {
+    const html = renderMainPage()
+
+    expect(html).toContain('正在加载套餐…')
+    expect(html).toMatch(
+      /<div class="loader"[^>]*><span class="waiting-state"[^>]*data-waiting-phase="requesting"[^>]*>/,
+    )
+    expect(html).toContain('role="status"')
+    expect(html).toContain('aria-live="polite"')
+    expect(html).toContain('aria-busy="true"')
+    expect(html).toContain('waiting-state-marker')
+  })
+
   it('preserves account-derived values, links, labels, and hidden initial states', () => {
     const html = renderMainPage('/main/account%20name')
 

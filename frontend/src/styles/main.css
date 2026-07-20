@@ -3,6 +3,7 @@
 @import './plans.css';
 @import './cmn.css';
 @import './modals.css';
+@import './waiting-state.css';
 
 * {
   box-sizing: border-box;

@@ -21,8 +21,8 @@
 | `AUTH_CODE_HMAC_KEY` | dual/hmac 必填 | 无 | 派生 `auth_code:v2:<HMAC-SHA256 hex>` 的专用密钥，至少 32 字节随机值；无默认回退。不得写入日志或提交仓库。 |
 | `PROXY_URL` | 否 | 空 | 访问 3HK/SIMWorld 上游接口时使用的 HTTP/HTTPS 代理。 |
 | `CMN_PROXY_URL` | 否 | 空 | CMN 换号接口 (`/mnms/holdAvailableNumbersFor15m/`) 专用代理。仅在该路径的请求上覆盖 `PROXY_URL`，留空则回退到 `PROXY_URL`。 |
-| `external_delivery_token` | 否 | 空 | 本地通知扩展 external_delivery Bot Token。仅在 `delivery_extension_local.py` 存在时生效。 |
-| `external_delivery_target` | 否 | 空 | 本地通知扩展接收消息的 Chat ID。 |
+| `external_delivery_token` | 否 | 空 | 仅本地扩展使用；开源核心不读取。 |
+| `external_delivery_target` | 否 | 空 | 仅本地扩展使用；开源核心不读取。 |
 
 ## `.env` 文件位置
 
@@ -72,7 +72,7 @@ CMN_PROXY_URL=http://user:pass@proxy.example.com:12321
 
 ## 通知扩展
 
-通知模块 `backend/app/delivery_extension.py` 默认为 no-op。如需启用本地通知，复制 `backend/app/delivery_extension_local.example.py` 为 `delivery_extension_local.py`，并在 `backend/.env` 中配置 `external_delivery_token` 和 `external_delivery_target`。`delivery_extension_local.py` 已被 `.gitignore` 忽略，不会进入公开仓库。该扩展需要 `external_delivery_client`（见 `requirements-local.txt`）。
+开源仓库不含业务通知文案。本地部署时复制 `extensions_local.example.py` → `extensions_local.py`、`delivery_extension_local.example.py` → `delivery_extension_local.py`，并在 `backend/.env` 配置本地投递凭据。上述本地文件与 `requirements-local.txt` 均被 gitignore，不会进入公开仓库。
 
 ---
 

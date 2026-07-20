@@ -16,7 +16,7 @@ from ..responses import (
     UpstreamErrorFn,
 )
 from ..runtime import SetCacheFn
-from ..services import FetchPlansBackgroundFn, SendPurchaseeventsFn
+from ..services import FetchPlansBackgroundFn
 from ..session_store import SessionContext
 from ..session_utils import ValidateCsrfFn
 from ..upstream import Make3hkRequestFn
@@ -55,9 +55,6 @@ class RouteDeps(Protocol):
     def _save_session(self) -> Callable[[SessionContext], None]: ...
 
     @property
-    def notify(self) -> Callable[[str], None]: ...
-
-    @property
     def _require_login(self) -> Callable[[Request], SessionContext | None]: ...
 
     @property
@@ -90,9 +87,6 @@ class RouteDeps(Protocol):
 
     @property
     def _validate_csrf(self) -> ValidateCsrfFn: ...
-
-    @property
-    def handle_purchase_event(self) -> SendPurchaseeventsFn: ...
 
     @property
     def internal_logout_account(

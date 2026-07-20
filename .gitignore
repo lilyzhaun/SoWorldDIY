@@ -28,6 +28,7 @@ auth_code.txt
 
 # Local-only modules (events, integrations)
 delivery_extension_local.py
+extensions_local.py
 request_overrides_local.py
 requirements-local.txt
 # Example templates are tracked

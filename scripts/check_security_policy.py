@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Final
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -24,12 +25,21 @@ UNPINNED_ACTION = re.compile(
 )
 PINNED = re.compile(r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+@[0-9a-f]{40}$")
 BASE_IMAGE = re.compile(r"^\s*FROM\s+(\S+)", re.M | re.I)
-external_delivery_IMPORT = re.compile(r"^\s*(from|import)\s+external_delivery_client\b|import\s+external_delivery_client", re.M)
+external_delivery_IMPORT = re.compile(
+    r"^\s*(from|import)\s+external_delivery_client\b|import\s+external_delivery_client", re.M
+)
 PUBLIC_BIND = re.compile(r"0\.0\.0\.0:(?!8888\b)\d+|0\.0\.0\.0:8888")
 # Container CMD may bind 0.0.0.0 inside network namespace; host publish must be loopback.
 COMPOSE_PUBLIC = re.compile(r'["\']0\.0\.0\.0:\d+:')
 RELEASE_FORBIDDEN = re.compile(r"\b(ssh|scp|systemctl|ansible|kubectl)\b", re.I)
-SENSITIVE_METRIC = re.compile(r'labelnames\s*=\s*\([^)]*(auth_code|password|token|secret)', re.I)
+SENSITIVE_METRIC = re.compile(
+    r"labelnames\s*=\s*\([^)]*(auth_code|password|token|secret)", re.I
+)
+PULL_REQUEST_TRIGGER: Final = re.compile(r"(?m)^\s{2}pull_request:\s*(?:#.*)?$")
+GITLEAKS_ACTION: Final = re.compile(
+    r"(?m)^\s*uses:\s*gitleaks/gitleaks-action@[0-9a-f]{40}\b"
+)
+PULL_REQUEST_READ: Final = re.compile(r"(?m)^\s+pull-requests:\s*read\s*(?:#.*)?$")
 
 
 def _tracked_files() -> set[str]:
@@ -42,7 +52,9 @@ def main() -> int:
     tracked = _tracked_files()
 
     for path in FORBIDDEN_TRACKED:
-        if path in tracked or any(t.startswith(path.rstrip("/") + "/") for t in tracked):
+        if path in tracked or any(
+            t.startswith(path.rstrip("/") + "/") for t in tracked
+        ):
             errors.append(f"tracked_local_secret_path: {path}")
 
     # Unpinned Actions
@@ -50,6 +62,12 @@ def main() -> int:
     if workflows.is_dir():
         for path in sorted(workflows.glob("*.yml")) + sorted(workflows.glob("*.yaml")):
             text = path.read_text(encoding="utf-8")
+            if (
+                PULL_REQUEST_TRIGGER.search(text)
+                and GITLEAKS_ACTION.search(text)
+                and not PULL_REQUEST_READ.search(text)
+            ):
+                errors.append(f"missing_gitleaks_pull_request_permission: {path.name}")
             for match in UNPINNED_ACTION.finditer(text):
                 ref = match.group("ref")
                 if ref.startswith("./"):
@@ -69,7 +87,7 @@ def main() -> int:
             image = match.group(1)
             if image.startswith("--") or image.upper() == "scratch":
                 continue
-            # multi-stage AS name: already captured full token before AS? 
+            # multi-stage AS name: already captured full token before AS?
             image = image.split()[0]
             if "@sha256:" not in image:
                 errors.append(f"unpinned_base_image: {image}")
@@ -90,7 +108,9 @@ def main() -> int:
     # Forbidden external_delivery imports in production backend source (delivery_extension_local excluded)
     app_dir = ROOT / "backend" / "app"
     for path in app_dir.rglob("*.py"):
-        if path.name.startswith("delivery_extension_local") or path.name.startswith("request_overrides_local"):
+        if path.name.startswith("delivery_extension_local") or path.name.startswith(
+            "request_overrides_local"
+        ):
             continue
         text = path.read_text(encoding="utf-8")
         if external_delivery_IMPORT.search(text):
@@ -103,7 +123,9 @@ def main() -> int:
 
     # Sensitive metric labels
     metrics = ROOT / "backend" / "app" / "metrics.py"
-    if metrics.is_file() and SENSITIVE_METRIC.search(metrics.read_text(encoding="utf-8")):
+    if metrics.is_file() and SENSITIVE_METRIC.search(
+        metrics.read_text(encoding="utf-8")
+    ):
         errors.append("sensitive_metric_label: metrics.py")
 
     if errors:

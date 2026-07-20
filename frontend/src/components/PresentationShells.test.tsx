@@ -33,6 +33,7 @@ describe('presentation shell contracts', () => {
         data={null}
         error=""
         loading={false}
+        numbersMode="initial"
         numbers={[]}
         numbersLoading={false}
         onAutoRefreshCancel={vi.fn()}
@@ -169,5 +170,42 @@ describe('presentation shell contracts', () => {
     expect(html).toContain('aria-modal="true"')
     expect(html).toContain('aria-labelledby="customModalTitle"')
     expect(html).toContain('id="customModalTitle"')
+  })
+
+  it('marks usage refreshing with the requesting waiting phase and keeps the sync copy', () => {
+    const html = renderToStaticMarkup(
+      <ActiveOffersSection
+        currentSub={null}
+        onOpenTransfer={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectOffer={vi.fn()}
+        refreshingUsage
+        selectedPlanId={null}
+        visible
+      />,
+    )
+
+    expect(html).toContain('id="refreshUsageBtn"')
+    expect(html).toContain('同步中…')
+    expect(html).toContain('data-waiting-phase="requesting"')
+    expect(html).toContain('waiting-state-marker')
+    expect(html).toContain('disabled=""')
+  })
+
+  it('keeps the idle usage refresh free of any waiting phase marker', () => {
+    const html = renderToStaticMarkup(
+      <ActiveOffersSection
+        currentSub={null}
+        onOpenTransfer={vi.fn()}
+        onRefresh={vi.fn()}
+        onSelectOffer={vi.fn()}
+        refreshingUsage={false}
+        selectedPlanId={null}
+        visible
+      />,
+    )
+
+    expect(html).toContain('刷新用量')
+    expect(html).not.toContain('data-waiting-phase')
   })
 })

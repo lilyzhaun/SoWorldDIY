@@ -76,7 +76,7 @@ FastAPI 后端
 
 ### 服务模块
 
-`services.py` 封装品牌识别、套餐后台刷新和购买通知。业务逻辑按职责拆分到独立模块，每个模块导出 typed 函数和 `TypedDict` / `dataclass` 边界：
+`services.py` 封装品牌识别与套餐后台刷新。业务逻辑按职责拆分到独立模块，每个模块导出 typed 函数和 `TypedDict` / `dataclass` 边界：
 
 - `services_commerce.py` — 套餐购买 payload 构造（`build_plan_purchase_payload`）、CMN 购买 payload 构造（`build_cmn_purchase_payload`）、钱包余额解析（`parse_wallet_balance`）、套餐缓存文件加载（`load_plans_from_cache`）。
 - `services_profile.py` — 资料聚合：`fetch_and_build_profile`（按品牌顺序请求 getProfile）、`merge_brand_profile_data`、`build_profile_result`。
@@ -103,7 +103,7 @@ FastAPI 后端
 - `backend/app/config.py` 从环境变量和 `backend/.env` 加载配置。
 - `backend/app/auth_codes.py` 使用 Redis 存储鉴权码，并可从 `backend/auth_codes.json` 导入初始数据。
 - `backend/app/security.py` 负责密码加密和 CSRF token 工具。
-- `backend/app/delivery_extension.py` 是通知发送 seam，默认 no-op；部署时可通过 `delivery_extension_local.py` 覆盖。
+- 业务路由只通过 `backend/app/hooks.py` 发出可选本地事件；文案与投递仅存在于 gitignore 的 `extensions_local.py` / `delivery_extension_local.py`。开源 `delivery_extension.py` 保持默认 no-op 投递 seam。
 - `backend/app/cache_store.py` 提供内存缓存。
 - `backend/app/auth_cli.py` 提供鉴权码管理 CLI。
 

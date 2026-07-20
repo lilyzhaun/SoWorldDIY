@@ -9,6 +9,7 @@ on:
 # Least privilege for PR/push CI (no write, no secrets beyond GITHUB_TOKEN).
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -23,6 +24,10 @@ jobs:
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - name: Require pinned Actions
         run: python3 scripts/check_actions_pinned.py
+      - name: Repository security policy
+        run: python3 scripts/check_security_policy.py
+      - name: Release policy
+        run: python3 scripts/check_release_policy.py
       - name: Install actionlint
         run: |
           set -euo pipefail

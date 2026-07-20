@@ -25,6 +25,35 @@ describe('runCmnAutoRefresh', () => {
     await running
   })
 
+  it('reports typed requesting and cooldown phases around the 3000ms wait', async () => {
+    vi.useFakeTimers()
+    const request = vi.fn<CmnAutoRefreshRequest>().mockResolvedValue(nonMatch)
+    const phases: Array<{ readonly attempt: number; readonly phase: string }> = []
+    const controller = new AbortController()
+
+    const running = runCmnAutoRefresh({
+      pattern: '666',
+      request,
+      signal: controller.signal,
+      onProgress: (progress) => phases.push(progress),
+    })
+    await Promise.resolve()
+    expect(phases).toEqual([
+      { attempt: 1, phase: 'requesting' },
+      { attempt: 1, phase: 'cooldown' },
+    ])
+
+    await vi.advanceTimersByTimeAsync(2999)
+    expect(phases).toHaveLength(2)
+    expect(request).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(1)
+    expect(request).toHaveBeenCalledTimes(2)
+    expect(phases[2]).toEqual({ attempt: 2, phase: 'requesting' })
+    controller.abort()
+    await running
+  })
+
   it('stops at the first candidate matched by the shared CMN matcher', async () => {
     vi.useFakeTimers()
     let requestCount = 0

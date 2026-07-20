@@ -20,10 +20,13 @@ type CmnNumbersOptions = {
 
 export const CMN_REFRESH_COOLDOWN_SECONDS = 3
 
+export type CmnNumbersMode = 'initial' | 'subsequent'
+
 export function useCmnNumbers({ accountId, currentSubId, lifecycle }: CmnNumbersOptions) {
   const { mountedRef, scopeGenerationRef } = lifecycle
   const [cmnNumbers, setCmnNumbers] = useState<string[]>([])
   const [cmnNumbersLoading, setCmnNumbersLoading] = useState(false)
+  const [cmnNumbersMode, setCmnNumbersMode] = useState<CmnNumbersMode>('initial')
   const [selectedNumber, setSelectedNumber] = useState<string | null>(null)
   const [cmnCanRefresh, setCmnCanRefresh] = useState(true)
   const [cmnCooldown, setCmnCooldown] = useState(0)
@@ -41,6 +44,7 @@ export function useCmnNumbers({ accountId, currentSubId, lifecycle }: CmnNumbers
     setCmnCooldown(0)
     setCmnNumbersLoading(false)
     setCmnNumbers([])
+    setCmnNumbersMode('initial')
     setSelectedNumber(null)
   }, [accountId, currentSubId])
 
@@ -120,6 +124,7 @@ export function useCmnNumbers({ accountId, currentSubId, lifecycle }: CmnNumbers
         const numbers = data.numbers || []
         setSelectedNumber(null)
         setCmnNumbers(numbers)
+        setCmnNumbersMode('subsequent')
         canRefreshAtRef.current = Date.now() + CMN_REFRESH_COOLDOWN_SECONDS * 1000
         setCmnCooldown(CMN_REFRESH_COOLDOWN_SECONDS)
         return { kind: 'success', numbers }
@@ -169,6 +174,7 @@ export function useCmnNumbers({ accountId, currentSubId, lifecycle }: CmnNumbers
     cmnCooldown,
     cmnNumbers,
     cmnNumbersLoading,
+    cmnNumbersMode,
     refreshCmnNumbers,
     releaseAutoRequestAfterCancel,
     requestCmnNumbers,

@@ -42,7 +42,14 @@ export async function resolveBrowserExecutable(environment = process.env, platfo
   )
 }
 
-export async function dumpBrowserDom(browserExecutable, browserProfile, testUrl, virtualTimeBudget = 1000, windowSize) {
+export async function dumpBrowserDom(
+  browserExecutable,
+  browserProfile,
+  testUrl,
+  virtualTimeBudget = 1000,
+  windowSize,
+  browserArguments = [],
+) {
   const argumentsList = [
     '--headless=new',
     '--no-sandbox',
@@ -50,6 +57,7 @@ export async function dumpBrowserDom(browserExecutable, browserProfile, testUrl,
     '--disable-dev-shm-usage',
     `--user-data-dir=${browserProfile}`,
     `--virtual-time-budget=${virtualTimeBudget}`,
+    ...browserArguments,
     '--dump-dom',
     testUrl,
   ]

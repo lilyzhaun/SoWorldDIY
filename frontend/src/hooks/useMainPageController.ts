@@ -175,6 +175,7 @@ export function useMainPageController(): ViewProps {
         loading: cmn.cmnLoading,
         numbers: cmn.cmnNumbers,
         numbersLoading: cmn.cmnNumbersLoading,
+        numbersMode: cmn.cmnNumbersMode,
         onAutoRefreshCancel: cmn.cancelCmnAutoRefresh,
         onAutoRefreshStart: () => cmn.startCmnAutoRefresh(modal.showAlert),
         onPatternChange: cmn.changeCmnPattern,

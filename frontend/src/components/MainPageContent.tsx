@@ -1,4 +1,4 @@
-import type { CmnAutoRefreshState } from '@/hooks/useCmn'
+import type { CmnAutoRefreshState, CmnNumbersMode } from '@/hooks/useCmn'
 import type { CmnCheckResponse, Plan, Subscription, TransferDraft } from '@/types'
 import type { CmnPattern } from '@/utils/cmnPattern'
 import { ActiveOffersSection } from './ActiveOffersSection'
@@ -36,6 +36,7 @@ type CmnContent = {
   readonly loading: boolean
   readonly numbers: string[]
   readonly numbersLoading: boolean
+  readonly numbersMode: CmnNumbersMode
   readonly onAutoRefreshCancel: () => void
   readonly onAutoRefreshStart: () => void
   readonly onPatternChange: (pattern: string) => void

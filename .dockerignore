@@ -18,6 +18,7 @@ backend/.env
 backend/auth_codes.json
 backend/auth_code.txt
 backend/app/delivery_extension_local.py
+backend/app/extensions_local.py
 backend/app/request_overrides_local.py
 backend/requirements-local.txt
 
