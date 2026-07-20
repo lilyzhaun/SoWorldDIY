@@ -33,3 +33,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Auth-code v2 key parsing hardened against reserved shapes and non-hex digests
 - Redis systemd unit uses `Type=simple` without libsystemd notify dependency
+- Dependabot pull-request secret scans receive the read-only PR metadata permission required by Gitleaks
+- Tag releases select notes from the matching changelog version instead of always using `[Unreleased]`

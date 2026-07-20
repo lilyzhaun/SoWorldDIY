@@ -206,6 +206,7 @@ docker compose --env-file deploy/compose/.env up -d --build --wait
 - 镜像由 digest 固定的多阶段 `Dockerfile` 构建。
 - Redis 不发布宿主机端口；应用只发布到 `127.0.0.1:18888`。
 - 语义化版本标签 `v*.*.*` 触发 `.github/workflows/release.yml`，向 `ghcr.io/<repository>` 发布带 SBOM/provenance 的镜像。
+- 推送标签前必须把 `[Unreleased]` 内容整理到对应的 `## [X.Y.Z]` 章节；标签缺少匹配章节时发布会失败，避免发布错误说明。
 - 手动 `workflow_dispatch` 只执行 dry-run，不发布镜像或 GitHub Release。
 - 不得把密钥写入镜像；使用 `deploy/compose/.env` 或运行时环境文件。
 
