@@ -13,6 +13,8 @@ from release_notes import extract_release_notes
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 RELEASE_NOTES_COMMAND: Final = "python3 scripts/release_notes.py"
+ATTESTATION_ACTION: Final = "actions/attest-build-provenance@"
+PRIVATE_ATTESTATION_GUARD: Final = "github.event.repository.private == false"
 RELEASE_NOTES_FIXTURE: Final = """# Changelog
 
 ## [Unreleased]
@@ -58,6 +60,10 @@ def main() -> int:
         text = path.read_text(encoding="utf-8")
         if RELEASE_NOTES_COMMAND not in text:
             violations.append(f"{path.relative_to(ROOT)}: RELEASE_NOTES_HELPER")
+        if ATTESTATION_ACTION in text and PRIVATE_ATTESTATION_GUARD not in text:
+            violations.append(
+                f"{path.relative_to(ROOT)}: PRIVATE_REPOSITORY_ATTESTATION_GUARD"
+            )
         for pattern, name in FORBIDDEN:
             if pattern.search(text):
                 violations.append(f"{path.relative_to(ROOT)}: {name}")
