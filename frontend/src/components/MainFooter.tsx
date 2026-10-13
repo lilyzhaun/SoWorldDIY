@@ -1,6 +1,6 @@
 type MainFooterProps = { readonly visible: boolean }
 
-export function MainFooter({ visible }: MainFooterProps): JSX.Element {
+export function MainFooter({ visible }: MainFooterProps): React.JSX.Element {
   return (
     <div id="mainFooter" className="footer-note-main" style={{ display: visible ? 'block' : 'none' }}>
       仅供个人学习使用，高净值账号请勿使用本网站。

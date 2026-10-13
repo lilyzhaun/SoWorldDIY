@@ -14,6 +14,7 @@ from typing import TextIO
 from urllib.parse import parse_qs, urlsplit, urlunsplit
 
 import redis
+from redis.typing import FieldT
 
 from .auth_code_keys import parse_auth_code_hmac_key
 from .redis_migrate_core import (
@@ -155,7 +156,7 @@ class _DecodeHashProxy:
         mapping: Mapping[str, object] | None = None,
     ) -> object:
         if mapping is not None:
-            encoded = {
+            encoded: dict[FieldT, bytes] = {
                 str(k).encode("utf-8"): str(v).encode("utf-8")
                 for k, v in mapping.items()
             }

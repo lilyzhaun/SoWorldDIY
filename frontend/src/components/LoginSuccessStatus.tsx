@@ -2,7 +2,7 @@ type LoginSuccessStatusProps = {
   readonly durationMs: number
 }
 
-export function LoginSuccessStatus({ durationMs }: LoginSuccessStatusProps): JSX.Element {
+export function LoginSuccessStatus({ durationMs }: LoginSuccessStatusProps): React.JSX.Element {
   return (
     <div className="login-success-status" role="status" aria-live="polite" aria-atomic="true">
       <div className="login-success-icon" aria-hidden="true">

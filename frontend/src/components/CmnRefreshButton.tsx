@@ -42,7 +42,11 @@ type CmnRefreshButtonProps = CmnRefreshButtonStateInput & {
   readonly visible: boolean
 }
 
-function renderCopy(state: CmnRefreshButtonState, mode: CmnNumbersMode, timerId: string | undefined): JSX.Element {
+function renderCopy(
+  state: CmnRefreshButtonState,
+  mode: CmnNumbersMode,
+  timerId: string | undefined,
+): React.JSX.Element {
   switch (state.kind) {
     case 'running':
       return (
@@ -82,7 +86,7 @@ export function CmnRefreshButton({
   pattern,
   validPattern,
   visible,
-}: CmnRefreshButtonProps): JSX.Element {
+}: CmnRefreshButtonProps): React.JSX.Element {
   const longPressTimerRef = useRef<number | null>(null)
   const suppressClickFallbackRef = useRef<number | null>(null)
   const armedPointerRef = useRef<number | null>(null)

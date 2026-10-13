@@ -2,6 +2,7 @@ import { StrictMode, useEffect, useLayoutEffect, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { useCmn } from '@/hooks/useCmn'
+import { waitForRender } from './waitForRender'
 
 const wait = (milliseconds: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 const realDateNow = Date.now.bind(Date)
@@ -25,7 +26,7 @@ window.fetch = async (input, init): Promise<Response> => {
   return Response.json({ status: 'success', numbers: numbersRequest === 1 ? ['11111111'] : ['12345678'] })
 }
 
-export function Harness(): JSX.Element {
+export function Harness(): React.JSX.Element {
   const cmn = useCmn('account-1', 'subscription-1', true)
   const checkCmnEligibility = cmn.checkCmnEligibility
   const cmnRef = useRef(cmn)
@@ -46,27 +47,27 @@ export function Harness(): JSX.Element {
     void (async () => {
       const eligibilityApplied = cmn.cmnData !== null
       const manualOutcome = await cmn.refreshCmnNumbers(() => undefined)
-      await wait(0)
+      await waitForRender(() => cmnRef.current.cmnNumbers[0] === '11111111')
       const getHarness = (): HTMLElement => document.getElementById('hook-harness') as HTMLElement
       const numbersApplied = manualOutcome.kind === 'success' && getHarness().dataset.numbers === '11111111'
 
       clockOffset += 3000
       await wait(300)
       cmnRef.current.changeCmnPattern('666')
-      await wait(0)
+      await waitForRender(() => cmnRef.current.cmnPattern === '666')
 
       cmnRef.current.startCmnAutoRefresh(() => undefined)
-      await wait(0)
+      await waitForRender(() => cmnRef.current.cmnNumbersLoading)
       cmnRef.current.cancelCmnAutoRefresh()
-      await wait(0)
+      await waitForRender(() => !cmnRef.current.cmnNumbersLoading && cmnRef.current.cmnAutoRefresh.kind !== 'running')
       const firstRequestCancelRestored =
         getHarness().dataset.canRefresh === 'true' && getHarness().dataset.cooldown === '0'
 
       cmnRef.current.startCmnAutoRefresh(() => undefined)
-      await wait(20)
+      await waitForRender(() => cmnRef.current.cmnCooldown > 0)
       const cooldownBeforeCancel = getHarness().dataset.cooldown
       cmnRef.current.cancelCmnAutoRefresh()
-      await wait(0)
+      await waitForRender(() => cmnRef.current.cmnAutoRefresh.kind !== 'running')
       const cooldownAfterCancel = getHarness().dataset.cooldown
       const cooldownPreserved =
         cooldownBeforeCancel === cooldownAfterCancel &&

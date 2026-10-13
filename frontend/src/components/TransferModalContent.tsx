@@ -18,7 +18,7 @@ export function TransferModalContent({
   onChangeAmount,
   onChangeTarget,
   target,
-}: TransferModalContentProps): JSX.Element {
+}: TransferModalContentProps): React.JSX.Element {
   return (
     <div style={{ textAlign: 'left' }}>
       <div style={{ fontSize: '14px', color: 'var(--text-sub)', marginBottom: '15px' }}>

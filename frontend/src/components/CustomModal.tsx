@@ -10,7 +10,7 @@ type CustomModalProps = {
   readonly title: string
 }
 
-export function CustomModal({ actions, children, mode, onClose, open, title }: CustomModalProps): JSX.Element {
+export function CustomModal({ actions, children, mode, onClose, open, title }: CustomModalProps): React.JSX.Element {
   const dialogRef = useDialogAccessibility(open, onClose)
   return (
     <div

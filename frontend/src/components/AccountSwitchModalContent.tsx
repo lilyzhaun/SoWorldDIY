@@ -17,7 +17,7 @@ export function AccountSwitchModalContent({
   onSwitchAccount,
   onSwitchSubscription,
   subscriptions,
-}: AccountSwitchModalContentProps): JSX.Element {
+}: AccountSwitchModalContentProps): React.JSX.Element {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingBottom: '10px' }}>
       {subscriptions.length > 0 ? (

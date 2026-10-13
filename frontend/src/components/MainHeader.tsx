@@ -32,7 +32,7 @@ export function MainHeader({
   onShowAlert,
   onSwitchCategory,
   search,
-}: MainHeaderProps): JSX.Element {
+}: MainHeaderProps): React.JSX.Element {
   return (
     <div className="fixed-header-wrapper">
       <div className="container" style={{ paddingBottom: 0 }}>

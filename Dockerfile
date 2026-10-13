@@ -3,7 +3,7 @@
 # Base images pinned by digest (resolved 2026-10-13).
 
 ############################
-# Frontend build (Node 24)
+# Frontend build (Node 26)
 ############################
 FROM node:26-bookworm@sha256:f1233c415b41ffcf237c717b3dea92e9d4ea006e0e4c71edcb790605d74f5404 AS frontend-build
 WORKDIR /src/frontend
@@ -44,7 +44,7 @@ RUN pip install --no-cache-dir --require-hashes -r /app/backend/requirements.loc
 # Package installers are not part of the runtime. pip vendors older libraries
 # independently of our lock; remove it and ensurepip's bundled installer wheel.
 RUN python -m pip uninstall --yes pip \
- && python -c "import pathlib, shutil; shutil.rmtree(pathlib.Path('/usr/local/lib/python3.13/ensurepip'))"
+ && python -c "import pathlib, shutil, sysconfig; shutil.rmtree(pathlib.Path(sysconfig.get_path('stdlib')) / 'ensurepip')"
 COPY LICENSE THIRD_PARTY_NOTICES.md /app/
 
 # Application source (no local secrets or host-only extensions)

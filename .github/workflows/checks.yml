@@ -61,7 +61,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        node: ["20.19.0", "24"]
+        node: ["20.19.0", "24", "26"]
     defaults:
       run:
         working-directory: frontend
@@ -107,7 +107,7 @@ jobs:
     strategy:
       max-parallel: 1
       matrix:
-        python: ["3.11", "3.12", "3.13"]
+        python: ["3.11", "3.12", "3.13", "3.14"]
     needs: [frontend]
     defaults:
       run:

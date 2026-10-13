@@ -35,7 +35,13 @@ type MainPageViewProps = {
   readonly dialogs: Parameters<typeof MainPageDialogs>[0]
 }
 
-export function MainPageView({ accountId, loaderPresence, header, content, dialogs }: MainPageViewProps): JSX.Element {
+export function MainPageView({
+  accountId,
+  loaderPresence,
+  header,
+  content,
+  dialogs,
+}: MainPageViewProps): React.JSX.Element {
   return (
     <>
       <div style={{ display: 'none' }} dangerouslySetInnerHTML={{ __html: SVG_SPRITE }} />

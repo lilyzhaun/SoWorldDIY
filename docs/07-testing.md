@@ -71,7 +71,7 @@ npm test
 - `npm run test:unit`：普通单元、组件和 contract 测试，排除 `tests/browser/**`。
 - `npm run test:browser`：真实 Chromium 测试，使用 `--no-file-parallelism` 串行执行。
 
-CI 和 Release 共用验收工作流：Python 3.11/3.12/3.13，Node 20.19 与 24。
+CI 和 Release 共用验收工作流：Python 3.11/3.12/3.13/3.14，Node 20.19、24 与 26。
 Python 3.12 执行分支覆盖率门槛；前端默认收集 `.ts`、`.tsx` 与 `.mjs` 契约测试。
 Chromium 用例在 CI 执行，可通过 `CHROME_BIN` 指定本地可执行文件。
 

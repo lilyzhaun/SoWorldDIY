@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- 配套升级 React / React DOM 19.2.7 及类型声明，适配 JSX、可空 ref 与原生布尔 inert 属性。
+- 更新 Python 运行依赖、redis-py 8、开发工具和 GitHub Actions，并同步带哈希的运行锁文件。
+- 容器使用 Node 26 / Python 3.14，补齐两种 Linux 架构的 Python 3.14 wheel 哈希与 CI 验收。
+- Dependabot 将 React、React DOM 和对应类型声明分组更新，避免拆分升级造成版本冲突。
+
 ### Security
 - 交易接口增加 24 小时 Redis 幂等记录与 `Idempotency-Key`；结果未知时停止重复执行并提示核对。
 - 撤销鉴权码不再由启动种子导入恢复，所有模式拒绝将 v2 摘要直接当作鉴权码。
@@ -25,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 重写首次部署 README。
 - 恢复作者原创 PWA 图标，纠正之前错误的图标来源说明。
 - 修复 Prometheus 文件认证头配置和迁移内容/TTL 核验。
-- 默认运行遗漏的 `.mjs` 契约测试；CI/Release 共用 Python 3.11–3.13、Node 20.19/24 和 Chromium 验收。
+- 默认运行遗漏的 `.mjs` 契约测试；CI/Release 共用 Python 3.11–3.14、Node 20.19/24/26 和 Chromium 验收。
 - 发布传递同一个已扫描镜像，不在发布步骤重新构建；附带 SBOM。
 
 ### Upgrade notes

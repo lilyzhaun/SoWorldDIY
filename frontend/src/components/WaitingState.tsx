@@ -10,7 +10,7 @@ type WaitingStateProps = {
   readonly phase: WaitingPhase
 }
 
-export function WaitingState({ children, iconClassName, phase }: WaitingStateProps): JSX.Element {
+export function WaitingState({ children, iconClassName, phase }: WaitingStateProps): React.JSX.Element {
   const iconClass = ['waiting-state-icon', iconClassName].filter(Boolean).join(' ')
   return (
     <span className="waiting-state" data-waiting-phase={phase}>

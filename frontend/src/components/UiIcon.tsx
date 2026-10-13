@@ -24,7 +24,7 @@ type UiIconProps = {
   readonly size?: 16 | 18 | 20
 }
 
-function renderIcon(name: UiIconName): JSX.Element {
+function renderIcon(name: UiIconName): React.JSX.Element {
   switch (name) {
     case 'alert-triangle':
       return (
@@ -122,7 +122,7 @@ function renderIcon(name: UiIconName): JSX.Element {
   }
 }
 
-export function UiIcon({ className, name, size = 20 }: UiIconProps): JSX.Element {
+export function UiIcon({ className, name, size = 20 }: UiIconProps): React.JSX.Element {
   return (
     <svg
       aria-hidden="true"

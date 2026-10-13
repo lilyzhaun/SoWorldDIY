@@ -1,11 +1,9 @@
-import { execFile } from 'node:child_process'
 import { constants as fsConstants } from 'node:fs'
 import { access } from 'node:fs/promises'
 import { join } from 'node:path'
 import process from 'node:process'
-import { promisify } from 'node:util'
+import { chromium } from 'playwright-core'
 
-const executeFile = promisify(execFile)
 const browserEnvironmentVariables = ['CHROME_BIN', 'PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH', 'THREEHK_CHROME_BIN']
 const browserPathCandidates = ['chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable']
 
@@ -46,21 +44,25 @@ export async function dumpBrowserDom(
   browserExecutable,
   browserProfile,
   testUrl,
-  virtualTimeBudget = 1000,
+  completionTimeout = 1000,
   windowSize,
   browserArguments = [],
 ) {
-  const argumentsList = [
-    '--headless=new',
-    '--no-sandbox',
-    '--disable-gpu',
-    '--disable-dev-shm-usage',
-    `--user-data-dir=${browserProfile}`,
-    `--virtual-time-budget=${virtualTimeBudget}`,
-    ...browserArguments,
-    '--dump-dom',
-    testUrl,
-  ]
-  if (windowSize) argumentsList.splice(-2, 0, `--window-size=${windowSize}`)
-  return executeFile(browserExecutable, argumentsList, { maxBuffer: 1_000_000, timeout: 20_000 })
+  const [width, height] = (windowSize || '1280,720').split(',').map(Number)
+  const context = await chromium.launchPersistentContext(browserProfile, {
+    executablePath: browserExecutable,
+    headless: true,
+    viewport: { width, height },
+    args: ['--no-sandbox', '--disable-dev-shm-usage', ...browserArguments],
+    reducedMotion: browserArguments.includes('--force-prefers-reduced-motion=reduce') ? 'reduce' : 'no-preference',
+    timeout: 15_000,
+  })
+  try {
+    const page = context.pages()[0]
+    await page.goto(testUrl, { waitUntil: 'load', timeout: 15_000 })
+    await page.locator('[data-complete="true"]').waitFor({ state: 'attached', timeout: completionTimeout })
+    return { stdout: await page.content() }
+  } finally {
+    await context.close()
+  }
 }

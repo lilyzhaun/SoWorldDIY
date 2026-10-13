@@ -56,7 +56,7 @@ type MainPageContentProps = {
   readonly plans: PlansContent
 }
 
-export function MainPageContent({ cmn, footerVisible, offers, plans }: MainPageContentProps): JSX.Element {
+export function MainPageContent({ cmn, footerVisible, offers, plans }: MainPageContentProps): React.JSX.Element {
   return (
     <div className="content-wrapper">
       <PlanList {...plans} />

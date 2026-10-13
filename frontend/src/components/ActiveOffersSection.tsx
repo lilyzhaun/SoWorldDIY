@@ -21,7 +21,7 @@ export function ActiveOffersSection({
   refreshingUsage,
   selectedPlanId,
   visible,
-}: ActiveOffersSectionProps): JSX.Element {
+}: ActiveOffersSectionProps): React.JSX.Element {
   const activeOffers = currentSub?.activeOffers || []
   return (
     <div id="activeOffersContainer" style={{ display: visible ? 'block' : 'none' }}>
@@ -107,7 +107,7 @@ export function ActiveOffersSection({
                 id={`active-offer-details-${offer.offerId}`}
                 className={`card-details ${isOpen ? 'open' : ''}`}
                 aria-hidden={!isOpen}
-                inert={isOpen ? undefined : ''}
+                inert={!isOpen}
               >
                 <div className="card-details-inner">
                   {offer.usage && offer.usage.length > 0 ? (

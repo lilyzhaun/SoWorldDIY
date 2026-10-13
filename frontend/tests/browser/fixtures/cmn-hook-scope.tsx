@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { useCmn } from '@/hooks/useCmn'
+import { waitForRender } from './waitForRender'
 
 const wait = (milliseconds: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 const realDateNow = Date.now.bind(Date)
@@ -71,7 +72,7 @@ window.fetch = async (input, init): Promise<Response> => {
 
 type Scope = { readonly accountId: string; readonly subscriptionId: string }
 
-export function Harness(): JSX.Element {
+export function Harness(): React.JSX.Element {
   const [scope, setScope] = useState<Scope>({ accountId: 'account-1', subscriptionId: 'subscription-1' })
   const cmn = useCmn(scope.accountId, scope.subscriptionId, true)
   const cmnRef = useRef(cmn)
@@ -93,15 +94,16 @@ export function Harness(): JSX.Element {
       await wait(300)
 
       const oldNumbers = cmnRef.current.refreshCmnNumbers(() => undefined)
-      await wait(0)
+      await waitForRender(() => cmnRef.current.cmnNumbers.length === 0 && cmnRef.current.cmnNumbersLoading)
       const harness = (): HTMLElement => document.getElementById('scope-harness') as HTMLElement
       const manualCleared = harness().dataset.numbers === '' && harness().dataset.numbersLoading === 'true'
       const overlapOutcome = await cmnRef.current.refreshCmnNumbers(() => undefined)
       const nonOverlap = overlapOutcome.kind === 'unavailable' && numbersRequestCount === 2
 
       setScope({ accountId: 'account-2', subscriptionId: 'subscription-2' })
-      await wait(0)
-      await wait(0)
+      await waitForRender(
+        () => oldEligibilityAborted && !cmnRef.current.cmnNumbersLoading && cmnRef.current.selectedNumber === null,
+      )
       const scopeReset =
         harness().dataset.numbers === '' &&
         harness().dataset.numbersLoading === 'false' &&
@@ -110,12 +112,14 @@ export function Harness(): JSX.Element {
       resolveOldEligibility?.()
       resolveOldNumbers?.()
       await Promise.all([oldEligibility, oldNumbers])
-      await wait(0)
+      await waitForRender(() => cmnRef.current.cmnData === null && cmnRef.current.cmnNumbers.length === 0)
       const staleIgnored = harness().dataset.offer === '' && harness().dataset.numbers === ''
 
       await cmnRef.current.checkCmnEligibility()
       const newNumbers = await cmnRef.current.refreshCmnNumbers(() => undefined)
-      await wait(0)
+      await waitForRender(
+        () => cmnRef.current.cmnData?.offerId === 'new-offer' && cmnRef.current.cmnNumbers[0] === '22222222',
+      )
       const newScopeApplied =
         newNumbers.kind === 'success' &&
         harness().dataset.offer === 'new-offer' &&
@@ -127,12 +131,14 @@ export function Harness(): JSX.Element {
       const cooldownReenabled = harness().dataset.cooldown === '0' && harness().dataset.canRefresh === 'true'
 
       cmnRef.current.changeCmnPattern('666')
-      await wait(0)
+      await waitForRender(() => cmnRef.current.cmnPattern === '666')
       cmnRef.current.startCmnAutoRefresh(() => undefined)
-      await wait(0)
+      await waitForRender(() => cmnRef.current.cmnNumbersLoading)
       const autoLoading = harness().dataset.numbersLoading === 'true'
       cmnRef.current.cancelCmnAutoRefresh()
-      await wait(0)
+      await waitForRender(
+        () => !cmnRef.current.cmnNumbersLoading && cmnRef.current.cmnAutoRefresh.message === '已取消自动查找',
+      )
       const cancelReset =
         harness().dataset.numbersLoading === 'false' && harness().dataset.autoMessage === '已取消自动查找'
 
