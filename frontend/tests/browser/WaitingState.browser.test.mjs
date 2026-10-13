@@ -1,24 +1,39 @@
-import { mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { URL, fileURLToPath } from 'node:url'
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { createServer } from 'vite'
+import { chromium } from 'playwright-core'
 
-import { dumpBrowserDom, resolveBrowserExecutable } from './browserHarness.mjs'
+import { resolveBrowserExecutable } from './browserHarness.mjs'
 
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url))
 let server
 let browserExecutable
 let testUrl
 
-async function dumpState(url, virtualTimeBudget, windowSize, browserArguments = []) {
-  const browserProfile = await mkdtemp(join(tmpdir(), '3hk-waiting-state-browser-'))
+async function dumpState(url, completionTimeout, windowSize, browserArguments = []) {
+  const [width, height] = windowSize.split(',').map(Number)
+  const browser = await chromium.launch({
+    executablePath: browserExecutable,
+    headless: true,
+    args: ['--no-sandbox', '--disable-dev-shm-usage', ...browserArguments],
+    timeout: 15_000,
+  })
   try {
-    return await dumpBrowserDom(browserExecutable, browserProfile, url, virtualTimeBudget, windowSize, browserArguments)
+    const page = await browser.newPage({ viewport: { width, height } })
+    await page.emulateMedia({
+      reducedMotion: browserArguments.includes('--force-prefers-reduced-motion=reduce') ? 'reduce' : 'no-preference',
+    })
+    await page.goto(url, { waitUntil: 'load', timeout: 15_000 })
+    // CSS animation.finished follows the compositor clock. A virtual-time dump
+    // can exit before that promise settles, especially on a loaded CI runner.
+    await page.locator('#waiting-state-harness[data-complete="true"]').waitFor({
+      state: 'attached',
+      timeout: completionTimeout,
+    })
+    return { stdout: await page.content() }
   } finally {
-    await rm(browserProfile, { recursive: true, force: true })
+    await browser.close()
   }
 }
 
