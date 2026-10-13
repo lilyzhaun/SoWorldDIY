@@ -21,7 +21,7 @@ const STATUS_PRESENTATIONS = {
   error: { icon: 'x-circle', role: 'alert' },
 } as const satisfies Record<StatusTone, StatusPresentation>
 
-export function StatusMessage({ className, message, tone }: StatusMessageProps): JSX.Element {
+export function StatusMessage({ className, message, tone }: StatusMessageProps): React.JSX.Element {
   const presentation: StatusPresentation = STATUS_PRESENTATIONS[tone]
   const rootClassName = `status-message status-message--${tone}${className ? ` ${className}` : ''}`
 

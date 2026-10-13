@@ -1,6 +1,6 @@
 # 配置说明
 
-锁定安装支持 Linux x86_64/aarch64 和 CPython 3.11–3.13；其他平台暂未做哈希锁兼容性
+锁定安装支持 Linux x86_64/aarch64 和 CPython 3.11–3.14；其他平台暂未做哈希锁兼容性
 验收，不应直接宣称受支持。更新依赖时同时更新 `requirements.txt` 与 `requirements.lock`。
 可在隔离的 Python 3.12 工具环境使用 `pip==25.3`、`pip-tools==7.5.2`，运行
 `pip-compile --generate-hashes --no-emit-index-url --no-emit-trusted-host --output-file requirements.lock requirements.txt`，

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import { flushSync } from 'react-dom'
 
 import { CmnSection } from '@/components/CmnSection'
 import type { CmnAutoRefreshState, CmnNumbersMode } from '@/hooks/useCmn'
@@ -8,7 +9,7 @@ import { parseCmnPattern } from '@/utils/cmnPattern'
 
 const wait = (milliseconds: number): Promise<void> => new Promise((resolve) => window.setTimeout(resolve, milliseconds))
 
-export function Harness(): JSX.Element {
+export function Harness(): React.JSX.Element {
   const [pattern, setPattern] = useState('')
   const [autoRefresh, setAutoRefresh] = useState<CmnAutoRefreshState>({ kind: 'idle', message: '' })
   const [numbers, setNumbers] = useState(['12345678'])
@@ -132,7 +133,7 @@ function dispatchContextMenu(button: HTMLButtonElement): boolean {
 }
 
 async function run(): Promise<void> {
-  createRoot(document.getElementById('root') as HTMLElement).render(<Harness />)
+  flushSync(() => createRoot(document.getElementById('root') as HTMLElement).render(<Harness />))
   await wait(0)
   const refreshButton = document.getElementById('refreshNumBtn') as HTMLButtonElement
   Object.defineProperties(refreshButton, {

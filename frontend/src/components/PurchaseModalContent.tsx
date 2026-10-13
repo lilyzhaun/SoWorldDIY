@@ -14,7 +14,7 @@ export function PurchaseModalContent({
   draft,
   onChangeDraft,
   showNewLineOption,
-}: PurchaseModalContentProps): JSX.Element {
+}: PurchaseModalContentProps): React.JSX.Element {
   const { currentBalance, maxAllowed, validTxn, payAmount } = purchasePayment(draft, balance)
   return (
     <div style={{ textAlign: 'left' }}>

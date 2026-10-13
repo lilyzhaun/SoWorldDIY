@@ -1,6 +1,6 @@
 type CartFabProps = { readonly count: number; readonly onOpen: () => void; readonly total: number }
 
-export function CartFab({ count, onOpen, total }: CartFabProps): JSX.Element {
+export function CartFab({ count, onOpen, total }: CartFabProps): React.JSX.Element {
   return (
     <button
       type="button"

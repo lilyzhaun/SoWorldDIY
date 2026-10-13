@@ -48,7 +48,7 @@ export function CmnSection({
   pattern,
   selectedNumber,
   visible,
-}: CmnSectionProps): JSX.Element {
+}: CmnSectionProps): React.JSX.Element {
   const keyboardStartPendingRef = useRef(false)
   const visibleNumbers = numbers.slice(0, 9)
   const patternError = parsedPattern.kind === 'invalid' ? parsedPattern.message : ''
@@ -68,7 +68,7 @@ export function CmnSection({
     document.getElementById('refreshNumBtn')?.focus()
   }, [autoRefresh.kind])
 
-  const renderRefreshButton = (mode: CmnNumbersMode): JSX.Element => (
+  const renderRefreshButton = (mode: CmnNumbersMode): React.JSX.Element => (
     <CmnRefreshButton
       autoRefresh={autoRefresh}
       canRefresh={canRefresh}

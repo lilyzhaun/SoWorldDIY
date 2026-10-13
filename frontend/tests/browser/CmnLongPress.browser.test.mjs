@@ -60,7 +60,7 @@ describe('CMN long press in real Chromium', () => {
     expect(stdout).toContain('data-zero-seconds-hidden="true"')
     expect(stdout).toContain('data-loading-animation-name="waiting-state-spin"')
     expect(stdout).toContain('data-reduced-motion="false"')
-    expect(stdout).toContain('data-viewport-width="500"')
+    expect(stdout).toContain('data-viewport-width="375"')
     expect(stdout).toContain('data-root-fills-viewport="true"')
   }, 30_000)
 

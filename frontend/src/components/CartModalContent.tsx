@@ -8,7 +8,12 @@ type CartModalContentProps = {
   readonly total: number
 }
 
-export function CartModalContent({ cart, onRemove, onUpdateQuantity, total }: CartModalContentProps): JSX.Element {
+export function CartModalContent({
+  cart,
+  onRemove,
+  onUpdateQuantity,
+  total,
+}: CartModalContentProps): React.JSX.Element {
   return (
     <div>
       <div className="cart-list">

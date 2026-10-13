@@ -22,7 +22,7 @@ export function CartQuantityModal({
   onExitComplete,
   onUpdateDraft,
   phase,
-}: CartQuantityModalProps): JSX.Element {
+}: CartQuantityModalProps): React.JSX.Element {
   const entered = phase === 'entered'
   const dialogRef = useDialogAccessibility(true, onCancel)
   return (

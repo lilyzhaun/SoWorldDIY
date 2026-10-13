@@ -19,7 +19,7 @@ export function MainModalActions({
   onCheckout,
   onConfirmPurchase,
   onConfirmTransfer,
-}: MainModalActionsProps): JSX.Element {
+}: MainModalActionsProps): React.JSX.Element {
   if (modalKind === 'alert') {
     return (
       <button className="modal-btn confirm alert-ok" onClick={onClose}>

@@ -62,7 +62,7 @@ export function HistoryModal({
   onClose,
   onQuery,
   onSelectDetail,
-}: HistoryModalProps): JSX.Element {
+}: HistoryModalProps): React.JSX.Element {
   const historyDetail = historyDetailIndex === null ? null : (historyItems[historyDetailIndex] ?? null)
   const dialogRef = useDialogAccessibility(historyOpen, onClose)
   const backButtonRef = useRef<HTMLButtonElement>(null)

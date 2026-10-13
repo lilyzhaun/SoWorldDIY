@@ -2,7 +2,7 @@ import { LoginSuccessStatus } from '@/components/LoginSuccessStatus'
 import { StatusMessage } from '@/components/StatusMessage'
 import { LOGIN_REDIRECT_DELAY_MS, useLoginFlow } from '@/hooks/useLoginFlow'
 
-export function LoginPage(): JSX.Element {
+export function LoginPage(): React.JSX.Element {
   const {
     authCode,
     clearRetainedToastIfHidden,

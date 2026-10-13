@@ -23,7 +23,7 @@ export function PlanList({
   selectedPlanId,
   showFreePlans,
   visible,
-}: PlanListProps): JSX.Element {
+}: PlanListProps): React.JSX.Element {
   return (
     <div id="planListContainer" style={{ display: visible ? undefined : 'none' }}>
       <div id="planList" className="plan-list">
@@ -59,7 +59,7 @@ export function PlanList({
                   id={`plan-details-${plan.offerId}`}
                   className={`card-details ${isOpen ? 'open' : ''}`}
                   aria-hidden={!isOpen}
-                  inert={isOpen ? undefined : ''}
+                  inert={!isOpen}
                 >
                   <div className="card-details-inner">
                     <div className="detail-desc">{stripHtml(plan.desc)}</div>

@@ -132,7 +132,7 @@ export function MainPageDialogs({
   purchase,
   quantity,
   transfer,
-}: MainPageDialogsProps): JSX.Element {
+}: MainPageDialogsProps): React.JSX.Element {
   return (
     <>
       <CartFab {...cartFab} />

@@ -29,7 +29,7 @@ export function InboxModal({
   onRefresh,
   onSelectMessage,
   subscriptions,
-}: InboxModalProps): JSX.Element {
+}: InboxModalProps): React.JSX.Element {
   const activeMessage = activeInboxIndex === null ? null : (inboxMessages[activeInboxIndex] ?? null)
   const safeActiveInboxContent = useMemo(
     () => sanitizeInboxContent(activeMessage?.content ?? ''),

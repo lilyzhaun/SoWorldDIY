@@ -17,7 +17,7 @@ function getVisibleFocusableElements(dialog: HTMLElement): HTMLElement[] {
   })
 }
 
-export function useDialogAccessibility(open: boolean, onClose: () => void): React.RefObject<HTMLDivElement> {
+export function useDialogAccessibility(open: boolean, onClose: () => void): React.RefObject<HTMLDivElement | null> {
   const dialogRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
 
