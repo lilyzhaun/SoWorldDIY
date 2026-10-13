@@ -17,9 +17,11 @@ from .auth_code_keys import (
 
 SESSION_PREFIX = "session:"
 CACHE_PREFIX = "cache:"
+OPERATION_PREFIX = "operation:"
 _PREFIX = {
     "session": SESSION_PREFIX,
     "cache": CACHE_PREFIX,
+    "operation": OPERATION_PREFIX,
     "auth_legacy": LEGACY_KEY_PREFIX,
     "auth_v2": V2_KEY_PREFIX,
 }
@@ -59,6 +61,7 @@ class MigrationPlan:
     cache_count: int
     auth_legacy_count: int
     auth_v2_count: int
+    operation_count: int
     items: tuple[PlannedKey, ...]
 
     def as_public_dict(self) -> dict[str, object]:
@@ -68,6 +71,7 @@ class MigrationPlan:
             "cache_count": self.cache_count,
             "auth_legacy_count": self.auth_legacy_count,
             "auth_v2_count": self.auth_v2_count,
+            "operation_count": self.operation_count,
             "prefixes": dict(_PREFIX),
             "keys": [
                 {
@@ -99,12 +103,16 @@ def _safe_pttl(client: MigrationRedisClient, key: str) -> int:
 def build_plan(source: MigrationRedisClient, *, hmac_key: bytes) -> MigrationPlan:
     items: list[PlannedKey] = []
     session_count = cache_count = auth_legacy_count = auth_v2_count = 0
+    operation_count = 0
     for key in _scan_keys(source, f"{SESSION_PREFIX}*"):
         session_count += 1
         items.append(PlannedKey("session", key, key, _safe_pttl(source, key)))
     for key in _scan_keys(source, f"{CACHE_PREFIX}*"):
         cache_count += 1
         items.append(PlannedKey("cache", key, key, _safe_pttl(source, key)))
+    for key in _scan_keys(source, f"{OPERATION_PREFIX}*"):
+        operation_count += 1
+        items.append(PlannedKey("operation", key, key, _safe_pttl(source, key)))
     for key in _scan_keys(source, f"{LEGACY_KEY_PREFIX}*"):
         pttl_ms = _safe_pttl(source, key)
         if is_v2_redis_key(key):
@@ -119,6 +127,7 @@ def build_plan(source: MigrationRedisClient, *, hmac_key: bytes) -> MigrationPla
         cache_count=cache_count,
         auth_legacy_count=auth_legacy_count,
         auth_v2_count=auth_v2_count,
+        operation_count=operation_count,
         items=tuple(items),
     )
 
@@ -156,9 +165,9 @@ def _copy_auth_hash(
 def apply_plan(
     source: MigrationRedisClient, dest: MigrationRedisClient, plan: MigrationPlan
 ) -> dict[str, int]:
-    copied = {"session": 0, "cache": 0, "auth_legacy": 0, "auth_v2": 0}
+    copied = {"session": 0, "cache": 0, "operation": 0, "auth_legacy": 0, "auth_v2": 0}
     for item in plan.items:
-        if item.kind in {"session", "cache"}:
+        if item.kind in {"session", "cache", "operation"}:
             _restore_binary(source, dest, item)
         elif item.kind in {"auth_legacy", "auth_v2"}:
             try:

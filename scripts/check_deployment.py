@@ -39,7 +39,9 @@ def main() -> None:
         config = entrypoint.split("<<YAML\n", 1)[1].split("\nYAML", 1)[0]
         (work / "prometheus.yml").write_text(config + "\n", encoding="utf-8")
         (work / "metrics_secret").write_text("audit-synthetic-only\n", encoding="utf-8")
-        image = re.search(r"image: (prom/prometheus:\S+)", (ROOT / "docker-compose.yml").read_text())
+        # Validate with the same upstream promtool version. The rebuilt image is
+        # built and scanned separately by compose-scan in the shared workflow.
+        image = re.search(r"FROM (prom/prometheus:\S+)", (ROOT / "deploy/monitoring/Dockerfile").read_text())
         assert image is not None
         run(["docker", "run", "--rm", "--network", "none", "--memory", "128m", "--pids-limit", "64", "--entrypoint", "/bin/promtool",
              "--mount", f"type=bind,src={work},dst=/audit,readonly",

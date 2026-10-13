@@ -4,7 +4,7 @@
 
 services:
   redis:
-    image: redis:8.0-alpine@sha256:5f61955be8ab2ccee9372b84ae4d4da2e2b156f87281e3f218544055e7ee04d4
+    image: redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     restart: unless-stopped
     command: ["/bin/sh", "/entrypoint.sh"]
     environment:
@@ -60,7 +60,10 @@ services:
 
   prometheus:
     profiles: ["monitoring"]
-    image: prom/prometheus:v3.2.1@sha256:6927e0919a144aa7616fd0137d4816816d42f6b816de3af269ab065250859a62
+    build:
+      context: .
+      dockerfile: deploy/monitoring/Dockerfile
+    image: soworld-prometheus:local
     restart: unless-stopped
     depends_on:
       app:

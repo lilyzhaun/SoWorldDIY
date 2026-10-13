@@ -7,6 +7,7 @@ from typing import Any, Protocol, runtime_checkable
 import requests
 from fastapi import Request
 
+from .idempotency import UpstreamWriteUncertain
 from .runtime import BASE_HEADERS, PROXIES
 from .session_store import SessionConflictError, SessionContext
 from .upstream_urls import simworld_url
@@ -122,7 +123,6 @@ def attempt_silent_relogin(
                         d._save_session(ctx)
                     except SessionConflictError:
                         request.state.session_ctx = None
-                        request.state.delete_session_cookie = True
                         logger.info(
                             "Silent re-login abandoned operation=silent_relogin reason=session_conflict"
                         )
@@ -154,12 +154,17 @@ def make_3hk_request(
         return None
 
     cookies = account_context.get("cookies", {})
+    financial_write = method.upper() == "POST" and getattr(
+        request.state, "idempotent_write", False
+    )
     headers = dict(BASE_HEADERS)
     headers["User-Agent"] = request.headers.get("User-Agent", "Mozilla/5.0")
 
     try:
         with d.get_isolated_session() as s:
             s.cookies.update(cookies)
+            if financial_write:
+                request.state.financial_write_started = True
             response = s.request(
                 method,
                 url,
@@ -169,6 +174,10 @@ def make_3hk_request(
                 proxies=d.resolve_proxies(url, PROXIES),
                 timeout=(5, 15),
             )
+            if financial_write and response.status_code >= 500:
+                raise UpstreamWriteUncertain(
+                    "Upstream returned an uncertain write status"
+                )
 
             if response.status_code == 401:
                 target_id = account_id
@@ -218,7 +227,6 @@ def make_3hk_request(
                         # ancillary cookie refresh loses a CAS race or Redis
                         # fails; never imply a completed write is safe to retry.
                         request.state.session_ctx = None
-                        request.state.delete_session_cookie = True
                         logger.warning(
                             "Session refresh skipped operation=make_3hk_request error_class=%s",
                             type(exc).__name__,
@@ -230,4 +238,6 @@ def make_3hk_request(
             "Upstream request failed operation=make_3hk_request error_class=%s",
             type(exc).__name__,
         )
+        if financial_write:
+            raise UpstreamWriteUncertain("Upstream write result unavailable") from exc
         return None

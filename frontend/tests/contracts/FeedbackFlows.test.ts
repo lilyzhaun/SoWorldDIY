@@ -38,7 +38,7 @@ describe('semantic feedback flow contracts', () => {
       '转移数量不能少于 ${transferDraft.minTransfer}',
       '余额不足',
       "data.message || '转移失败'",
-      '网络请求失败',
+      '操作结果待确认',
     ]) {
       expect(transferSource).toContain(message)
     }

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import secrets
+from urllib.parse import quote
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -78,7 +79,9 @@ def register_session_routes(app: FastAPI, deps: RouteDeps) -> None:
             accounts = ctx.data.get("accounts", {})
             if accounts:
                 first_id = list(accounts.keys())[0]
-                return RedirectResponse(url=f"/main/{first_id}", status_code=302)
+                return RedirectResponse(
+                    url=f"/main/{quote(first_id, safe='@')}", status_code=302
+                )
 
         account_ids = list(ctx.data.get("accounts", {}))
         try:

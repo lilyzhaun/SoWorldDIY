@@ -30,7 +30,19 @@ self.addEventListener('fetch', (e) => {
   // 1. API 请求：网络优先
   if (e.request.url.includes('/api/')) {
     e.respondWith(
-      fetch(e.request).catch(() => new Response(JSON.stringify({ status: 'error', message: '网络已断开' }))),
+      fetch(e.request).catch(() => {
+        const financialWrite =
+          e.request.method === 'POST' &&
+          ['/api/purchase', '/api/cmn/purchase', '/api/sim/transfer'].includes(new URL(e.request.url).pathname)
+        return new Response(
+          JSON.stringify({
+            status: 'error',
+            code: financialWrite ? 'upstream_result_unknown' : 'network_error',
+            message: financialWrite ? '操作结果待确认，请先核对交易记录或资源余额；不要创建新订单' : '网络已断开',
+          }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } },
+        )
+      }),
     )
     return
   }
@@ -38,7 +50,7 @@ self.addEventListener('fetch', (e) => {
   // 【修改点2】页面导航请求（HTML）：强制网络优先
   // 解决 net::ERR_FAILED 的关键！
   // 只有走网络，浏览器才能正确处理 Flask 返回的 302 重定向
-  if (e.request.mode === 'navigate' || e.request.headers.get('accept').includes('text/html')) {
+  if (e.request.mode === 'navigate' || e.request.headers.get('accept')?.includes('text/html')) {
     e.respondWith(fetch(e.request))
     return
   }

@@ -76,7 +76,7 @@ describe('MainPage rendered contract', () => {
   it('preserves account-derived values, labels, and hidden initial states without footer links', () => {
     const html = renderMainPage('/main/account%20name')
 
-    expect(html).toContain('id="current-account-id-ref" value="account%20name"')
+    expect(html).toContain('id="current-account-id-ref" value="account name"')
     expect(html).toContain('aria-label="交易记录"')
     expect(html).toContain('aria-label="收件箱"')
     expect(html).toContain('aria-label="退出登录"')

@@ -69,21 +69,21 @@ def test_anonymous_request_sets_no_session_or_csrf_cookie() -> None:
     assert not any(c.startswith("csrf_token=") for c in set_cookie)
 
 
-def test_stale_session_cookie_is_deleted(monkeypatch: MonkeyPatch) -> None:
+def test_stale_request_does_not_delete_a_newer_browser_cookie(
+    monkeypatch: MonkeyPatch,
+) -> None:
     _install_fake_store(monkeypatch)
     resp = invoke(
         "/api/balance?account_id=a@b.com", headers={"cookie": "session=ghost"}
     )
-    set_cookie = " ".join(resp.header("set-cookie"))
-    assert "session=" in set_cookie and "Max-Age=0" in set_cookie
-    assert "csrf_token=" in set_cookie and "Max-Age=0" in set_cookie
+    assert resp.header("set-cookie") == []
 
 
-def test_logged_in_session_sets_session_and_csrf_cookies(
+def test_logged_in_reads_do_not_reissue_session_cookies(
     monkeypatch: MonkeyPatch,
 ) -> None:
     store = _install_fake_store(monkeypatch)
-    sid, csrf = _authed_session(store)
+    sid, _ = _authed_session(store)
     monkeypatch.setattr(
         main, "make_3hk_request", lambda **kw: FakeResponse(200, [{"amount": 0}])
     )
@@ -91,6 +91,16 @@ def test_logged_in_session_sets_session_and_csrf_cookies(
         "/api/balance?account_id=a@b.com&subscriptionId=s",
         headers={"cookie": f"session={sid}"},
     )
+    assert resp.header("set-cookie") == []
+
+
+def test_new_anonymous_session_sets_session_and_csrf_cookies(
+    monkeypatch: MonkeyPatch,
+) -> None:
+    store = _install_fake_store(monkeypatch)
+    resp = invoke("/")
+    sid, data = next(iter(store.sessions.items()))
+    csrf = data["csrf_token"]
     cookies = resp.header("set-cookie")
     session_cookie = [c for c in cookies if c.startswith("session=")][0]
     csrf_cookie = [c for c in cookies if c.startswith("csrf_token=")][0]
@@ -270,6 +280,25 @@ def test_metrics_correct_secret_returns_prometheus_text(
     )
     assert "http_requests_total" in body
     assert "SENTINEL_PII_should_not_appear" not in body
+
+
+def test_metrics_refreshes_readiness_on_every_authorized_scrape(monkeypatch):
+    from redis.exceptions import RedisError
+
+    monkeypatch.setattr(main, "METRICS_SECRET", "expected-secret")
+    monkeypatch.setattr(main.redis_client, "ping", lambda: True)
+    headers = {"x-metrics-secret": "expected-secret"}
+    assert b"app_redis_ready 1.0" in invoke("/metrics", headers=headers).body
+
+    def fail():
+        raise RedisError("synthetic outage")
+
+    monkeypatch.setattr(main.redis_client, "ping", fail)
+    response = invoke("/metrics", headers=headers)
+    assert b"app_redis_ready 0.0" in response.body
+    assert b"app_ready 0.0" in response.body
+    monkeypatch.setattr(main.redis_client, "ping", lambda: True)
+    assert b"app_redis_ready 1.0" in invoke("/metrics", headers=headers).body
 
 
 def test_metrics_excludes_pii_from_labels(monkeypatch: MonkeyPatch) -> None:

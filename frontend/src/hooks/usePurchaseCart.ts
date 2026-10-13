@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
-import { apiPostJson } from '@/api/client'
+import { ApiHttpError, apiPostJson, newOperationId } from '@/api/client'
 import type { CartItem, CmnCheckResponse, Plan } from '@/types'
 import { toUserFacingApiError } from '@/utils'
 import { getApiUrl } from '@/utils/mainPage'
+import { purchasePayment } from '@/utils/purchasePayment'
 
 export type CartQuantityDraft = {
   readonly offerId: string
@@ -30,6 +31,8 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
   const [cart, setCart] = useState<CartItem[]>([])
   const [cartQtyDraft, setCartQtyDraft] = useState<CartQuantityDraft | null>(null)
   const [purchaseDraft, setPurchaseDraft] = useState<PurchaseDraft | null>(null)
+  const requestId = useRef('')
+  const inFlight = useRef(false)
 
   const cartCount = useMemo(() => cart.reduce((total, item) => total + item.quantity, 0), [cart])
   const cartTotal = useMemo(() => cart.reduce((total, item) => total + item.price * item.quantity, 0), [cart])
@@ -73,6 +76,7 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
   }
 
   const openPurchaseModal = (title: string, price: number, source: 'cart' | 'cmn', openModal: () => void): void => {
+    requestId.current = ''
     const currentBalance = Number.parseFloat(balance) || 0
     const txnAmount = currentBalance >= price ? price : Math.max(currentBalance, 0)
     setPurchaseDraft({ title, price, txnAmount, paymentType: 'ALCN', submitting: false, source, newLine: false })
@@ -80,19 +84,25 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
   }
 
   const submitCheckout = async (showAlert: ShowAlert): Promise<void> => {
-    if (!purchaseDraft || purchaseDraft.source !== 'cart') return
+    if (!purchaseDraft || purchaseDraft.source !== 'cart' || inFlight.current) return
+    inFlight.current = true
+    requestId.current ||= newOperationId()
     setPurchaseDraft((previous) => (previous ? { ...previous, submitting: true } : null))
     try {
       const url = getApiUrl('/api/purchase', accountId)
-      const data = await apiPostJson<{ status?: string; message?: string; paymentUrl?: string }>(url, {
-        items: cart,
-        subscriptionId: currentSubId,
-        price: purchaseDraft.price,
-        paymentType: purchaseDraft.paymentType,
-        txnAmount: purchaseDraft.newLine ? 0 : purchaseDraft.txnAmount,
-        new_line: purchaseDraft.newLine,
-        account_id: accountId,
-      })
+      const data = await apiPostJson<{ status?: string; message?: string; paymentUrl?: string }>(
+        url,
+        {
+          items: cart,
+          subscriptionId: currentSubId,
+          price: purchaseDraft.price,
+          paymentType: purchaseDraft.paymentType,
+          txnAmount: purchasePayment(purchaseDraft, balance).validTxn,
+          new_line: purchaseDraft.newLine,
+          account_id: accountId,
+        },
+        { headers: { 'Idempotency-Key': requestId.current } },
+      )
       if (data.status === 'success' && data.paymentUrl) {
         setCart([])
         window.location.href = data.paymentUrl
@@ -101,8 +111,16 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
         setPurchaseDraft((previous) => (previous ? { ...previous, submitting: false } : null))
       }
     } catch (error: unknown) {
-      showAlert(toUserFacingApiError(error, '网络错误'), '错误')
+      if (error instanceof ApiHttpError && error.status === 400) requestId.current = ''
+      showAlert(
+        error instanceof ApiHttpError
+          ? toUserFacingApiError(error, '提交失败')
+          : '操作结果待确认，请先核对交易记录；不要创建新订单',
+        '错误',
+      )
       setPurchaseDraft((previous) => (previous ? { ...previous, submitting: false } : null))
+    } finally {
+      inFlight.current = false
     }
   }
 
@@ -111,20 +129,26 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
     selectedNumber: string | null,
     showAlert: ShowAlert,
   ): Promise<void> => {
-    if (!purchaseDraft || purchaseDraft.source !== 'cmn' || !cmnData || !selectedNumber) return
+    if (!purchaseDraft || purchaseDraft.source !== 'cmn' || !cmnData || !selectedNumber || inFlight.current) return
+    inFlight.current = true
+    requestId.current ||= newOperationId()
     setPurchaseDraft((previous) => (previous ? { ...previous, submitting: true } : null))
     try {
       const url = getApiUrl('/api/cmn/purchase', accountId)
-      const data = await apiPostJson<{ status?: string; paymentUrl?: string; message?: string }>(url, {
-        offerId: cmnData.offerId,
-        offerSubType: cmnData.offerSubType,
-        price: cmnData.price,
-        subscriptionId: currentSubId,
-        selectedNumber,
-        paymentType: purchaseDraft.paymentType,
-        txnAmount: purchaseDraft.txnAmount,
-        account_id: accountId,
-      })
+      const data = await apiPostJson<{ status?: string; paymentUrl?: string; message?: string }>(
+        url,
+        {
+          offerId: cmnData.offerId,
+          offerSubType: cmnData.offerSubType,
+          price: cmnData.price,
+          subscriptionId: currentSubId,
+          selectedNumber,
+          paymentType: purchaseDraft.paymentType,
+          txnAmount: purchasePayment(purchaseDraft, balance).validTxn,
+          account_id: accountId,
+        },
+        { headers: { 'Idempotency-Key': requestId.current } },
+      )
       if (data.status === 'success' && data.paymentUrl) {
         window.location.href = data.paymentUrl
       } else {
@@ -132,8 +156,16 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
         setPurchaseDraft((previous) => (previous ? { ...previous, submitting: false } : null))
       }
     } catch (error: unknown) {
-      showAlert(toUserFacingApiError(error, '网络错误'), '错误')
+      if (error instanceof ApiHttpError && error.status === 400) requestId.current = ''
+      showAlert(
+        error instanceof ApiHttpError
+          ? toUserFacingApiError(error, '提交失败')
+          : '操作结果待确认，请先核对交易记录；不要创建新订单',
+        '错误',
+      )
       setPurchaseDraft((previous) => (previous ? { ...previous, submitting: false } : null))
+    } finally {
+      inFlight.current = false
     }
   }
 

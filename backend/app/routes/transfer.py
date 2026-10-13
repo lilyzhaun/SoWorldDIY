@@ -8,6 +8,7 @@ from starlette.responses import Response
 
 from ..blocking import run_blocking
 from ..cache_store import profile_cache_key
+from ..idempotency import IDEMPOTENCY_OPENAPI, UpstreamWriteUncertain, idempotent_write
 from ..public_errors import INTERNAL_ERROR, INVALID_REQUEST
 from ..responses import _public_error
 from ..schemas import TransferRequest
@@ -26,7 +27,8 @@ logger = logging.getLogger(__name__)
 
 
 def register_transfer_routes(app: FastAPI, deps: RouteDeps) -> None:
-    @app.post("/api/sim/transfer")
+    @app.post("/api/sim/transfer", openapi_extra=IDEMPOTENCY_OPENAPI)
+    @idempotent_write(deps)
     async def transfer_resource(request: Request) -> Response:
         ctx = deps._require_login(request)
         if not ctx:
@@ -104,6 +106,8 @@ def register_transfer_routes(app: FastAPI, deps: RouteDeps) -> None:
                 400,
                 operation="transfer_resource",
             )
+        except UpstreamWriteUncertain:
+            raise
         except WriteValidationError as exc:
             return deps._json_error(str(exc), 400)
         except Exception as exc:

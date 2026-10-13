@@ -42,7 +42,7 @@ export function buildMainPageDialogs(input: BuildDialogsInput): DialogsProps {
         window.location.href = '/?add=1'
       },
       onSwitchAccount: (identifier: string) => {
-        window.location.href = `/main/${identifier}`
+        window.location.href = `/main/${encodeURIComponent(identifier)}`
       },
       onSwitchSubscription: input.onSwitchSubscription,
       subscriptions: input.subscriptions,

@@ -2,7 +2,7 @@ groups:
   - name: 3hk-new
     rules:
       - alert: ThreeHKReadinessFailure
-        expr: probe_success{job="3hk-new-ready"} == 0
+        expr: up{job="3hk-new"} == 0 or app_ready{job="3hk-new"} == 0
         for: 2m
         labels:
           severity: critical

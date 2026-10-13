@@ -182,6 +182,46 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: python scripts/check_deployment.py
 
+  compose-scan:
+    name: compose-${{ matrix.service }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      max-parallel: 1
+      matrix:
+        service: [redis, prometheus]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Setup monitoring image builder
+        if: matrix.service == 'prometheus'
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - name: Build monitoring security image
+        if: matrix.service == 'prometheus'
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          file: deploy/monitoring/Dockerfile
+          load: true
+          tags: soworld-prometheus:local
+          cache-from: type=gha,scope=soworld-monitoring
+          cache-to: type=gha,scope=soworld-monitoring,mode=max
+      - name: Resolve shipped Compose image
+        id: image
+        env:
+          SERVICE: ${{ matrix.service }}
+        run: |
+          image=$(docker compose --env-file deploy/compose/env.example --profile monitoring config --format json | jq -r --arg service "$SERVICE" '.services[$service].image')
+          echo "ref=$image" >> "$GITHUB_OUTPUT"
+      - name: Scan Compose image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.image.outputs.ref }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
   container-scan:
     if: inputs.scan_container
     name: trivy

@@ -10,6 +10,7 @@ from starlette.responses import Response
 from ..blocking import run_blocking
 from ..brand import INVALID_BRAND_CODE, InvalidBrandError, parse_brand, plans_cache_path
 from ..cache_store import profile_cache_key
+from ..idempotency import IDEMPOTENCY_OPENAPI, UpstreamWriteUncertain, idempotent_write
 from ..public_errors import AUTH_FAILED, INTERNAL_ERROR, INVALID_REQUEST
 from ..responses import _public_error
 from ..schemas import PurchaseRequest
@@ -113,7 +114,8 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
             )
             return deps._json_success({"status": "success", "balance": 0})
 
-    @app.post("/api/purchase")
+    @app.post("/api/purchase", openapi_extra=IDEMPOTENCY_OPENAPI)
+    @idempotent_write(deps)
     async def purchase_plan(request: Request) -> Response:
         ctx = deps._require_login(request)
         if not ctx:
@@ -174,12 +176,16 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
                 return deps._json_success(
                     {"status": "success", "paymentUrl": r.json()["paymentUrl"]}
                 )
+            if r is not None and r.status_code == 200:
+                raise UpstreamWriteUncertain("Missing payment result")
             return deps._upstream_error(
                 r,
                 "购买请求失败，请稍后重试",
                 400,
                 operation="purchase_plan",
             )
+        except UpstreamWriteUncertain:
+            raise
         except WriteValidationError as exc:
             return deps._json_error(str(exc), 400)
         except Exception as exc:

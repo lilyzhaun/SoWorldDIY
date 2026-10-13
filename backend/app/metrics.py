@@ -53,6 +53,11 @@ REDIS_READY = Gauge(
     "1 if Redis ping succeeds else 0",
     registry=REGISTRY,
 )
+APP_READY = Gauge(
+    "app_ready",
+    "1 if Redis and required application assets are ready",
+    registry=REGISTRY,
+)
 RATE_LIMIT_DECISIONS = Counter(
     "app_rate_limit_decisions_total",
     "Rate-limit decisions",
@@ -159,6 +164,10 @@ def observe_upstream(operation: str, outcome_class: str) -> None:
 
 def set_redis_ready(ok: bool) -> None:
     REDIS_READY.set(1 if ok else 0)
+
+
+def set_app_ready(ok: bool) -> None:
+    APP_READY.set(1 if ok else 0)
 
 
 def _refresh_process_metrics() -> None:

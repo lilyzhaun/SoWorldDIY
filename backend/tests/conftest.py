@@ -53,3 +53,11 @@ def _default_allow_rate_limiter(monkeypatch: pytest.MonkeyPatch) -> None:
             return None
 
     monkeypatch.setattr(main, "rate_limiter", _AllowAll())
+
+
+@pytest.fixture(autouse=True)
+def _isolated_operation_redis(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app import main
+    from tests.contract_support import FakeOperationRedis
+
+    monkeypatch.setattr(main, "redis_client", FakeOperationRedis())

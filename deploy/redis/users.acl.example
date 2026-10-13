@@ -8,6 +8,6 @@ user default off
 user 3hk-migrate on >CHANGE_ME_MIGRATE_PASSWORD ~* &* +@all
 
 # Application runtime user: only project keyspaces + required command groups.
-# Key patterns: session:*, cache:*, auth_code:v2:*, ratelimit:*
+# Key patterns: session:*, cache:*, auth_code:v2:*, ratelimit:*, operation:*
 # +@read includes SCAN/GET/HGETALL needed by session + auth-code list.
-user 3hk-app on >CHANGE_ME_APP_PASSWORD ~session:* ~cache:* ~auth_code:v2:* ~ratelimit:* &* +@read +@write +@connection +@scripting +@transaction -@dangerous -config -acl -slowlog
+user 3hk-app on >CHANGE_ME_APP_PASSWORD ~session:* ~cache:* ~auth_code:v2:* ~ratelimit:* ~operation:* &* +@read +@write +@connection +@scripting +@transaction -@dangerous -config -acl -slowlog

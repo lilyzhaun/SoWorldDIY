@@ -29,6 +29,10 @@ export function withCsrfHeaders(headers?: HeadersInit, cookieSource = document.c
   return next
 }
 
+export function newOperationId(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
 export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}): Promise<Response> {
   const method = (init.method || 'GET').toUpperCase()
   const headers = method === 'GET' || method === 'HEAD' ? init.headers : withCsrfHeaders(init.headers)

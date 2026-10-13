@@ -171,7 +171,7 @@ class SessionMiddleware(BaseHTTPMiddleware):
             if ctx is not None:
                 await run_blocking(_daily_refresh_session_if_needed, ctx)
         except SessionConflictError:
-            response = JSONResponse(
+            return JSONResponse(
                 {
                     "status": "error",
                     "code": "session_conflict",
@@ -179,17 +179,8 @@ class SessionMiddleware(BaseHTTPMiddleware):
                 },
                 status_code=409,
             )
-            response.delete_cookie(
-                SESSION_COOKIE_NAME, secure=bool(_runtime.COOKIE_SECURE)
-            )
-            response.delete_cookie(
-                CSRF_COOKIE_NAME, secure=bool(_runtime.COOKIE_SECURE)
-            )
-            return response
         request.state.session_ctx = ctx
         request.state.delete_session_cookie = False
-        if ctx is None and request.cookies.get(SESSION_COOKIE_NAME):
-            request.state.delete_session_cookie = True
         response = await call_next(request)
         if request.url.path == "/" or request.url.path.startswith(
             ("/api/", "/main", "/login", "/logout")
@@ -201,7 +192,9 @@ class SessionMiddleware(BaseHTTPMiddleware):
         if getattr(request.state, "delete_session_cookie", False):
             response.delete_cookie(key=SESSION_COOKIE_NAME, path="/", secure=secure)
             response.delete_cookie(key=CSRF_COOKIE_NAME, path="/", secure=secure)
-        elif current_ctx is not None:
+        # Only creation or an explicit login rotation may issue cookies. An
+        # older concurrent response must not overwrite the browser's new SID.
+        elif current_ctx is not None and (ctx is None or current_ctx.sid != ctx.sid):
             csrf_token = await run_blocking(_ensure_csrf_token, current_ctx)
             response.set_cookie(
                 key=SESSION_COOKIE_NAME,

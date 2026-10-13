@@ -156,7 +156,7 @@ def test_completed_write_result_survives_session_refresh_conflict(
         account_context=account,
     )
     assert result is response
-    assert request.state.delete_session_cookie
+    assert not getattr(request.state, "delete_session_cookie", False)
 
 
 def _ctx_with_accounts(accounts: dict[str, Any]) -> SessionContext:

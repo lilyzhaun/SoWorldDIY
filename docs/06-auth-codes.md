@@ -69,6 +69,10 @@ python -m app.auth_cli seed
 
 导入来源是 `backend/auth_codes.json`。该文件是运行时敏感数据，不应提交。
 
+导入只由此 CLI 命令显式触发，应用启动不会自动导入。导入完成后移走或删除种子文件，
+避免以后手动执行 `seed` 时重新创建已撤销的码。`legacy`、`dual`、`hmac` 均拒绝将
+`v2:<64 位摘要>` 当作鉴权码提交。
+
 格式示例：
 
 ```json

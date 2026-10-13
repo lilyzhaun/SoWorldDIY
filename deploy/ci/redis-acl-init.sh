@@ -11,7 +11,7 @@ redis-cli -h "$HOST" -p "$PORT" ping | grep -q PONG
 
 redis-cli -h "$HOST" -p "$PORT" ACL SETUSER 3hk-app on \
   ">$APP_PASS" \
-  '~session:*' '~cache:*' '~auth_code:v2:*' '~ratelimit:*' \
+  '~session:*' '~cache:*' '~auth_code:v2:*' '~ratelimit:*' '~operation:*' \
   '&*' +@read +@write +@connection +@scripting +@transaction -@dangerous -config -acl -slowlog
 
 redis-cli -h "$HOST" -p "$PORT" --user 3hk-app -a "$APP_PASS" --no-auth-warning PING | grep -q PONG

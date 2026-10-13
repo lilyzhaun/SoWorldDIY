@@ -9,6 +9,25 @@ afterEach(() => {
 })
 
 describe('usePurchaseCart', () => {
+  it('retains the operation key after a lost response', async () => {
+    const fetch = vi.fn().mockRejectedValue(new TypeError('Failed to fetch'))
+    vi.stubGlobal('fetch', fetch)
+    const { result } = renderHook(() => usePurchaseCart('acc', 'sub1', '0'))
+    const alert = vi.fn()
+    act(() => result.current.openPurchaseModal('order', 10, 'cart', vi.fn()))
+    await act(async () => {
+      await result.current.submitCheckout(alert)
+    })
+    await act(async () => {
+      await result.current.submitCheckout(alert)
+    })
+    const first = fetch.mock.calls[0][1].headers.get('Idempotency-Key')
+    const second = fetch.mock.calls[1][1].headers.get('Idempotency-Key')
+    expect(first).toMatch(/^[a-f0-9]{32}$/)
+    expect(second).toBe(first)
+    expect(alert).toHaveBeenCalledWith(expect.stringContaining('操作结果待确认'), '错误')
+  })
+
   it('adds, updates, and removes cart items', () => {
     const showAlert = vi.fn()
     const { result } = renderHook(() => usePurchaseCart('acc', 'sub1', '10'))
@@ -152,7 +171,7 @@ describe('usePurchaseCart', () => {
     await act(async () => {
       await result.current.submitCheckout(showAlert)
     })
-    expect(showAlert).toHaveBeenCalledWith('net', '错误')
+    expect(showAlert).toHaveBeenCalledWith(expect.stringContaining('操作结果待确认'), '错误')
   })
 
   it('submits cmn purchase success and failure paths', async () => {

@@ -18,7 +18,7 @@ Redis 需要能被后端访问。默认地址是 `redis://127.0.0.1:6379/0`。
 ## 克隆仓库
 
 ```bash
-git clone <repository-url> 3hk_new
+git clone https://github.com/lilyzhaun/SoWorldDIY.git 3hk_new
 cd 3hk_new
 ```
 

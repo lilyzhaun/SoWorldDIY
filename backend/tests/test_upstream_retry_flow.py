@@ -10,6 +10,7 @@ from typing import Any
 import requests
 from pytest import MonkeyPatch
 from requests.structures import CaseInsensitiveDict
+from starlette.datastructures import State
 
 from app.session_store import SessionContext
 
@@ -222,4 +223,4 @@ class FakeResponse:
 
 def _make_request(method: str, ua: str = "Mozilla/5.0"):
     headers = CaseInsensitiveDict({"User-Agent": ua})
-    return type("_Req", (), {"headers": headers})()
+    return type("_Req", (), {"headers": headers, "state": State()})()

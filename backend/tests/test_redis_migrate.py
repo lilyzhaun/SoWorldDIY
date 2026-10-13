@@ -142,6 +142,7 @@ def test_apply_and_verify_preserve_ttl_and_auth_counters() -> None:
     dest = FakeMigrateRedis()
     src.setex("session:s1", 300, b"sess-payload")
     src.setex("cache:c1", 90, b"cache-payload")
+    src.setex("operation:pending", 3600, b'{"state":"pending"}')
     src.hset(
         f"auth_code:{SENTINEL_CODE}",
         mapping={"usage_limit": "9", "times_used": "3"},
@@ -149,12 +150,19 @@ def test_apply_and_verify_preserve_ttl_and_auth_counters() -> None:
 
     plan = build_plan(src, hmac_key=HMAC_SECRET)
     copied = apply_plan(src, dest, plan)
-    assert copied == {"session": 1, "cache": 1, "auth_legacy": 1, "auth_v2": 0}
+    assert copied == {
+        "session": 1,
+        "cache": 1,
+        "operation": 1,
+        "auth_legacy": 1,
+        "auth_v2": 0,
+    }
 
     result = verify_plan(src, dest, plan)
     assert result["ok"] is True
     assert dest.strings["session:s1"] == b"sess-payload"
     assert dest.strings["cache:c1"] == b"cache-payload"
+    assert dest.strings["operation:pending"] == b'{"state":"pending"}'
     dest_auth = dest.hashes[v2_redis_key(HMAC_SECRET, SENTINEL_CODE)]
     assert dest_auth == {"usage_limit": "9", "times_used": "3"}
     assert SENTINEL_CODE not in dest.hashes
@@ -197,6 +205,46 @@ def test_rollback_plan_public_has_atomic_url_and_mode_steps() -> None:
     assert "AUTH_CODE_KEY_MODE" in text
     assert "DB 15" in text or "db15" in text.lower()
     assert "FLUSHALL" not in text or "Never FLUSH" in text
+
+
+def test_live_redis_acl_supports_atomic_operation_reservations(
+    disposable_redis_pair, monkeypatch
+):
+    import anyio
+    import redis
+    from starlette.responses import JSONResponse
+
+    from app import main
+    from app.idempotency import idempotent_write
+    from tests.contract_support import authed_request
+
+    client = redis.Redis(
+        host="127.0.0.1",
+        port=disposable_redis_pair["dst_port"],
+        username="3hk-app",
+        password=disposable_redis_pair["acl_password"],
+        decode_responses=True,
+    )
+    monkeypatch.setattr(main, "redis_client", client)
+    writes = []
+
+    @idempotent_write(main._main_deps)
+    async def operation(request):
+        writes.append(1)
+        return JSONResponse({"status": "success"})
+
+    try:
+        for _ in range(2):
+            request = authed_request(
+                "/api/sim/transfer",
+                "POST",
+                body=b'{"account_id":"a@b.com"}',
+                headers={"idempotency-key": "redis-acl-synthetic-operation-000001"},
+            )
+            assert anyio.run(operation, request).status_code == 200
+        assert writes == [1]
+    finally:
+        client.close()
 
 
 def test_redact_redis_url_strips_password() -> None:
@@ -269,7 +317,7 @@ def disposable_redis_pair() -> Any:
                 "user default on nopass ~* &* +@all",
                 (
                     f"user 3hk-app on >{acl_password} "
-                    "~session:* ~cache:* ~auth_code:v2:* ~ratelimit:* &* "
+                    "~session:* ~cache:* ~auth_code:v2:* ~ratelimit:* ~operation:* &* "
                     "+@read +@write +@connection +@scripting +@transaction "
                     "-@dangerous -config -acl -slowlog"
                 ),

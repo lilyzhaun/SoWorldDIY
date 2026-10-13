@@ -1,4 +1,5 @@
 import type { PurchaseDraft } from '@/hooks/usePurchaseCart'
+import { purchasePayment } from '@/utils/purchasePayment'
 import { UiIcon } from './UiIcon'
 
 type PurchaseModalContentProps = {
@@ -14,10 +15,7 @@ export function PurchaseModalContent({
   onChangeDraft,
   showNewLineOption,
 }: PurchaseModalContentProps): JSX.Element {
-  const currentBalance = Number.parseFloat(balance) || 0
-  const maxAllowed = Math.min(currentBalance, draft.price)
-  const validTxn = Math.max(0, Math.min(draft.txnAmount, maxAllowed))
-  const payAmount = Math.max(0, draft.price - validTxn)
+  const { currentBalance, maxAllowed, validTxn, payAmount } = purchasePayment(draft, balance)
   return (
     <div style={{ textAlign: 'left' }}>
       <div style={{ fontSize: '14px', color: '#64748b' }}>商品信息</div>
@@ -50,13 +48,14 @@ export function PurchaseModalContent({
       ) : null}
       <div style={{ marginBottom: '15px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
-          <span>余额抵扣</span>
+          <span>{draft.newLine ? '新开号码不支持余额抵扣' : '余额抵扣'}</span>
           <span style={{ color: '#64748b' }}>(可用: ${currentBalance})</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontWeight: 'bold' }}>$</span>
           <input
             type="number"
+            disabled={draft.newLine || draft.submitting}
             value={validTxn}
             step="0.1"
             max={maxAllowed}

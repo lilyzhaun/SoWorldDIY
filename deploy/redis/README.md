@@ -20,6 +20,7 @@ Application keys on DB **0** only:
 - `cache:*`
 - `auth_code:v2:*` (HMAC mode)
 - `ratelimit:*` (rate limits)
+- `operation:*` (24-hour financial-operation deduplication; required on upgrade)
 
 **Never** inspect or mutate DB **15** during migration.
 

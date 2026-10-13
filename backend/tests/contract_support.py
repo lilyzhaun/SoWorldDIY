@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import copy
 import json
+import threading
+import uuid
 from collections.abc import Callable, Sequence
 from typing import Any
 
 import anyio
+import redis
 import requests
 from fastapi.routing import APIRoute
 from pytest import MonkeyPatch
@@ -18,6 +21,34 @@ from app.session_store import SessionConflictError, SessionContext
 SESSION_COOKIE_NAME = "session"
 CSRF_COOKIE_NAME = "csrf_token"
 CSRF_HEADER_NAME = "x-csrf-token"
+FINANCIAL_PATHS = {"/api/purchase", "/api/cmn/purchase", "/api/sim/transfer"}
+
+
+class FakeOperationRedis(redis.Redis):
+    """Atomic in-memory reservation store for route contract isolation."""
+
+    def __init__(self):
+        super().__init__(host="127.0.0.1", port=1, decode_responses=True)
+        self.records = {}
+        self.lock = threading.Lock()
+
+    def eval(self, script, numkeys, key, pending, ttl):
+        assert key.startswith("operation:") and numkeys == 1
+        with self.lock:
+            if key in self.records:
+                return self.records[key]
+            self.records[key] = pending
+            return None
+
+    def set(self, key, value, *, ex=None, xx=False):
+        with self.lock:
+            if xx and key not in self.records:
+                return False
+            self.records[key] = value
+            return True
+
+    def ping(self):
+        return True
 
 
 class FakeResponse:
@@ -168,6 +199,8 @@ def invoke(
     else:
         raw_path = path.encode()
     raw_headers = [(k.lower().encode(), v.encode()) for k, v in (headers or {}).items()]
+    if method == "POST" and raw_path.decode() in FINANCIAL_PATHS:
+        raw_headers.append((b"idempotency-key", uuid.uuid4().hex.encode()))
     if body and not any(k == b"content-type" for k, _ in raw_headers):
         raw_headers.append((b"content-type", b"application/json"))
     done = {"flag": False}
@@ -287,6 +320,8 @@ def authed_request(
     content_type: str | None = None,
 ) -> Request:
     request_headers = dict(headers or {})
+    if method == "POST" and path in FINANCIAL_PATHS:
+        request_headers.setdefault("idempotency-key", uuid.uuid4().hex)
     if csrf is not None:
         request_headers[CSRF_HEADER_NAME] = csrf
     req = build_request(

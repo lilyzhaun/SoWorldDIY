@@ -2,7 +2,7 @@
 
 > [← 入口与运行方式](04-entrypoints.md) · [鉴权码管理 →](06-auth-codes.md)
 
-本页列出后端主要 API。除登录前接口外，大多数 API 需要有效 `session_id` Cookie。会修改状态的 JSON 接口还需要 CSRF 头。
+本页列出后端主要 API。除登录前接口外，大多数 API 需要有效 `session` Cookie。会修改状态的 JSON 接口还需要 CSRF 头。
 
 ## 通用约定
 
@@ -36,6 +36,20 @@
 | `/api/history` | GET | Query: `account_id`, `subscriptionId`, `startDate`, `endDate` | 查询交易记录。 |
 
 ## 套餐与购买
+
+### 交易幂等与结果确认
+
+`POST /api/purchase`、`POST /api/cmn/purchase`、`POST /api/sim/transfer` 必须携带
+`Idempotency-Key`：32–64 个字母、数字、`_` 或 `-`，建议使用 UUID v4。
+同一账号、接口和幂等键的记录在 Redis 中保留 24 小时；重试必须沿用相同请求体与键。
+成功或明确失败的结果会重放，未完成请求不会再次转发；同一键用于不同请求体返回
+`409 idempotency_conflict`。新逻辑订单应生成新键。
+
+上游写请求超时、返回 5xx，或执行后响应无法解析时，返回
+`409 upstream_result_unknown`（操作结果待确认）。此时先核对运营商交易记录、套餐或资源余额，
+不要更换幂等键盲目重试。保留该键可再次查询缓存结果；本服务不支持上游事务回滚。
+Redis 不可用时拒绝开始交易。幂等记录过期、丢失或 `SESSION_SECRET` 轮换后不能重放原记录，
+因此升级、迁移及密钥轮换前应先核对待确认交易。
 
 | 路径 | 方法 | 请求 | 说明 |
 | --- | --- | --- | --- |
@@ -95,7 +109,7 @@
 超限返回 HTTP **429**，JSON `code=rate_limited`，并带整数 `Retry-After` 头。仅当直连对端属于 `TRUSTED_PROXY_IPS`（默认 loopback）时信任 `X-Forwarded-For`。Redis 不可用时 `check-user`、`send-otp` 和 `login` 失败关闭（503）。
 
 无效鉴权码不消耗目标账号失败/OTP 配额。请求体超过 64 KiB 返回 413；读取超时返回
-408；会话快照冲突返回 409。敏感操作不会由服务端或前端自动重试。
+408；会话快照冲突返回 409。结果不确定的交易不会由服务端或前端自动重试。
 
 购买金额与新鲜上游套餐目录核对，数量限 1–99；钱包抵扣不能超过订单或当前可用余额。
 换号和资源转移校验订阅归属；转移还校验来源号码、资源、单位及额度。非法或过期请求

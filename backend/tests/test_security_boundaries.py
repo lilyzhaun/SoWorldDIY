@@ -105,15 +105,9 @@ def test_session_and_csrf_cookies_honor_cookie_secure_flag(
     monkeypatch: MonkeyPatch,
 ) -> None:
     store = _install_fake_store(monkeypatch)
-    sid, csrf = _authed_session(store)
     monkeypatch.setattr("app.session_utils._runtime.COOKIE_SECURE", True)
-    monkeypatch.setattr(
-        main, "make_3hk_request", lambda **kw: FakeResponse(200, [{"amount": 0}])
-    )
-    resp = invoke(
-        "/api/balance?account_id=a@b.com&subscriptionId=s",
-        headers={"cookie": f"session={sid}"},
-    )
+    resp = invoke("/")
+    csrf = next(iter(store.sessions.values()))["csrf_token"]
     cookies = resp.header("set-cookie")
     session_cookie = next(c for c in cookies if c.startswith("session="))
     csrf_cookie = next(c for c in cookies if c.startswith("csrf_token="))
@@ -125,16 +119,9 @@ def test_session_and_csrf_cookies_honor_cookie_secure_flag(
 def test_session_and_csrf_cookies_omit_secure_when_disabled(
     monkeypatch: MonkeyPatch,
 ) -> None:
-    store = _install_fake_store(monkeypatch)
-    sid, _ = _authed_session(store)
+    _install_fake_store(monkeypatch)
     monkeypatch.setattr("app.session_utils._runtime.COOKIE_SECURE", False)
-    monkeypatch.setattr(
-        main, "make_3hk_request", lambda **kw: FakeResponse(200, [{"amount": 0}])
-    )
-    resp = invoke(
-        "/api/balance?account_id=a@b.com&subscriptionId=s",
-        headers={"cookie": f"session={sid}"},
-    )
+    resp = invoke("/")
     cookies = " ".join(resp.header("set-cookie"))
     assert "Secure" not in cookies
 

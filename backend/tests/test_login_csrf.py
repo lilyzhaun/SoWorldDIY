@@ -111,7 +111,7 @@ def test_revoked_session_cannot_be_inherited_during_login(monkeypatch: MonkeyPat
     )
     assert response.status == 409
     assert not store.sessions
-    assert "Max-Age=0" in " ".join(response.header("set-cookie"))
+    assert not response.header("set-cookie")
 
 
 def test_login_page_bootstraps_csrf(monkeypatch: MonkeyPatch, tmp_path):

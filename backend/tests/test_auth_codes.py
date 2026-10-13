@@ -103,6 +103,40 @@ def expected_fingerprint(code: str, key: bytes = HMAC_SECRET) -> str:
     return fingerprint_from_digest(digest)
 
 
+@pytest.mark.parametrize(
+    "mode", [AuthCodeKeyMode.LEGACY, AuthCodeKeyMode.DUAL, AuthCodeKeyMode.HMAC]
+)
+def test_stored_digest_cannot_be_used_as_an_access_code(mode):
+    client = FakeRedis()
+    writer = make_store(client, mode=AuthCodeKeyMode.HMAC, hmac_key=HMAC_SECRET)
+    writer.create(SENTINEL_CODE, usage_limit=3)
+    store = make_store(client, mode=mode, hmac_key=HMAC_SECRET)
+    digest_code = expected_v2_key(SENTINEL_CODE).removeprefix("auth_code:")
+    assert store.verify(digest_code, consume=True) == (False, "无效鉴权码")
+    assert writer.verify(SENTINEL_CODE) == (True, "OK")
+
+
+def test_startup_does_not_restore_a_revoked_seed(monkeypatch, tmp_path):
+    import json
+
+    import anyio
+
+    from app import main
+
+    seed = tmp_path / "seed.json"
+    seed.write_text(json.dumps({SENTINEL_CODE: {"usage_limit": 3}}))
+    store = make_store(FakeRedis(), seed_file=seed)
+    store.seed_from_file()
+    store.revoke(SENTINEL_CODE)
+    monkeypatch.setattr(main, "auth_code_store", store)
+
+    async def start():
+        async with main.lifespan(main.create_app()):
+            assert not store.verify(SENTINEL_CODE)[0]
+
+    anyio.run(start)
+
+
 # --- mode / secret parsing -------------------------------------------------
 
 
