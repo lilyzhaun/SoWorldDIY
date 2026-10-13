@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from urllib.parse import quote
 
 from fastapi import FastAPI, Request
 from fastapi.responses import (
@@ -13,7 +14,7 @@ from redis.exceptions import RedisError
 from starlette.responses import Response
 
 from ..blocking import run_blocking
-from ..metrics import authorize_metrics, render_metrics, set_redis_ready
+from ..metrics import authorize_metrics, render_metrics, set_app_ready, set_redis_ready
 from ..public_errors import SERVICE_UNAVAILABLE, UNAUTHORIZED
 from ..rate_limit_http import client_ip, guard
 from ..responses import _public_error
@@ -27,8 +28,7 @@ def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
     async def healthcheck() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.get("/_ready")
-    async def readiness() -> JSONResponse:
+    async def readiness_checks() -> dict[str, bool]:
         checks: dict[str, bool] = {
             "redis": False,
             "frontend_index": (deps.FRONTEND_DIST_DIR / "index.html").exists(),
@@ -43,6 +43,12 @@ def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
         except RedisError:
             checks["redis"] = False
         set_redis_ready(bool(checks["redis"]))
+        set_app_ready(all(checks.values()))
+        return checks
+
+    @app.get("/_ready")
+    async def readiness() -> JSONResponse:
+        checks = await readiness_checks()
         status_code = 200 if all(checks.values()) else 503
         return JSONResponse(
             status_code=status_code,
@@ -63,6 +69,7 @@ def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
             return Response(status_code=404)
         if decision != "ok":
             return _public_error(UNAUTHORIZED, 403)
+        await readiness_checks()
         body, content_type = render_metrics()
         return PlainTextResponse(content=body.decode("utf-8"), media_type=content_type)
 
@@ -113,7 +120,9 @@ def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
         accounts = ctx.data.get("accounts", {}) if ctx else {}
         if isinstance(accounts, dict) and accounts:
             first_id = list(accounts.keys())[0]
-            return RedirectResponse(url=f"/main/{first_id}", status_code=302)
+            return RedirectResponse(
+                url=f"/main/{quote(first_id, safe='@')}", status_code=302
+            )
         return FileResponse(
             deps.FRONTEND_DIST_DIR / "login.html", media_type="text/html"
         )

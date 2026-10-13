@@ -1,7 +1,9 @@
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { useSubscriptionBootstrap } from './useSubscriptionBootstrap'
+import { usePurchaseCart } from './usePurchaseCart'
+import type { Category } from '@/types'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -9,6 +11,43 @@ afterEach(() => {
 })
 
 describe('useSubscriptionBootstrap', () => {
+  it('keeps the cart across categories but clears it on subscription change', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: 'success', plans: [] }) }),
+    )
+    const setters = { setBalance: vi.fn(), setPlans: vi.fn(), setPlansLoading: vi.fn() }
+    const actions = {
+      checkCmnEligibility: vi.fn(),
+      fetchHistory: vi.fn(),
+      fetchInbox: vi.fn(),
+      resetHistory: vi.fn(),
+      showAlert: vi.fn(),
+    }
+    const { result, rerender } = renderHook(
+      ({ category, currentSubId }) => {
+        const purchase = usePurchaseCart('acc', currentSubId, '0')
+        useSubscriptionBootstrap(
+          { accountId: 'acc', category, currentSubId, noNumberMode: false, ...setters },
+          { ...actions, resetCart: purchase.resetCart },
+        )
+        return purchase
+      },
+      { initialProps: { category: 'ALL' as Category, currentSubId: 's1' } },
+    )
+    await waitFor(() => expect(setters.setPlans).toHaveBeenCalled())
+    act(() => result.current.setCartQtyDraft({ offerId: 'o1', name: 'Plan', price: 5, quantity: 2 }))
+    act(() => result.current.confirmAddToCart(vi.fn()))
+    expect(result.current.cartCount).toBe(2)
+    rerender({ category: 'LOCAL', currentSubId: 's1' })
+    expect(result.current.cartCount).toBe(2)
+    rerender({ category: 'CMN', currentSubId: 's1' })
+    expect(result.current.cartCount).toBe(2)
+    expect(actions.checkCmnEligibility).toHaveBeenCalledTimes(1)
+    rerender({ category: 'ALL', currentSubId: 's2' })
+    expect(result.current.cartCount).toBe(0)
+  })
+
   it('fetches balance and plans for a subscription', async () => {
     document.cookie = ''
     vi.stubGlobal(

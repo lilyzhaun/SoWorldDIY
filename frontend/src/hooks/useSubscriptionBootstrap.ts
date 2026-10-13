@@ -78,10 +78,14 @@ export function useSubscriptionBootstrap(
     }
     currentActions.resetCart()
     currentActions.resetHistory()
-    if (category === 'CMN' && !noNumberMode) void currentActions.checkCmnEligibility()
-
     return () => {
       cancelled = true
     }
-  }, [accountId, category, currentSubId, noNumberMode, setBalance, setPlans, setPlansLoading])
+  }, [accountId, currentSubId, noNumberMode, setBalance, setPlans, setPlansLoading])
+
+  useEffect(() => {
+    if (category === 'CMN' && currentSubId && !noNumberMode) {
+      void actionsRef.current.checkCmnEligibility()
+    }
+  }, [accountId, category, currentSubId, noNumberMode])
 }

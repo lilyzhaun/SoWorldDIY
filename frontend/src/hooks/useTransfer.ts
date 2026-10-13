@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
-import { apiPostJson } from '@/api/client'
+import { ApiHttpError, apiPostJson, newOperationId } from '@/api/client'
 import type { Subscription, TransferDraft } from '@/types'
 import { toUserFacingApiError } from '@/utils'
 import { getApiUrl } from '@/utils/mainPage'
@@ -11,9 +11,12 @@ export function useTransfer(accountId: string, currentSubId: string) {
   const [transferAmount, setTransferAmount] = useState('')
   const [transferError, setTransferError] = useState('')
   const [transferSubmitting, setTransferSubmitting] = useState(false)
+  const requestId = useRef('')
+  const inFlight = useRef(false)
 
   const openTransferModal = (event: React.MouseEvent, draft: TransferDraft, openModal: () => void): void => {
     event.stopPropagation()
+    requestId.current = ''
     setTransferDraft(draft)
     setTransferTarget('')
     setTransferAmount('')
@@ -27,7 +30,7 @@ export function useTransfer(accountId: string, currentSubId: string) {
   }
 
   const submitTransfer = async (currentSub: Subscription | null): Promise<string | null> => {
-    if (!transferDraft || !currentSub) return null
+    if (!transferDraft || !currentSub || inFlight.current) return null
     const target = transferTarget.trim()
     const amount = Number.parseFloat(transferAmount)
     if (!target || target.length < 8) {
@@ -46,21 +49,27 @@ export function useTransfer(accountId: string, currentSubId: string) {
       setTransferError('余额不足')
       return null
     }
+    inFlight.current = true
+    requestId.current ||= newOperationId()
     setTransferSubmitting(true)
     setTransferError('')
     try {
       const url = getApiUrl('/api/sim/transfer', accountId)
-      const data = await apiPostJson<{ status?: string; message?: string }>(url, {
-        subscriptionId: currentSubId,
-        sourceMsisdn: currentSub.mobile,
-        targetMsisdn: target,
-        amount,
-        userOfferId: transferDraft.userOfferId,
-        balanceResourceId: transferDraft.balanceResourceId,
-        unit: transferDraft.unit,
-        productFamily: transferDraft.productFamily,
-        account_id: accountId,
-      })
+      const data = await apiPostJson<{ status?: string; message?: string }>(
+        url,
+        {
+          subscriptionId: currentSubId,
+          sourceMsisdn: currentSub.mobile,
+          targetMsisdn: target,
+          amount,
+          userOfferId: transferDraft.userOfferId,
+          balanceResourceId: transferDraft.balanceResourceId,
+          unit: transferDraft.unit,
+          productFamily: transferDraft.productFamily,
+          account_id: accountId,
+        },
+        { headers: { 'Idempotency-Key': requestId.current } },
+      )
       if (data.status === 'success') {
         return target
       } else {
@@ -68,8 +77,15 @@ export function useTransfer(accountId: string, currentSubId: string) {
         setTransferError(data.message || '转移失败')
       }
     } catch (error: unknown) {
+      if (error instanceof ApiHttpError && error.status === 400) requestId.current = ''
       setTransferSubmitting(false)
-      setTransferError(toUserFacingApiError(error, '网络请求失败'))
+      setTransferError(
+        error instanceof ApiHttpError
+          ? toUserFacingApiError(error, '转移失败')
+          : '操作结果待确认，请先核对资源余额；不要再次发起转移',
+      )
+    } finally {
+      inFlight.current = false
     }
     return null
   }

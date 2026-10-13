@@ -43,7 +43,7 @@ from .runtime import (
     SESSION_SECRET,  # noqa: F401 — re-exported for monkeypatch seam
     SUB_BRANDS,  # noqa: F401 — re-exported for monkeypatch seam
     TRUSTED_PROXY_IPS,  # noqa: F401 — re-exported for monkeypatch seam
-    auth_code_store,
+    auth_code_store,  # noqa: F401 — re-exported for CLI/test compatibility
     decrypt_password,  # noqa: F401 — re-exported for monkeypatch seam
     delete_cache,  # noqa: F401 — re-exported for monkeypatch seam
     encrypt_password,  # noqa: F401 — re-exported for monkeypatch seam
@@ -121,7 +121,6 @@ def internal_logout_account(ctx: SessionContext, account_id: str) -> bool:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    auth_code_store.seed_from_file()
     logger.info("3HK New App started")
     yield
 

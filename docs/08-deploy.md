@@ -107,7 +107,7 @@ systemctl status 3hk-new.service
 | `deploy/redis/3hk-new-redis.service` | systemd 单元模板 |
 | `deploy/redis/README.md` | 安装与冒烟检查说明 |
 
-应用只使用 DB **0** 的 `session:*`、`cache:*`、`auth_code:v2:*`、`ratelimit:*`。迁移工具**不得**读写 DB **15**。
+应用使用 DB **0** 的 `session:*`、`cache:*`、`auth_code:v2:*`、`ratelimit:*`、`operation:*`。升级自建 Redis ACL 时需增加 `~operation:*`，用于保留 24 小时交易幂等记录。迁移工具**不得**读写 DB **15**。
 
 ### 迁移 CLI
 
@@ -122,7 +122,7 @@ python -m app.redis_migrate verify --source-url ... --dest-url ...
 python -m app.redis_migrate rollback-plan
 ```
 
-`plan` 只输出计数、前缀与 TTL，不打印密码、鉴权码或 key 值。`session:*`/`cache:*` 用 DUMP/PTTL/RESTORE 复制；legacy `auth_code:<code>` 重写为 `auth_code:v2:<hmac>`。回滚时必须**同时**恢复 `REDIS_URL` 与 `AUTH_CODE_KEY_MODE`。
+`plan` 只输出计数、前缀与 TTL，不打印密码、鉴权码或 key 值。`session:*`/`cache:*`/`operation:*` 用 DUMP/PTTL/RESTORE 复制；legacy `auth_code:<code>` 重写为 `auth_code:v2:<hmac>`。迁移前暂停交易并核对待确认操作，避免迁移期间新增记录。回滚时必须**同时**恢复 `REDIS_URL` 与 `AUTH_CODE_KEY_MODE`。
 
 ## 健康检查
 

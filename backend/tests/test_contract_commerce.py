@@ -154,7 +154,9 @@ def test_purchase_new_line_flow_payload(monkeypatch: MonkeyPatch) -> None:
     assert payload["order"]["orderSubscription"]["simType"] == "ESIM"
 
 
-def test_purchase_upstream_no_payment_url_returns_400(monkeypatch: MonkeyPatch) -> None:
+def test_purchase_upstream_no_payment_url_is_an_unknown_result(
+    monkeypatch: MonkeyPatch,
+) -> None:
     monkeypatch.setattr(
         main,
         "make_3hk_request",
@@ -170,9 +172,5 @@ def test_purchase_upstream_no_payment_url_returns_400(monkeypatch: MonkeyPatch) 
             {"account_id": "a@b.com", "subscriptionId": "s", "items": [], "price": 0}
         ),
     )
-    assert resp.status_code == 400
-    assert json.loads(bytes(resp.body)) == {
-        "status": "error",
-        "message": "购买请求失败，请稍后重试",
-        "code": "upstream_error",
-    }
+    assert resp.status_code == 409
+    assert json.loads(bytes(resp.body))["code"] == "upstream_result_unknown"

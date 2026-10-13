@@ -1,14 +1,19 @@
 export function getAccountIdFromPathname(pathname: string): string {
   const pathParts = pathname.split('/')
   const mainIdx = pathParts.indexOf('main')
-  return (mainIdx >= 0 ? pathParts[mainIdx + 1] : '') ?? ''
+  const encoded = (mainIdx >= 0 ? pathParts[mainIdx + 1] : '') ?? ''
+  try {
+    return decodeURIComponent(encoded)
+  } catch {
+    return ''
+  }
 }
 
 export function getApiUrl(endpoint: string, accountId: string): string {
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`
   if (!accountId) return normalizedEndpoint
   const separator = normalizedEndpoint.includes('?') ? '&' : '?'
-  return `${normalizedEndpoint}${separator}account_id=${accountId}`
+  return `${normalizedEndpoint}${separator}${new URLSearchParams({ account_id: accountId })}`
 }
 
 export function stripHtml(input: string): string {

@@ -17,6 +17,16 @@ describe('MainPage utilities', () => {
     )
   })
 
+  it('round-trips email identifiers through paths and query parameters', () => {
+    for (const identifier of ['name+tag@example.test', 'a&b@example.test', 'percent%tag@example.test']) {
+      const account = getAccountIdFromPathname(`/main/${encodeURIComponent(identifier)}`)
+      const url = new URL(getApiUrl('/api/profile?refresh=true', account), 'https://example.test')
+      expect(url.searchParams.get('account_id')).toBe(identifier)
+      expect(url.searchParams.get('refresh')).toBe('true')
+    }
+    expect(getAccountIdFromPathname('/main/%invalid')).toBe('')
+  })
+
   it('strips markup while preserving text content', () => {
     expect(stripHtml('<strong>套餐</strong><script>alert(1)</script>')).toBe('套餐alert(1)')
     expect(stripHtml('plain text')).toBe('plain text')

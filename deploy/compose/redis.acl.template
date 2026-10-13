@@ -1,2 +1,2 @@
 user default off
-user 3hk-app on >${REDIS_APP_PASSWORD} ~session:* ~cache:* ~auth_code:v2:* ~ratelimit:* &* +@read +@write +@connection +@scripting +@transaction -@dangerous -config -acl -slowlog
+user 3hk-app on >${REDIS_APP_PASSWORD} ~session:* ~cache:* ~auth_code:v2:* ~ratelimit:* ~operation:* &* +@read +@write +@connection +@scripting +@transaction -@dangerous -config -acl -slowlog

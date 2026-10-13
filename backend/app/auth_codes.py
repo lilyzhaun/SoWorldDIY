@@ -110,6 +110,8 @@ class AuthCodeStore:
     def verify(self, auth_code: str | None, consume: bool = False) -> tuple[bool, str]:
         if not auth_code:
             return False, "请输入鉴权码"
+        if is_reserved_v2_shaped_code(auth_code):
+            return False, "无效鉴权码"
         try:
             return self._verify_redis(auth_code, consume)
         except RedisError as exc:

@@ -4,6 +4,7 @@ import copy
 import logging
 import time
 from typing import Any
+from urllib.parse import quote
 
 import requests
 from fastapi import FastAPI, Request
@@ -275,7 +276,7 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                         request.state.session_ctx = rotated
                         request.state.delete_session_cookie = False
                     except SessionConflictError:
-                        deps._mark_session_cookie_for_deletion(request)
+                        request.state.session_ctx = None
                         return JSONResponse(
                             status_code=409,
                             content={
@@ -299,7 +300,10 @@ def register_auth_routes(app: FastAPI, deps: RouteDeps) -> None:
                         deps.rate_limiter.clear_login_fail_identifier, identifier
                     )
                     return deps._json_success(
-                        {"status": "success", "redirect": f"/main/{identifier}"}
+                        {
+                            "status": "success",
+                            "redirect": f"/main/{quote(identifier, safe='@')}",
+                        }
                     )
 
             await run_blocking(deps.rate_limiter.record_login_failure, identifier)

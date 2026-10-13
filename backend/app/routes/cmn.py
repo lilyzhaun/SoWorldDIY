@@ -8,6 +8,7 @@ from starlette.responses import Response
 
 from ..blocking import run_blocking
 from ..cache_store import profile_cache_key
+from ..idempotency import IDEMPOTENCY_OPENAPI, UpstreamWriteUncertain, idempotent_write
 from ..public_errors import INTERNAL_ERROR, INVALID_REQUEST
 from ..responses import _public_error
 from ..schemas import CmnPurchaseRequest
@@ -131,7 +132,8 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             sid=sid,
         )
 
-    @app.post("/api/cmn/purchase")
+    @app.post("/api/cmn/purchase", openapi_extra=IDEMPOTENCY_OPENAPI)
+    @idempotent_write(deps)
     async def purchase_cmn(request: Request) -> Response:
         ctx = deps._require_login(request)
         if not ctx:
@@ -191,12 +193,16 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
                 return deps._json_success(
                     {"status": "success", "paymentUrl": r.json()["paymentUrl"]}
                 )
+            if r is not None and r.status_code == 200:
+                raise UpstreamWriteUncertain("Missing payment result")
             return deps._upstream_error(
                 r,
                 "换号购买请求失败，请稍后重试",
                 400,
                 operation="purchase_cmn",
             )
+        except UpstreamWriteUncertain:
+            raise
         except WriteValidationError as exc:
             return deps._json_error(str(exc), 400)
         except Exception as exc:

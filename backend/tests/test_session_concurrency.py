@@ -199,3 +199,67 @@ def test_live_redis_only_one_concurrent_rotation_succeeds(disposable_redis_pair)
     assert store.load(original.sid) is None
     assert len(store.load(successes[0].sid)["accounts"]) == 2
     client.close()
+
+
+def test_slow_prelogin_response_cannot_overwrite_new_session(monkeypatch):
+    import asyncio
+    import time
+
+    import anyio
+    import httpx
+
+    from tests.contract_support import isolated_sessions
+
+    store = _install_fake_store(monkeypatch)
+    ctx = store.create(
+        {
+            "csrf_token": "tok",
+            "accounts": {"old@example.test": {"cookies": {}, "sub_brand": "THREE"}},
+            "last_session_refresh": time.time(),
+        }
+    )
+    monkeypatch.setattr(main, "verify_auth_code", lambda *_: (True, "OK"))
+    monkeypatch.setattr(
+        main,
+        "get_isolated_session",
+        isolated_sessions(
+            [FakeResponse(200, {"subBrand": "THREE"}), FakeResponse(204)]
+        ),
+    )
+
+    async def scenario():
+        app = main.create_app()
+        started, release = asyncio.Event(), asyncio.Event()
+
+        @app.get("/test-slow")
+        async def slow():
+            started.set()
+            await asyncio.wait_for(release.wait(), 3)
+            return {"status": "success"}
+
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://test.local"
+        ) as client:
+            client.cookies.set("session", ctx.sid, domain="test.local", path="/")
+            pending = asyncio.create_task(client.get("/test-slow"))
+            await asyncio.wait_for(started.wait(), 3)
+            login = await client.post(
+                "/login",
+                headers={"x-csrf-token": "tok"},
+                data={
+                    "login_type": "password",
+                    "identifier": "new+tag@example.test",
+                    "password": "synthetic",
+                    "auth_code": "synthetic",
+                },
+            )
+            assert login.status_code == 200
+            assert login.json()["redirect"] == "/main/new%2Btag@example.test"
+            new_sid = client.cookies.get("session")
+            release.set()
+            stale = await pending
+            assert not stale.headers.get_list("set-cookie")
+            assert client.cookies.get("session") == new_sid != ctx.sid
+            assert store.load(new_sid)["accounts"]["new+tag@example.test"]
+
+    anyio.run(scenario)

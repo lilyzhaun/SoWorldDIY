@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from urllib.parse import quote
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, RedirectResponse
@@ -19,7 +20,9 @@ def register_account_page_routes(app: FastAPI, deps: RouteDeps) -> None:
             return RedirectResponse(url="/", status_code=302)
         accounts = ctx.data.get("accounts", {})
         first_id = list(accounts.keys())[0]
-        return RedirectResponse(url=f"/main/{first_id}", status_code=302)
+        return RedirectResponse(
+            url=f"/main/{quote(first_id, safe='@')}", status_code=302
+        )
 
     @app.get("/main/{account_id}")
     async def main_page(request: Request, account_id: str) -> Response:

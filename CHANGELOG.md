@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Security
+- 交易接口增加 24 小时 Redis 幂等记录与 `Idempotency-Key`；结果未知时停止重复执行并提示核对。
+- 撤销鉴权码不再由启动种子导入恢复，所有模式拒绝将 v2 摘要直接当作鉴权码。
+- 常规请求不再回写或清除会话 Cookie，避免旧并发响应覆盖登录轮换结果。
+- 更新 Redis、Prometheus 镜像并将 Compose 镜像纳入 CI 漏洞门禁。
 - 会话使用 Redis 原子版本检查，阻止旧快照恢复已注销会话和账号；登录轮换 SID/CSRF。
 - 登录校验 CSRF 与来源；无效鉴权码不污染目标账号配额，代理链按可信边界解析。
 - 资料缓存按会话隔离；请求体、并发和指标标签有界；同步上游请求不阻塞事件循环。
@@ -16,11 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 递归排除 `.env`，关闭参考部署的原始访问日志，补充并分发第三方许可证。
 
 ### Fixed
+- 修复分类切换清空购物车、新开号码支付金额不一致和带 `+` 邮箱的 URL 编码问题。
+- 指标抓取实时刷新 Redis 和应用就绪状态，告警改用实际存在的指标。
+- 重写首次部署 README，替换运营商品牌图标为项目 SIM 卡图案。
 - 修复 Prometheus 文件认证头配置和迁移内容/TTL 核验。
 - 默认运行遗漏的 `.mjs` 契约测试；CI/Release 共用 Python 3.11–3.13、Node 20.19/24 和 Chromium 验收。
 - 发布传递同一个已扫描镜像，不在发布步骤重新构建；附带 SBOM。
 
 ### Upgrade notes
+- 三个交易 POST 接口现在要求 `Idempotency-Key`，前后端须一起升级；自建 Redis ACL 增加 `~operation:*`。
+- 迁移保留 `operation:*` 记录；升级或轮换密钥前先核对待确认交易，不要盲目创建新订单。
+- 种子导入改为显式 `python -m app.auth_cli seed`，导入后移走种子文件。
 - 切换新会话写入逻辑前停止旧版本；禁止旧 SETEX 写入版本与 CAS 版本并行运行。
 - 非浏览器登录客户端先获取登录页，携带 CSRF；`409 session_conflict` 需要刷新或重新登录。
 - Linux x86_64/aarch64 使用 `pip install --require-hashes -r requirements.lock`。
