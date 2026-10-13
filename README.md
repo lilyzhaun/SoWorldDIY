@@ -151,7 +151,7 @@ pip install --require-hashes -r requirements.lock
 HOST=127.0.0.1 PORT=8888 ./start.sh
 ```
 
-后端同时托管构建后的前端。开发模式下可以在 `frontend/` 执行 `npm run dev`；API 联调方式见[开发文档](docs/02-setup.md)。
+后端同时托管构建后的前端。修改前端后重新执行 `npm run build`，再通过后端地址联调；配置步骤见[开发文档](docs/02-setup.md)。
 
 ### 验证
 
