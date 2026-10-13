@@ -62,6 +62,7 @@ def test_make_3hk_request_passes_cookies_and_returns_response(
 
     monkeypatch.setattr(main, "get_isolated_session", lambda: FakeSession())
     monkeypatch.setattr(main, "resolve_proxies", lambda url, default: default)
+    monkeypatch.setattr(main, "_save_session", lambda ctx: None)
 
     ctx = _ctx_with_accounts({"a@b.com": {"cookies": {"old": "v"}}})
     acct = {"cookies": {"old": "v"}}
@@ -114,6 +115,48 @@ def test_make_3hk_request_exception_returns_none(monkeypatch: MonkeyPatch) -> No
         account_context={"cookies": {}},
     )
     assert result is None
+
+
+def test_completed_write_result_survives_session_refresh_conflict(
+    monkeypatch: MonkeyPatch,
+):
+    from app import main
+    from app.session_store import SessionConflictError
+    from tests.contract_support import build_request
+
+    response = FakeResponse(
+        200, {"paymentUrl": "https://pay.example/"}, cookies={"upstream": "new"}
+    )
+
+    class Session:
+        cookies = requests.utils.cookiejar_from_dict({})
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            pass
+
+        def request(self, *args, **kwargs):
+            return response
+
+    def conflict(ctx):
+        raise SessionConflictError("revoked")
+
+    monkeypatch.setattr(main, "get_isolated_session", Session)
+    monkeypatch.setattr(main, "_save_session", conflict)
+    request = build_request("POST", "/api/purchase")
+    account = {"cookies": {}}
+    result = main.make_3hk_request(
+        request,
+        _ctx_with_accounts({"account": account}),
+        "POST",
+        "https://simworld.net/synthetic",
+        account_id="account",
+        account_context=account,
+    )
+    assert result is response
+    assert request.state.delete_session_cookie
 
 
 def _ctx_with_accounts(accounts: dict[str, Any]) -> SessionContext:

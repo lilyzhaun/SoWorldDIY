@@ -89,7 +89,7 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
         subscriptionId: currentSubId,
         price: purchaseDraft.price,
         paymentType: purchaseDraft.paymentType,
-        txnAmount: purchaseDraft.txnAmount,
+        txnAmount: purchaseDraft.newLine ? 0 : purchaseDraft.txnAmount,
         new_line: purchaseDraft.newLine,
         account_id: accountId,
       })

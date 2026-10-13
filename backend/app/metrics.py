@@ -126,7 +126,7 @@ def route_template_from_request(request: Request) -> str:
                 p = getattr(r, "path", None)
                 if isinstance(p, str) and p:
                     return p
-    return normalize_route_template(request.url.path)
+    return "unmatched"
 
 
 def status_class(status_code: int) -> str:
@@ -179,7 +179,7 @@ def authorize_metrics(provided: str | None, expected: str) -> str:
         return "missing"
     if provided is None or not str(provided).strip():
         return "missing"
-    if secrets.compare_digest(str(provided), expected):
+    if secrets.compare_digest(str(provided).encode("utf-8"), expected.encode("utf-8")):
         return "ok"
     return "forbidden"
 
@@ -196,6 +196,8 @@ class MetricsMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         method = request.method.upper()
+        if method not in {"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}:
+            method = "OTHER"
         route = route_template_from_request(request)
         ACTIVE_REQUESTS.inc()
         start = time.perf_counter()

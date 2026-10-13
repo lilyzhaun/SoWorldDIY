@@ -84,7 +84,7 @@ def test_profile_returns_cached_without_upstream_call(monkeypatch: MonkeyPatch) 
         "get_cache",
         lambda k: (
             {"status": "success", "data": {"cached": True}}
-            if k == "profile_a@b.com"
+            if k == "profile_sid-seeded_a@b.com"
             else None
         ),
     )
@@ -95,13 +95,20 @@ def test_profile_returns_cached_without_upstream_call(monkeypatch: MonkeyPatch) 
     assert resp.status_code == 200
     assert json.loads(bytes(resp.body)) == {
         "status": "success",
-        "data": {"cached": True},
+        "data": {
+            "cached": True,
+            "available_accounts": [
+                {"identifier": "a@b.com", "active": True, "subBrand": "THREE"}
+            ],
+        },
     }
 
 
 def test_profile_refresh_deletes_cache_then_fetches(monkeypatch: MonkeyPatch) -> None:
     deleted: list[str] = []
-    cache_box: dict[str, Any] = {"profile_a@b.com": {"status": "success", "old": True}}
+    cache_box: dict[str, Any] = {
+        "profile_sid-seeded_a@b.com": {"status": "success", "old": True}
+    }
     monkeypatch.setattr(main, "get_cache", lambda key: cache_box.get(key))
 
     def fake_delete(key):
@@ -123,7 +130,7 @@ def test_profile_refresh_deletes_cache_then_fetches(monkeypatch: MonkeyPatch) ->
     assert resp.status_code == 200
     body = json.loads(bytes(resp.body))
     assert body["status"] == "success"
-    assert deleted == ["profile_a@b.com"]
+    assert deleted == ["profile_sid-seeded_a@b.com"]
     assert fetched
 
 
@@ -155,7 +162,7 @@ def test_profile_aggregates_offers_and_caches(monkeypatch: MonkeyPatch) -> None:
     assert offer["usage"][0]["total"] == 1000
     assert offer["usage"][0]["remain"] == 400
     assert body["data"]["current"]["mobile"] == "85212345678"
-    assert set_calls and set_calls[0][0] == "profile_a@b.com"
+    assert set_calls and set_calls[0][0] == "profile_sid-seeded_a@b.com"
 
 
 def test_balance_no_account_returns_zero(monkeypatch: MonkeyPatch) -> None:

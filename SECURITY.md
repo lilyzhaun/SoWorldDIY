@@ -6,7 +6,12 @@
 
 请不要在公开 issue 中披露真实凭据、账号信息、OTP、cookies、鉴权码或可直接利用的细节。
 
-如果你发现安全问题，请通过私有渠道联系维护者，并包含：
+如果你发现安全问题，请在本仓库的 **Security → Advisories → Report a vulnerability**
+私密报告。若入口未启用，请通过维护者 GitHub 个人资料中公开的联系方式先请求私密
+交流渠道；不要把漏洞细节或真实凭据放进公开 Issue。维护者在公开仓库前须启用
+GitHub Private Vulnerability Reporting。
+
+报告请包含：
 
 - 影响范围说明。
 - 可复现步骤。

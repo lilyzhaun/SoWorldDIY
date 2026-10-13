@@ -1,12 +1,12 @@
-# Trivy image scan exceptions (accepted)
+# Trivy 镜像扫描策略
 
 Scanned image: `3hk-new:local` built from digest-pinned
 `python:3.13-slim-bookworm` + `node:24-bookworm` (build stage only).
 
-Application dependency scans (`backend/requirements.txt`, `frontend/package-lock.json`)
-reported **0** HIGH/CRITICAL via `trivy fs` and `pip-audit --strict`.
+历史扫描结论不能代表当前版本。应用依赖以 `backend/requirements.lock` 和
+`frontend/package-lock.json` 的实时审计结果为准。
 
-## Accepted base-image OS findings (image scan)
+## 历史 OS 发现（不再作为豁免）
 
 Findings originate from Debian bookworm packages shipped in the official
 `python:3.13-slim-bookworm` runtime (not from pinned Python app dependencies).
@@ -25,4 +25,6 @@ Mitigations in place:
 - Redis not published; ACL least-privilege user
 - No secrets/local overrides in build context (`.dockerignore` + export scan)
 
-Action: bump base digests regularly; do not suppress app-language CVEs without fix/upgrade.
+镜像扫描必须以 `exit-code: 1` 阻断有修复的 HIGH/CRITICAL；上述按包名的宽泛接受
+不是有效豁免。当前不配置漏洞忽略清单。若新增豁免，必须逐个记录 CVE/GHSA、实际
+适用性、理由、责任人和固定到期日，并在 CI 中验证期限；不能豁免整个扫描步骤。

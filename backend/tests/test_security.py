@@ -41,3 +41,13 @@ def test_csrf_token_matches_edge_cases() -> None:
     assert csrf_token_matches(token, None) is False
     assert csrf_token_matches("", token) is False
     assert csrf_token_matches(token, "wrong") is False
+
+
+def test_cryptography_49_ciphertext_still_decrypts():
+    # Generated with cryptography 49.0.0, a public synthetic key, and timestamp
+    # 1700000000. This is not a credential or a production encryption key.
+    ciphertext = "gAAAAABlU_EAsBJqd-DTqFWL-QCRQlBpcfOzXan7gwDYuRwIBud-njlsc2Azm0juTTsFxgZCw54xGWf6u2t4t4UQ6_D8umeCOJDCDVxO1UnvRd-Z9ohmjd4="
+    assert (
+        decrypt_password(create_password_cipher("legacy-synthetic-key"), ciphertext)
+        == "legacy-synthetic-password"
+    )

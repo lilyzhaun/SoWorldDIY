@@ -100,6 +100,12 @@ class FakeMigrateRedis:
     def exists(self, *names: str) -> int:
         return sum(1 for n in names if n in self.strings or n in self.hashes)
 
+    def get(self, name: str) -> bytes | None:
+        return self.strings.get(name)
+
+    def pexpire(self, name: str, ttl: int) -> None:
+        self.pttls[name] = ttl
+
     def setex(self, name: str, seconds: int, value: bytes | str) -> None:
         raw = value if isinstance(value, bytes) else str(value).encode("utf-8")
         self.strings[name] = raw
@@ -161,6 +167,27 @@ def test_plan_does_not_include_unrelated_prefixes() -> None:
     plan = build_plan(src, hmac_key=HMAC_SECRET)
     assert plan.session_count == 1
     assert all(not i.source_key.startswith("other:") for i in plan.items)
+
+
+def test_verify_rejects_corrupted_session_and_apply_preserves_destination():
+    src, dst = FakeMigrateRedis(), FakeMigrateRedis()
+    src.setex("session:test", 60, b"correct")
+    plan = build_plan(src, hmac_key=HMAC_SECRET)
+    apply_plan(src, dst, plan)
+    dst.strings["session:test"] = b"corrupted"
+    assert verify_plan(src, dst, plan)["ok"] is False
+    with pytest.raises(RuntimeError, match="BUSYKEY"):
+        apply_plan(src, dst, plan)
+    assert dst.get("session:test") == b"corrupted"
+
+
+def test_migration_refuses_other_databases():
+    from app.redis_migrate import _connect
+
+    with pytest.raises(SystemExit, match="DB 0"):
+        _connect("redis://127.0.0.1:1/15")
+    with pytest.raises(SystemExit, match="DB 0"):
+        _connect("redis://127.0.0.1:1/0?db=15")
 
 
 def test_rollback_plan_public_has_atomic_url_and_mode_steps() -> None:

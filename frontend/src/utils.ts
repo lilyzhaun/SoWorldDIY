@@ -15,6 +15,7 @@ export function toUserFacingApiError(error: unknown, fallback: string): string {
     if (error.status === 401) return '登录已失效，请重新登录'
     if (error.status === 403) return '没有权限执行此操作'
     if (error.status === 404) return '请求的资源不存在'
+    if (error.status === 409) return '会话已变更，请刷新或重新登录'
     if (error.status === 429) return '请求过于频繁，请稍后再试'
     if (error.status >= 500) return '服务暂时不可用，请稍后再试'
     return fallback

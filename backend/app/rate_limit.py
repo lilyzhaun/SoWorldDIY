@@ -119,20 +119,35 @@ class RateLimiter:
             cfg.check_user_ip_window,
         )
 
-    def send_otp(self, *, ip: str, identifier: str) -> RateLimitDecision:
+    def session_create_ip(self, ip: str) -> RateLimitDecision:
         cfg = self._config
-        id_hash = _hash_identifier(identifier)
-        id_decision = self._hit(
-            _bucket_key("send_otp", "id", id_hash),
-            cfg.send_otp_id_limit,
-            cfg.send_otp_id_window,
+        return self._hit(
+            _bucket_key("session_create", "ip", ip),
+            cfg.check_user_ip_limit,
+            cfg.check_user_ip_window,
         )
-        if id_decision.redis_error or not id_decision.allowed:
-            return id_decision
+
+    def send_otp(self, *, ip: str, identifier: str) -> RateLimitDecision:
+        ip_decision = self.send_otp_ip(ip)
+        if ip_decision.redis_error or not ip_decision.allowed:
+            return ip_decision
+        return self.send_otp_identifier(identifier)
+
+    def send_otp_ip(self, ip: str) -> RateLimitDecision:
+        cfg = self._config
         return self._hit(
             _bucket_key("send_otp", "ip", ip),
             cfg.send_otp_ip_limit,
             cfg.send_otp_ip_window,
+        )
+
+    def send_otp_identifier(self, identifier: str) -> RateLimitDecision:
+        cfg = self._config
+        id_hash = _hash_identifier(identifier)
+        return self._hit(
+            _bucket_key("send_otp", "id", id_hash),
+            cfg.send_otp_id_limit,
+            cfg.send_otp_id_window,
         )
 
     def login_ip(self, ip: str) -> RateLimitDecision:

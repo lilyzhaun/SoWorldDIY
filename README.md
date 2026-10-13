@@ -75,7 +75,7 @@ npm run build
 cd ../backend
 python -m venv .venv
 . .venv/bin/activate
-pip install -r requirements.txt
+pip install --require-hashes -r requirements.lock
 HOST=127.0.0.1 PORT=8888 ./start.sh
 ```
 
@@ -119,7 +119,7 @@ curl http://127.0.0.1:8888/_ready
 
 ```bash
 cd backend
-.venv/bin/pip-audit -r requirements.txt --strict
+.venv/bin/pip-audit -r requirements.lock --strict
 .venv/bin/python -m compileall -q app
 PYTHONWARNINGS=error .venv/bin/python -c "from app.main import create_app; create_app().openapi()"
 basedpyright --project pyrightconfig.json
@@ -143,7 +143,7 @@ npm run test:coverage
 npm run build
 ```
 
-`npm test` 还会执行真实 Chromium 测试，适合本地完整回归；当前 CI 的单元测试步骤使用 `npm run test:coverage`。
+`npm test` 还会执行真实 Chromium 测试；CI 和 Release 同样执行该浏览器回归。
 
 详见 [测试说明](docs/07-testing.md) 和 [贡献指南](CONTRIBUTING.md)。
 
@@ -244,5 +244,6 @@ npm run build
 - 后端兼容性与覆盖率：Python 3.11 运行完整测试，Python 3.12 执行 `--cov=app --cov-branch --cov-fail-under=84`
 - 前端覆盖率：`cd frontend && npm run test:coverage`
 - 仓库策略：`python3 scripts/check_docs_consistency.py` 和 `python3 scripts/check_security_policy.py`
-- CI：`.github/workflows/ci.yml`（Action SHA 固定、依赖审计、Trivy、覆盖率）
+- CI：`.github/workflows/ci.yml` 与 Release 共用 `.github/workflows/checks.yml`（Action SHA 固定、依赖审计、阻断式 Trivy、覆盖率、Chromium）
+- 发布产物随附项目及第三方许可证；Linux x86_64/aarch64 的运行依赖完整锁定在 `backend/requirements.lock`。
 - 发布：推送 `vX.Y.Z` 标签触发 `.github/workflows/release.yml`；`workflow_dispatch` 仅执行 dry-run，不发布 GHCR 或 GitHub Release

@@ -73,7 +73,7 @@ def test_resolve_client_ip_trusts_xff_from_loopback() -> None:
     ip = resolve_client_ip(
         peer="127.0.0.1",
         x_forwarded_for="198.51.100.7, 10.0.0.1",
-        trusted_proxies=parse_trusted_proxy_ips(None),
+        trusted_proxies=parse_trusted_proxy_ips("127.0.0.1,::1,10.0.0.1"),
     )
     assert ip == "198.51.100.7"
 
@@ -85,6 +85,16 @@ def test_resolve_client_ip_ignores_spoofed_xff_from_untrusted_peer() -> None:
         trusted_proxies=parse_trusted_proxy_ips("127.0.0.1,::1"),
     )
     assert ip == "203.0.113.50"
+
+
+def test_appended_xff_does_not_trust_spoofed_leftmost_entry():
+    assert (
+        resolve_client_ip(peer="127.0.0.1", x_forwarded_for="1.2.3.4, 198.51.100.7")
+        == "198.51.100.7"
+    )
+    assert (
+        resolve_client_ip(peer="127.0.0.1", x_forwarded_for="not-an-ip") == "127.0.0.1"
+    )
 
 
 def test_check_user_ip_threshold_and_retry_after() -> None:
@@ -116,8 +126,9 @@ def test_send_otp_identifier_and_ip_limits() -> None:
     assert limiter.send_otp(ip="9.9.9.9", identifier="a@b.com").allowed is True
     blocked_id = limiter.send_otp(ip="9.9.9.9", identifier="a@b.com")
     assert blocked_id.allowed is False
-    # Different identifier still subject to IP limit
-    assert limiter.send_otp(ip="9.9.9.9", identifier="other@x.com").allowed is True
+    # Even an identifier-blocked request consumed the source IP quota.
+    assert limiter.send_otp(ip="9.9.9.9", identifier="other@x.com").allowed is False
+    assert limiter.send_otp(ip="8.8.8.8", identifier="other@x.com").allowed is True
     blocked_ip = limiter.send_otp(ip="9.9.9.9", identifier="third@x.com")
     assert blocked_ip.allowed is False
     # Keys never contain raw identifier

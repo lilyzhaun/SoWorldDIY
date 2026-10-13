@@ -44,7 +44,8 @@ def resolve_client_ip(
     """Return client IP.
 
     Trust ``X-Forwarded-For`` only when the direct peer is in *trusted_proxies*.
-    Uses the left-most (original client) address from the header when trusted.
+    Walks right-to-left, stopping at the first untrusted hop. Client-supplied
+    left-most entries must not bypass rate limits when a proxy appends XFF.
     """
     peer_ip = _normalize_ip(peer or "") or "0.0.0.0"
     trusted = {_normalize_ip(p) for p in trusted_proxies}
@@ -52,6 +53,12 @@ def resolve_client_ip(
         return peer_ip
     if not x_forwarded_for or not str(x_forwarded_for).strip():
         return peer_ip
-    first = str(x_forwarded_for).split(",", 1)[0]
-    forwarded = _normalize_ip(first)
-    return forwarded or peer_ip
+    for entry in reversed(str(x_forwarded_for).split(",")):
+        forwarded = _normalize_ip(entry)
+        try:
+            ip_address(forwarded)
+        except ValueError:
+            return peer_ip
+        if forwarded not in trusted:
+            return forwarded
+    return peer_ip

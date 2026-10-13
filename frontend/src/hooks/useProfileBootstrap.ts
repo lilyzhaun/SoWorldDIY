@@ -33,6 +33,10 @@ export function useProfileBootstrap(deps: ProfileBootstrapDeps): void {
         const apiUrl = getApiUrl(`/api/profile?_t=${Date.now()}`, accountId)
         const response = await apiFetch(apiUrl, { headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' } })
         const contentType = response.headers.get('content-type')
+        if (response.status === 401 || response.status === 409) {
+          window.location.href = '/?session=expired'
+          return
+        }
         if (response.redirected || (contentType && !contentType.includes('application/json'))) {
           window.location.href = '/'
           return

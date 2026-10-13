@@ -6,6 +6,7 @@ import json
 import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Final, TypedDict
 
@@ -124,7 +125,11 @@ def build_cmn_purchase_payload(
 ) -> CmnPurchasePayloadResult:
     """Build the upstream payload for a CMN number purchase."""
     txn = float(body.txnAmount)
-    payable_amount = max(0.0, float(body.price) - txn)
+    payable_amount = float(
+        max(Decimal(0), Decimal(str(body.price)) - Decimal(str(txn))).quantize(
+            Decimal("0.01")
+        )
+    )
     payment: PurchasePaymentPayload = {"amnt": payable_amount}
     if payable_amount > 0:
         payment.update({"lang": "tc", "type": body.paymentType})
@@ -161,7 +166,11 @@ def build_plan_purchase_payload(
 ) -> PlanPurchasePayloadResult:
     """Build the upstream payload for normal or new-line plan purchases."""
     txn = float(body.txnAmount)
-    payable_amount = max(0.0, float(body.price) - txn)
+    payable_amount = float(
+        max(Decimal(0), Decimal(str(body.price)) - Decimal(str(txn))).quantize(
+            Decimal("0.01")
+        )
+    )
     payment: PurchasePaymentPayload = {"amnt": payable_amount}
     if payable_amount > 0:
         payment.update({"lang": "tc", "type": body.paymentType})
@@ -260,7 +269,7 @@ def parse_wallet_balance(data: object) -> float:
         if "amount" not in item:
             continue
         amounts.append(_wallet_amount(item.get("amount", 0)))
-    return max(amounts)
+    return max(amounts, default=0.0)
 
 
 def load_plans_from_cache(

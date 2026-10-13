@@ -98,7 +98,7 @@ def test_build_plan_purchase_payload_new_line_exact_shape_and_no_mutation() -> N
         ],
         price=10,
         txnAmount=20,
-        paymentType="CARD",
+        paymentType="MPGS",
     )
     before = body.model_dump()
 
@@ -156,11 +156,11 @@ def test_build_cmn_purchase_payload_external_payment_and_wallet() -> None:
 def test_build_cmn_purchase_payload_clamps_amount_and_omits_external_payment() -> None:
     body = CmnPurchaseRequest(
         subscriptionId="sub-2",
-        selectedNumber=123,
+        selectedNumber=12345678,
         offerId="CMN-OFFER-2",
         price=10,
         txnAmount=20,
-        paymentType="CARD",
+        paymentType="MPGS",
     )
 
     result = build_cmn_purchase_payload(body, None)

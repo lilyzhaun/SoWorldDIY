@@ -1,5 +1,11 @@
 # 配置说明
 
+锁定安装支持 Linux x86_64/aarch64 和 CPython 3.11–3.13；其他平台暂未做哈希锁兼容性
+验收，不应直接宣称受支持。更新依赖时同时更新 `requirements.txt` 与 `requirements.lock`。
+可在隔离的 Python 3.12 工具环境使用 `pip==25.3`、`pip-tools==7.5.2`，运行
+`pip-compile --generate-hashes --no-emit-index-url --no-emit-trusted-host --output-file requirements.lock requirements.txt`，
+然后执行三个 Python 版本的安装、测试及 `pip-audit`。
+
 > [← 安装与本地开发](02-setup.md) · [入口与运行方式 →](04-entrypoints.md)
 
 后端配置由 `backend/app/config.py` 加载。启动时会先读取 `backend/.env`，再读取进程环境变量。若同名变量已经存在于进程环境中，`.env` 不会覆盖它。
@@ -16,7 +22,7 @@
 | `REDIS_MIGRATE_DEST_URL` | 否 | `redis://127.0.0.1:6380/0` | 仅迁移 CLI 使用：目标专用 Redis URL。不进入应用运行时配置。 |
 | `AUTH_CODE_KEY_MODE` | 否 | `legacy` | 鉴权码 Redis key 模式：`legacy`（明文 `auth_code:<code>`）、`dual`（读 legacy/v2，只写 v2）、`hmac`（仅 v2）。`legacy`/`dual` 仅用于有界迁移窗口，不是永久静默回退。 |
 | `METRICS_SECRET` | 是 | 无 | `GET /metrics` 所需密钥，经请求头 `x-metrics-secret` 常量时间校验。缺失或错误分别返回 404/403。 |
-| `TRUSTED_PROXY_IPS` | 否 | `127.0.0.1,::1,localhost` | 允许设置 `X-Forwarded-For` 的直连代理 IP 列表（逗号分隔）。非信任对端忽略 XFF。 |
+| `TRUSTED_PROXY_IPS` | 否 | `127.0.0.1,::1,localhost` | 可信代理 IP 列表（逗号分隔）。非信任对端忽略 XFF；可信链从右向左取首个非信任地址，不能信任客户端自填的最左项。 |
 | `RATE_LIMIT_*` | 否 | 见安全方案默认值 | 覆盖 check-user / send-otp / login 的限流阈值与窗口（秒）。 |
 | `AUTH_CODE_HMAC_KEY` | dual/hmac 必填 | 无 | 派生 `auth_code:v2:<HMAC-SHA256 hex>` 的专用密钥，至少 32 字节随机值；无默认回退。不得写入日志或提交仓库。 |
 | `PROXY_URL` | 否 | 空 | 访问 3HK/SIMWorld 上游接口时使用的 HTTP/HTTPS 代理。 |

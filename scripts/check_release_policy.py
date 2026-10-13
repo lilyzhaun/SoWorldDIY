@@ -71,6 +71,15 @@ def main() -> int:
 
     for path in paths:
         text = path.read_text(encoding="utf-8")
+        publish = text.split("  publish:", 1)[-1]
+        if "docker/build-push-action@" in publish:
+            violations.append(f"{path.name}: REBUILD_AFTER_SCAN")
+        if "docker load -i" not in publish or "docker save -o" not in text:
+            violations.append(f"{path.name}: MISSING_SCANNED_IMAGE_HANDOFF")
+        if re.search(r'exit-code:\s*[\'\"]?0\b', text):
+            violations.append(f"{path.name}: NONBLOCKING_SECURITY_SCAN")
+        if "./.github/workflows/checks.yml" not in text:
+            violations.append(f"{path.name}: MISSING_SHARED_CHECKS")
         if RELEASE_NOTES_COMMAND not in text:
             violations.append(f"{path.relative_to(ROOT)}: RELEASE_NOTES_HELPER")
         if ATTESTATION_ACTION in text and PRIVATE_ATTESTATION_STEP.search(text) is None:

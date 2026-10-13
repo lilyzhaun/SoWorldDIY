@@ -8,6 +8,7 @@ from typing import Any, Protocol, runtime_checkable
 import requests
 
 from .brand import InvalidBrandError, parse_brand, plans_cache_path
+from .cache_store import profile_cache_key
 from .runtime import BASE_HEADERS, PLANS_CACHE_DIR, PROXIES, plans_refresh_lock
 from .session_store import SessionContext
 from .upstream_urls import three_offer_url
@@ -69,7 +70,7 @@ def get_brand_by_sub_id(
 ) -> str:
     d = _deps()
     if account_id:
-        data = d.get_cache(f"profile_{account_id}")
+        data = d.get_cache(profile_cache_key(ctx.sid, account_id))
         if data and isinstance(data, dict):
             subscriptions = data.get("data", {}).get("subscriptions", [])
             for sub in subscriptions:
@@ -146,7 +147,11 @@ def fetch_and_save_plans_background(
                 )
                 logger.info("Plans updated for %s", brand)
     except Exception as exc:
-        logger.exception("Background plan fetch failed brand=%s: %s", brand, exc)
+        logger.error(
+            "Background plan fetch failed brand=%s error_class=%s",
+            brand,
+            type(exc).__name__,
+        )
     finally:
         with plans_refresh_lock:
             d.plans_refreshing.discard(brand)

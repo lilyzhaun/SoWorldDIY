@@ -27,6 +27,13 @@ describe('useLoginFlow', () => {
     expect(result.current.isAddMode).toBe(true)
   })
 
+  it('explains a revoked session without retrying a login', () => {
+    window.history.replaceState({}, '', '/?session=expired')
+    const { result } = renderHook(() => useLoginFlow())
+    expect(result.current.toast?.message).toBe('会话已变更或失效，请重新登录')
+    expect(apiFetch).not.toHaveBeenCalled()
+  })
+
   it('validates OTP send inputs and success countdown', async () => {
     const { result } = renderHook(() => useLoginFlow())
 

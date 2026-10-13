@@ -3,13 +3,22 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import pytest
+
 from app import main
+from app.routes import transfer
 from tests.contract_support import (
     FakeResponse,
     MonkeyPatch,
     authed_request,
     run_endpoint,
 )
+
+
+@pytest.fixture(autouse=True)
+def _verified_resource(monkeypatch):
+    # Only upstream payload contracts bypass the separately tested read checks.
+    monkeypatch.setattr(transfer, "validate_transfer", lambda *args: "THREE")
 
 
 def test_transfer_no_dto_offer_returns_400(monkeypatch: MonkeyPatch) -> None:
@@ -60,8 +69,8 @@ def test_transfer_success_payload_and_cache_invalidation(
     body = {
         "account_id": "a@b.com",
         "subscriptionId": "s",
-        "sourceMsisdn": "111",
-        "targetMsisdn": "222",
+        "sourceMsisdn": "11111111",
+        "targetMsisdn": "22222222",
         "productFamily": "DATA",
         "balanceResourceId": "9",
         "unit": "MB",
@@ -79,12 +88,12 @@ def test_transfer_success_payload_and_cache_invalidation(
     )
     assert resp.status_code == 200
     assert json.loads(bytes(resp.body)) == {"status": "success"}
-    assert invalidated == ["profile_a@b.com"]
+    assert invalidated == ["profile_sid-seeded_a@b.com"]
     payload = captured[-1]["json"]
     assert "tranferOrder" in payload
     order_sub = payload["tranferOrder"]["orderSubscription"]
-    assert order_sub["msisdn"] == "111"
-    assert order_sub["volumeUpMsisdn"] == "222"
+    assert order_sub["msisdn"] == "11111111"
+    assert order_sub["volumeUpMsisdn"] == "22222222"
     offer = order_sub["offers"][0]
     assert offer["offerId"] == "DTO1"
     assert offer["transferOfferId"] == "UO"
@@ -118,8 +127,8 @@ def test_transfer_upstream_non_200_returns_400(monkeypatch: MonkeyPatch) -> None
         "balanceResourceId": 1,
         "amount": 1,
         "unit": "MB",
-        "sourceMsisdn": "1",
-        "targetMsisdn": "2",
+        "sourceMsisdn": "11111111",
+        "targetMsisdn": "22222222",
         "userOfferId": "u",
     }
     resp = run_endpoint(

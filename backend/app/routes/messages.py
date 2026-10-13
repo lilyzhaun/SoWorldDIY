@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from starlette.responses import Response
 
+from ..blocking import run_blocking
 from ..public_errors import INTERNAL_ERROR
 from ..responses import _public_error
 from ..upstream_urls import simworld_url
@@ -31,7 +32,8 @@ def register_messages_routes(app: FastAPI, deps: RouteDeps) -> None:
         seen: set[Any] = set()
         brand = account_ctx.get("sub_brand", "THREE")
         try:
-            r = deps.make_3hk_request(
+            r = await run_blocking(
+                deps.make_3hk_request,
                 request=request,
                 ctx=ctx,
                 method="GET",
@@ -81,7 +83,8 @@ def register_messages_routes(app: FastAPI, deps: RouteDeps) -> None:
             "endDate": request.query_params.get("endDate"),
         }
         try:
-            r = deps.make_3hk_request(
+            r = await run_blocking(
+                deps.make_3hk_request,
                 request=request,
                 ctx=ctx,
                 method="GET",

@@ -38,7 +38,7 @@ cp .env.example backend/.env
 cd backend
 python -m venv .venv
 . .venv/bin/activate
-pip install -r requirements.txt
+pip install --require-hashes -r requirements.lock
 ```
 
 ## 安装前端依赖并构建

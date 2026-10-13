@@ -41,7 +41,7 @@ def test_brand_by_sub_id_uses_cached_profile_subscription(
                     ]
                 }
             }
-            if key == "profile_acct"
+            if key == "profile_sid-test_acct"
             else None
         ),
     )
@@ -103,7 +103,7 @@ def test_internal_logout_account_clears_session_when_last_account(
     has_left = main.internal_logout_account(ctx, "a@b.com")
     assert has_left is False
     assert ctx.data == {}
-    assert cleared == ["profile_a@b.com"]
+    assert cleared == ["profile_sid-test_a@b.com"]
 
 
 def test_internal_logout_account_keeps_session_with_remaining(

@@ -8,8 +8,11 @@ from typing import cast
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from .blocking import RequestConcurrencyMiddleware
+from .cache_store import profile_cache_key
 from .main_deps import MainDepsAdapter, MainModuleSource
 from .metrics import MetricsMiddleware
+from .request_limits import RequestBodyLimitMiddleware
 from .request_overrides import (
     resolve_proxies,  # noqa: F401 — re-exported for monkeypatch seam
 )
@@ -105,7 +108,7 @@ def internal_logout_account(ctx: SessionContext, account_id: str) -> bool:
     accounts = ctx.data.get("accounts", {})
     if isinstance(accounts, dict) and account_id in accounts:
         del accounts[account_id]
-    delete_cache(f"profile_{account_id}")
+    delete_cache(profile_cache_key(ctx.sid, account_id))
 
     if not accounts:
         _clear_session(ctx)
@@ -132,6 +135,8 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(MetricsMiddleware)
     app.add_middleware(SessionMiddleware)
+    app.add_middleware(RequestBodyLimitMiddleware)
+    app.add_middleware(RequestConcurrencyMiddleware)
 
     if FRONTEND_STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=FRONTEND_STATIC_DIR), name="static")
@@ -140,6 +145,12 @@ def create_app() -> FastAPI:
             "/assets",
             StaticFiles(directory=FRONTEND_DIST_DIR / "assets"),
             name="assets",
+        )
+    if (FRONTEND_DIST_DIR / "licenses").exists():
+        app.mount(
+            "/licenses",
+            StaticFiles(directory=FRONTEND_DIST_DIR / "licenses"),
+            name="licenses",
         )
 
     # Reuse the module-level adapter; do not reconfigure global providers.

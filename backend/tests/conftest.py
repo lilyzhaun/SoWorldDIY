@@ -28,7 +28,16 @@ def _default_allow_rate_limiter(monkeypatch: pytest.MonkeyPatch) -> None:
         def check_user_ip(self, ip: str) -> RateLimitDecision:
             return RateLimitDecision(allowed=True)
 
+        def session_create_ip(self, ip: str) -> RateLimitDecision:
+            return RateLimitDecision(allowed=True)
+
         def send_otp(self, *, ip: str, identifier: str) -> RateLimitDecision:
+            return RateLimitDecision(allowed=True)
+
+        def send_otp_ip(self, ip: str) -> RateLimitDecision:
+            return RateLimitDecision(allowed=True)
+
+        def send_otp_identifier(self, identifier: str) -> RateLimitDecision:
             return RateLimitDecision(allowed=True)
 
         def login_ip(self, ip: str) -> RateLimitDecision:

@@ -11,7 +11,7 @@ import os
 import sys
 from collections.abc import Mapping
 from typing import TextIO
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import parse_qs, urlsplit, urlunsplit
 
 import redis
 
@@ -76,7 +76,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _connect(url: str) -> redis.Redis:
-    return redis.Redis.from_url(url, decode_responses=False)
+    parts = urlsplit(url)
+    if parts.path not in {"", "/", "/0"} or any(
+        db != "0" for db in parse_qs(parts.query).get("db", [])
+    ):
+        raise SystemExit("Migration is restricted to DB 0")
+    return redis.Redis.from_url(
+        url, decode_responses=False, socket_connect_timeout=3, socket_timeout=3
+    )
 
 
 def _require_hmac(raw: str | None) -> bytes:
@@ -164,6 +171,15 @@ class _DecodeHashProxy:
         if isinstance(result, int):
             return result
         raise TypeError(f"redis EXISTS returned unexpected type {type(result)!r}")
+
+    def get(self, name: str) -> bytes | None:
+        result = self._c.get(name)
+        if result is None or isinstance(result, bytes):
+            return result
+        raise TypeError("redis GET returned non-bytes")
+
+    def pexpire(self, name: str, ttl: int) -> object:
+        return self._c.pexpire(name, ttl)
 
 
 def run(argv: list[str] | None = None, out: TextIO | None = None) -> int:

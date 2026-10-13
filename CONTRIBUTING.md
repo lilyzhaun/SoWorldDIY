@@ -52,7 +52,7 @@
 
 ```bash
 cd backend
-.venv/bin/pip-audit -r requirements.txt --strict
+.venv/bin/pip-audit -r requirements.lock --strict
 .venv/bin/python -m compileall -q app
 PYTHONWARNINGS=error .venv/bin/python -c "from app.main import create_app; create_app().openapi()"
 basedpyright --project pyrightconfig.json
@@ -84,7 +84,7 @@ npm run test:coverage
 npm run build
 ```
 
-`npm run test:coverage` 是当前 CI 的测试步骤；本地完整回归可额外运行 `npm test`，它还会执行真实 Chromium 测试。
+CI 执行 `npm run test:coverage` 和真实 Chromium 测试；本地完整回归可运行 `npm test`。
 
 通用检查：
 
@@ -163,7 +163,7 @@ git status --short
 cd backend
 python3.11 -m pytest
 python3.12 -m pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
-.venv/bin/pip-audit -r requirements.txt --strict
+.venv/bin/pip-audit -r requirements.lock --strict
 ```
 
 前端覆盖率和依赖审计：
