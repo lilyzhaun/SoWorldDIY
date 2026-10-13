@@ -1,6 +1,6 @@
 const VERSION = new URL(self.location.href).searchParams.get('v') || 'dev'
 
-const CACHE_NAME = '3hk-app-v' + VERSION
+const CACHE_NAME = '3hk-app-v' + VERSION + '-original-icons'
 
 // 【修改点1】从列表中删除了 '/'
 // 首页必须实时请求，否则无法判断是否需要跳转 /main 或显示多账号登录

@@ -4,9 +4,7 @@
 
 ## 项目图标
 
-`frontend/public/static/images/icon-192.png` 和 `icon-512.png` 是为本项目生成的
-SIM 卡图案（AI 辅助生成），随项目按 MIT 发布，不使用运营商品牌标志。
-历史版本中的第三方品牌标识不属于本项目 MIT 授权范围；运营商名称和商标归各自权利人所有。
+`frontend/public/static/images/icon-192.png` 和 `icon-512.png` 由项目作者原创绘制。
 
 ## Ant Design Icons
 
