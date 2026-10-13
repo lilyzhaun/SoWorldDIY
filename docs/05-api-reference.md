@@ -72,6 +72,8 @@
 
 登录成功后，后端会设置 `csrf_token` Cookie。前端非 GET/HEAD 请求通过 `x-csrf-token` 发送同一个值。当 `COOKIE_SECURE=true` 时，`session` 与 `csrf_token` 均带 `Secure`。以下接口会校验 CSRF：
 
+- `POST /login`：先请求登录页取得匿名会话及 CSRF，认证成功后 SID 和 CSRF 均轮换。
+
 - `/logout`
 - `/api/purchase`
 - `/api/cmn/numbers`
@@ -91,6 +93,13 @@
 | `POST /login` | 每 IP 10 次 / 15 分钟；每标识失败 5 次 / 15 分钟（成功清除失败桶） |
 
 超限返回 HTTP **429**，JSON `code=rate_limited`，并带整数 `Retry-After` 头。仅当直连对端属于 `TRUSTED_PROXY_IPS`（默认 loopback）时信任 `X-Forwarded-For`。Redis 不可用时 `check-user`、`send-otp` 和 `login` 失败关闭（503）。
+
+无效鉴权码不消耗目标账号失败/OTP 配额。请求体超过 64 KiB 返回 413；读取超时返回
+408；会话快照冲突返回 409。敏感操作不会由服务端或前端自动重试。
+
+购买金额与新鲜上游套餐目录核对，数量限 1–99；钱包抵扣不能超过订单或当前可用余额。
+换号和资源转移校验订阅归属；转移还校验来源号码、资源、单位及额度。非法或过期请求
+返回 400，并且不转发上游写操作。
 
 ---
 

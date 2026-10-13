@@ -9,6 +9,33 @@ afterEach(() => {
 })
 
 describe('useProfileBootstrap', () => {
+  it('redirects a session conflict to a clearly explained login without retry', async () => {
+    const original = window.location
+    Object.defineProperty(window, 'location', { configurable: true, value: { ...original, href: '' } })
+    const fetch = vi.fn().mockResolvedValue({
+      status: 409,
+      ok: false,
+      headers: { get: () => 'application/json' },
+    })
+    vi.stubGlobal('fetch', fetch)
+    try {
+      renderHook(() =>
+        useProfileBootstrap({
+          accountId: 'account',
+          currentSubId: '',
+          setCurrentSubId: vi.fn(),
+          setNoNumberMode: vi.fn(),
+          setLoading: vi.fn(),
+          setSubscriptions: vi.fn(),
+          setAvailableAccounts: vi.fn(),
+        }),
+      )
+      await waitFor(() => expect(window.location.href).toBe('/?session=expired'))
+      expect(fetch).toHaveBeenCalledTimes(1)
+    } finally {
+      Object.defineProperty(window, 'location', { configurable: true, value: original })
+    }
+  })
   it('loads profile and selects subscription', async () => {
     const setCurrentSubId = vi.fn()
     const setNoNumberMode = vi.fn()

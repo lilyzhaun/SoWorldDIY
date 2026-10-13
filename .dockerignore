@@ -13,6 +13,8 @@ AGENTS.md
 # Secrets and local-only files
 .env
 .env.*
+**/.env
+**/.env.*
 !**/.env.example
 backend/.env
 backend/auth_codes.json

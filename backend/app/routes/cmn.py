@@ -6,10 +6,13 @@ from fastapi import FastAPI, Request
 from pydantic import ValidationError
 from starlette.responses import Response
 
+from ..blocking import run_blocking
+from ..cache_store import profile_cache_key
 from ..public_errors import INTERNAL_ERROR, INVALID_REQUEST
 from ..responses import _public_error
 from ..schemas import CmnPurchaseRequest
 from ..services_commerce import build_cmn_purchase_payload
+from ..services_validation import WriteValidationError, validate_cmn
 from ..upstream_urls import simworld_url
 from .deps import RouteDeps
 
@@ -55,7 +58,8 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
 
         sid = request.query_params.get("subscriptionId")
         target_brand = deps.get_brand_by_sub_id(ctx, sid, req_ident)
-        r = deps.make_3hk_request(
+        r = await run_blocking(
+            deps.make_3hk_request,
             request=request,
             ctx=ctx,
             method="GET",
@@ -90,7 +94,8 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
             return deps._redirect_to_login()
 
         target_brand = deps.get_brand_by_sub_id(ctx, sid, req_ident)
-        r = deps.make_3hk_request(
+        r = await run_blocking(
+            deps.make_3hk_request,
             request=request,
             ctx=ctx,
             method="POST",
@@ -152,7 +157,11 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
         sid = body.subscriptionId
         target_brand = deps.get_brand_by_sub_id(ctx, str(sid), req_ident)
         try:
-            kr = deps.make_3hk_request(
+            target_brand = await run_blocking(
+                validate_cmn, deps, request, ctx, req_ident, body
+            )
+            kr = await run_blocking(
+                deps.make_3hk_request,
                 request=request,
                 ctx=ctx,
                 method="GET",
@@ -167,7 +176,8 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
                 kr.json().get("accessPurchaseKey"),
             )
 
-            r = deps.make_3hk_request(
+            r = await run_blocking(
+                deps.make_3hk_request,
                 request=request,
                 ctx=ctx,
                 method="POST",
@@ -177,7 +187,7 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
                 account_context=account_ctx,
             )
             if r and r.status_code == 200 and "paymentUrl" in r.json():
-                deps.delete_cache(f"profile_{req_ident}")
+                deps.delete_cache(profile_cache_key(ctx.sid, req_ident))
                 return deps._json_success(
                     {"status": "success", "paymentUrl": r.json()["paymentUrl"]}
                 )
@@ -187,6 +197,8 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
                 400,
                 operation="purchase_cmn",
             )
+        except WriteValidationError as exc:
+            return deps._json_error(str(exc), 400)
         except Exception as exc:
             logger.error(
                 "purchase_cmn failed error_class=%s brand=%s",

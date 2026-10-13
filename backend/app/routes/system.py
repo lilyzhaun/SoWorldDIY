@@ -12,8 +12,10 @@ from fastapi.responses import (
 from redis.exceptions import RedisError
 from starlette.responses import Response
 
+from ..blocking import run_blocking
 from ..metrics import authorize_metrics, render_metrics, set_redis_ready
-from ..public_errors import UNAUTHORIZED
+from ..public_errors import SERVICE_UNAVAILABLE, UNAUTHORIZED
+from ..rate_limit_http import client_ip, guard
 from ..responses import _public_error
 from .deps import RouteDeps
 
@@ -37,7 +39,7 @@ def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
             "plans_cache_dir": deps.PLANS_CACHE_DIR.exists(),
         }
         try:
-            checks["redis"] = bool(deps.redis_client.ping())
+            checks["redis"] = bool(await run_blocking(deps.redis_client.ping))
         except RedisError:
             checks["redis"] = False
         set_redis_ready(bool(checks["redis"]))
@@ -87,6 +89,22 @@ def register_system_routes(app: FastAPI, deps: RouteDeps) -> None:
     @app.get("/")
     async def index(request: Request) -> Response:
         ctx = getattr(request.state, "session_ctx", None)
+        if ctx is None:
+            blocked = guard(
+                await run_blocking(
+                    deps.rate_limiter.session_create_ip,
+                    client_ip(request, deps.TRUSTED_PROXY_IPS),
+                ),
+                endpoint="session_create",
+            )
+            if blocked is not None:
+                return blocked
+            try:
+                ctx = await run_blocking(deps._create_session)
+            except RuntimeError:
+                return _public_error(SERVICE_UNAVAILABLE, 503)
+            request.state.session_ctx = ctx
+            request.state.delete_session_cookie = False
         if request.query_params.get("add") == "1":
             return FileResponse(
                 deps.FRONTEND_DIST_DIR / "login.html", media_type="text/html"

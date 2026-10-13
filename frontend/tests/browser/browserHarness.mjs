@@ -62,5 +62,5 @@ export async function dumpBrowserDom(
     testUrl,
   ]
   if (windowSize) argumentsList.splice(-2, 0, `--window-size=${windowSize}`)
-  return executeFile(browserExecutable, argumentsList, { maxBuffer: 1_000_000 })
+  return executeFile(browserExecutable, argumentsList, { maxBuffer: 1_000_000, timeout: 20_000 })
 }

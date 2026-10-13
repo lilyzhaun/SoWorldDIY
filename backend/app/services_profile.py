@@ -195,7 +195,11 @@ def fetch_and_build_profile(
                     )
                 user_email = merge_brand_profile_data(brand, data, agg, user_email)
         except Exception as exc:
-            logger.error("Err parsing %s: %s", brand, exc)
+            logger.error(
+                "Profile parse failed brand=%s error_class=%s",
+                brand,
+                type(exc).__name__,
+            )
             continue
 
     subscriptions_list = list(agg.values())

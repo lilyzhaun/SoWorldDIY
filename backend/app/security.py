@@ -35,6 +35,6 @@ def new_csrf_token() -> str:
 
 
 def csrf_token_matches(expected: str | None, provided: str | None) -> bool:
-    if not expected or not provided:
+    if not expected or not provided or not expected.isascii() or not provided.isascii():
         return False
     return secrets.compare_digest(expected, provided)

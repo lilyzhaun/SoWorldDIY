@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [main]
 
-# Least privilege for PR/push CI (no write, no secrets beyond GITHUB_TOKEN).
 permissions:
   contents: read
   pull-requests: read
@@ -16,189 +15,63 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  policy:
-    name: workflow-policy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Require pinned Actions
-        run: python3 scripts/check_actions_pinned.py
-      - name: Repository security policy
-        run: python3 scripts/check_security_policy.py
-      - name: Release policy
-        run: python3 scripts/check_release_policy.py
-      - name: Install actionlint
-        run: |
-          set -euo pipefail
-          VERSION=1.7.7
-          curl -sSL "https://github.com/rhysd/actionlint/releases/download/v${VERSION}/actionlint_${VERSION}_linux_amd64.tar.gz" \
-            | tar -xz -C /tmp actionlint
-          sudo mv /tmp/actionlint /usr/local/bin/actionlint
-          actionlint -version
-      - name: actionlint
-        run: actionlint -color
+  checks:
+    uses: ./.github/workflows/checks.yml
 
-  secrets:
-    name: secret-scan
+  # Preserve the exact status contexts required by the Protect main ruleset.
+  # Reusable-workflow and matrix job names are not stable branch-protection
+  # contexts. These gates fail closed unless every shared check succeeds.
+  workflow-policy:
+    name: workflow-policy
+    needs: checks
+    if: always()
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          fetch-depth: 0
-      - name: Gitleaks
-        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: test "$CHECKS_RESULT" = success
+
+  secret-scan:
+    name: secret-scan
+    needs: checks
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: test "$CHECKS_RESULT" = success
 
   frontend:
     name: frontend
+    needs: checks
+    if: always()
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
+    timeout-minutes: 2
     steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Setup Node
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "20.19.0"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - name: Install
-        run: npm ci
-      - name: npm audit
-        run: npm audit --audit-level=moderate
-      - name: Format
-        run: npm run format:check
-      - name: Lint
-        run: npm run lint
-      - name: Typecheck
-        run: npm run typecheck
-      - name: Unit tests with coverage
-        run: npm run test:coverage
-      - name: Build
-        run: npm run build
-      - name: Upload frontend dist
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: frontend-dist
-          path: frontend/dist
-          retention-days: 7
+      - env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: test "$CHECKS_RESULT" = success
 
   backend:
     name: backend
+    needs: checks
+    if: always()
     runs-on: ubuntu-latest
-    needs: [frontend]
-    defaults:
-      run:
-        working-directory: backend
-    env:
-      SESSION_SECRET: ci-test-secret
-      PASSWORD_ENCRYPTION_KEY: ci-test-encryption-key
-      COOKIE_SECURE: "false"
-      METRICS_SECRET: ci-test-metrics-secret
-      AUTH_CODE_KEY_MODE: legacy
-      REDIS_APP_PASSWORD: ci-redis-app-pass
-      # After ACL init, app user is required for any live Redis touch.
-      REDIS_URL: redis://3hk-app:ci-redis-app-pass@127.0.0.1:6379/0
-    services:
-      redis:
-        # redis:7 digest resolved 2026-07-16
-        image: redis:7@sha256:a8f08480e1f88f2647fed492d1178c06abb0d0c1fbf02c682a61e2f483fb3954
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
+    timeout-minutes: 2
     steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Setup Python 3.11
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "3.11"
-      - name: Install Redis tooling
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends redis-server redis-tools
-      - name: Initialize Redis ACL
-        working-directory: ${{ github.workspace }}
-        run: bash deploy/ci/redis-acl-init.sh
-      - name: Download frontend build artifacts
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: frontend-dist
-          path: frontend/dist
-      - name: Install Python 3.11 dependencies
-        run: |
-          python -m pip install -r requirements.txt
-          python -m pip install -r requirements-dev.txt
-      - name: pip-audit
-        run: pip-audit -r requirements.txt --strict
-      - name: Compile
-        run: python -m compileall -q app
-      - name: OpenAPI smoke
-        run: PYTHONWARNINGS=error python -c "from app.main import create_app; create_app().openapi()"
-      - name: basedpyright
-        run: basedpyright --project pyrightconfig.json
-      - name: ruff format
-        run: ruff format --check app tests
-      - name: ruff check
-        run: ruff check app tests
-      - name: pytest on Python 3.11
-        run: |
-          python --version
-          python -m pytest
-      - name: Setup Python 3.12
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "3.12"
-      - name: Install Python 3.12 dependencies
-        run: |
-          python -m pip install -r requirements.txt
-          python -m pip install -r requirements-dev.txt
-      - name: pytest with coverage on Python 3.12
-        run: |
-          python --version
-          python -m pytest --cov=app --cov-branch --cov-report=term --cov-fail-under=84
+      - env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: test "$CHECKS_RESULT" = success
 
-  container-scan:
+  trivy:
     name: trivy
+    needs: checks
+    if: always()
     runs-on: ubuntu-latest
-    needs: [frontend]
+    timeout-minutes: 2
     steps:
-      - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          severity: HIGH,CRITICAL
-          exit-code: "1"
-          ignore-unfixed: true
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
-      - name: Build image for scan
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
-        with:
-          context: .
-          file: Dockerfile
-          load: true
-          tags: 3hk-new:ci
-          push: false
-      - name: Trivy image scan
-        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
-        with:
-          scan-type: image
-          image-ref: 3hk-new:ci
-          severity: HIGH,CRITICAL
-          # Base-image OS findings documented in deploy/compose/trivy-exceptions.md
-          # (perl/zlib/ncurses/util-linux). Fail on fixable HIGH/CRITICAL only.
-          exit-code: "0"
-          ignore-unfixed: true
+      - env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: test "$CHECKS_RESULT" = success

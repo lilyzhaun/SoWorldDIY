@@ -81,14 +81,19 @@ BASE_HEADERS: dict[str, str] = {
 SUB_BRANDS = list(SUPPORTED_BRANDS)
 
 retries = Retry(total=3, backoff_factor=0.5, status_forcelist=[500, 502, 503, 504])
-global_adapter = HTTPAdapter(pool_connections=20, pool_maxsize=20, max_retries=retries)
 
 CACHE_DEFAULT_TIMEOUT = 300
 cache = MemoryCache(default_timeout=CACHE_DEFAULT_TIMEOUT)
 
 plans_refresh_lock = threading.Lock()
 plans_refreshing: set[str] = set()
-redis_client = redis.Redis.from_url(REDIS_URL, decode_responses=True)
+redis_client = redis.Redis.from_url(
+    REDIS_URL,
+    decode_responses=True,
+    socket_connect_timeout=3,
+    socket_timeout=3,
+    max_connections=16,
+)
 session_store = RedisSessionStore(
     redis_client=redis_client,
     key_prefix=REDIS_SESSION_PREFIX,
@@ -131,6 +136,8 @@ def verify_auth_code(auth_code: str | None, consume: bool = False) -> tuple[bool
 
 def get_isolated_session() -> requests.Session:
     s = requests.Session()
-    s.mount("http://", global_adapter)
-    s.mount("https://", global_adapter)
+    # Closing a Session must not close another in-flight request's adapter.
+    adapter = HTTPAdapter(pool_connections=4, pool_maxsize=4, max_retries=retries)
+    s.mount("http://", adapter)
+    s.mount("https://", adapter)
     return s

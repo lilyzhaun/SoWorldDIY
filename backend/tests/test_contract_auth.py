@@ -9,9 +9,24 @@ from tests.contract_support import (
     MonkeyPatch,
     _authed_session,
     _install_fake_store,
-    invoke,
     isolated_sessions,
 )
+from tests.contract_support import (
+    invoke as _invoke,
+)
+
+
+def invoke(path: str, *args, **kwargs):
+    # Authentication flow contracts start with a valid pre-login CSRF session.
+    # Missing/cross-site tokens are tested separately against the raw ASGI app.
+    if path == "/login":
+        ctx = main.session_store.create({"csrf_token": "login-token"})
+        kwargs["headers"] = {
+            **kwargs.get("headers", {}),
+            "cookie": f"session={ctx.sid}",
+            "x-csrf-token": "login-token",
+        }
+    return _invoke(path, *args, **kwargs)
 
 
 def test_protected_routes_redirect_to_login_when_anonymous() -> None:
@@ -55,6 +70,9 @@ def test_csrf_missing_on_post_returns_403(monkeypatch: MonkeyPatch) -> None:
 
 
 def test_csrf_valid_proceeds_past_csrf_gate(monkeypatch: MonkeyPatch) -> None:
+    from app.routes import commerce
+
+    monkeypatch.setattr(commerce, "validate_purchase", lambda *args: "THREE")
     store = _install_fake_store(monkeypatch)
     sid, csrf = _authed_session(store)
 
@@ -167,7 +185,7 @@ def test_password_login_success_sets_session_and_redirect(
 
 
 def test_password_login_success_saves_session_once(monkeypatch: MonkeyPatch) -> None:
-    _install_fake_store(monkeypatch)
+    store = _install_fake_store(monkeypatch)
     monkeypatch.setattr(main, "verify_auth_code", lambda code, consume: (True, "OK"))
     monkeypatch.setattr(
         main,
@@ -179,10 +197,14 @@ def test_password_login_success_saves_session_once(monkeypatch: MonkeyPatch) -> 
 
     saved: list[tuple[str, dict[str, Any]]] = []
 
-    def fake_save_session(ctx) -> None:
-        saved.append((ctx.sid, dict(ctx.data)))
+    original_rotate = store.rotate
 
-    monkeypatch.setattr(main, "_save_session", fake_save_session)
+    def fake_rotate(sid, data):
+        ctx = original_rotate(sid, data)
+        saved.append((ctx.sid, dict(ctx.data)))
+        return ctx
+
+    monkeypatch.setattr(store, "rotate", fake_rotate)
 
     resp = invoke(
         "/login",
@@ -275,7 +297,7 @@ def test_login_session_save_failure_returns_503(monkeypatch: MonkeyPatch) -> Non
     def raising_save(sid, data):
         raise RuntimeError("Redis save failed")
 
-    monkeypatch.setattr(store, "save", raising_save)
+    monkeypatch.setattr(store, "rotate", raising_save)
     resp = invoke(
         "/login",
         method="POST",
@@ -383,6 +405,7 @@ def test_login_redis_failure_returns_503(monkeypatch: MonkeyPatch) -> None:
     from tests.test_rate_limit import FakeRateRedis
 
     limiter = RateLimiter(FakeRateRedis(fail=True), RateLimitConfig())
+    _install_fake_store(monkeypatch)
     monkeypatch.setattr(main, "rate_limiter", limiter)
     monkeypatch.setattr(main, "verify_auth_code", lambda code, consume: (True, "OK"))
     resp = invoke(

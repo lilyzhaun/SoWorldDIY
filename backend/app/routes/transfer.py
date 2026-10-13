@@ -6,6 +6,8 @@ from fastapi import FastAPI, Request
 from pydantic import ValidationError
 from starlette.responses import Response
 
+from ..blocking import run_blocking
+from ..cache_store import profile_cache_key
 from ..public_errors import INTERNAL_ERROR, INVALID_REQUEST
 from ..responses import _public_error
 from ..schemas import TransferRequest
@@ -16,6 +18,7 @@ from ..services_transfer import (
     select_dto_offer,
     select_transfer_product_id,
 )
+from ..services_validation import WriteValidationError, validate_transfer
 from ..upstream_urls import simworld_url
 from .deps import RouteDeps
 
@@ -49,7 +52,11 @@ def register_transfer_routes(app: FastAPI, deps: RouteDeps) -> None:
         sid = body.subscriptionId
         target_brand = deps.get_brand_by_sub_id(ctx, str(sid), req_ident)
         try:
-            tr = deps.make_3hk_request(
+            target_brand = await run_blocking(
+                validate_transfer, deps, request, ctx, req_ident, body
+            )
+            tr = await run_blocking(
+                deps.make_3hk_request,
                 request=request,
                 ctx=ctx,
                 method="GET",
@@ -78,7 +85,8 @@ def register_transfer_routes(app: FastAPI, deps: RouteDeps) -> None:
                 amount=coerce_request_float(body.amount),
             )
 
-            r = deps.make_3hk_request(
+            r = await run_blocking(
+                deps.make_3hk_request,
                 request=request,
                 ctx=ctx,
                 method="POST",
@@ -88,7 +96,7 @@ def register_transfer_routes(app: FastAPI, deps: RouteDeps) -> None:
                 account_context=account_ctx,
             )
             if r and r.status_code == 200:
-                deps.delete_cache(f"profile_{req_ident}")
+                deps.delete_cache(profile_cache_key(ctx.sid, req_ident))
                 return deps._json_success({"status": "success"})
             return deps._upstream_error(
                 r,
@@ -96,6 +104,8 @@ def register_transfer_routes(app: FastAPI, deps: RouteDeps) -> None:
                 400,
                 operation="transfer_resource",
             )
+        except WriteValidationError as exc:
+            return deps._json_error(str(exc), 400)
         except Exception as exc:
             logger.error(
                 "transfer_resource failed error_class=%s brand=%s",

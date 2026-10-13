@@ -26,6 +26,11 @@ export function useLoginFlow() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     setIsAddMode(urlParams.get('add') === '1')
+    if (urlParams.get('session') === 'expired') {
+      const message: LoginToastState = { message: '会话已变更或失效，请重新登录', tone: 'warning' }
+      setToast(message)
+      setRetainedToast(message)
+    }
   }, [])
 
   useEffect(() => {

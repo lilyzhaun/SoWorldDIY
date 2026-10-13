@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from collections.abc import Callable, Sequence
 from typing import Any
@@ -12,7 +13,7 @@ from starlette.requests import Request
 from starlette.types import Message, Scope
 
 from app import main
-from app.session_store import SessionContext
+from app.session_store import SessionConflictError, SessionContext
 
 SESSION_COOKIE_NAME = "session"
 CSRF_COOKIE_NAME = "csrf_token"
@@ -42,19 +43,33 @@ class FakeSessionStore:
         self._n = 0
 
     def load(self, sid: str) -> dict[str, Any] | None:
-        return self.sessions.get(sid)
+        data = self.sessions.get(sid)
+        return copy.deepcopy(data) if data is not None else None
 
     def save(self, sid: str, data: dict[str, Any]) -> None:
-        self.sessions[sid] = data
+        current = self.sessions.get(sid)
+        if current is None or current.get("_revision", 0) != data.get("_revision", 0):
+            raise SessionConflictError("Session was revoked or changed")
+        data["_revision"] = data.get("_revision", 0) + 1
+        self.sessions[sid] = copy.deepcopy(data)
 
     def create(self, data: dict[str, Any]) -> SessionContext:
         self._n += 1
         sid = f"3hk_user_fake-{self._n}"
-        self.sessions[sid] = data
-        return SessionContext(sid=sid, data=data)
+        payload = copy.deepcopy(dict(data, _revision=0))
+        self.sessions[sid] = copy.deepcopy(payload)
+        return SessionContext(sid=sid, data=payload)
 
     def delete(self, sid: str) -> None:
         self.sessions.pop(sid, None)
+
+    def rotate(self, sid: str, data: dict[str, Any]) -> SessionContext:
+        current = self.sessions.get(sid)
+        if current is None or current.get("_revision", 0) != data.get("_revision", 0):
+            raise SessionConflictError("Session was revoked or changed")
+        ctx = self.create(data)
+        self.delete(sid)
+        return ctx
 
 
 class FakeIsolatedSession:

@@ -15,6 +15,7 @@ on:
 # Default least privilege; publish job elevates only what it needs.
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: release-${{ github.workflow }}-${{ github.ref }}
@@ -25,27 +26,15 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  checks:
+    uses: ./.github/workflows/checks.yml
+    with:
+      scan_container: false
+
   validate:
     name: validate
     runs-on: ubuntu-latest
-    env:
-      SESSION_SECRET: ci-test-secret
-      PASSWORD_ENCRYPTION_KEY: ci-test-encryption-key
-      COOKIE_SECURE: "false"
-      METRICS_SECRET: ci-test-metrics-secret
-      AUTH_CODE_KEY_MODE: legacy
-      REDIS_APP_PASSWORD: ci-redis-app-pass
-      REDIS_URL: redis://3hk-app:ci-redis-app-pass@127.0.0.1:6379/0
-    services:
-      redis:
-        image: redis:7@sha256:a8f08480e1f88f2647fed492d1178c06abb0d0c1fbf02c682a61e2f483fb3954
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -58,9 +47,10 @@ jobs:
       - name: Install actionlint
         run: |
           set -euo pipefail
-          VERSION=1.7.7
-          curl -sSL "https://github.com/rhysd/actionlint/releases/download/v${VERSION}/actionlint_${VERSION}_linux_amd64.tar.gz" \
-            | tar -xz -C /tmp actionlint
+          VERSION=1.7.12
+          curl --fail --max-time 60 -sSL "https://github.com/rhysd/actionlint/releases/download/v${VERSION}/actionlint_${VERSION}_linux_amd64.tar.gz" -o /tmp/actionlint.tar.gz
+          echo '8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/actionlint.tar.gz' | sha256sum --check
+          tar -xz -C /tmp -f /tmp/actionlint.tar.gz actionlint
           sudo mv /tmp/actionlint /usr/local/bin/actionlint
           actionlint -version
       - name: actionlint
@@ -68,52 +58,6 @@ jobs:
       - name: Extract notes from CHANGELOG
         id: notes
         run: python3 scripts/release_notes.py CHANGELOG.md "$GITHUB_REF" /tmp/release-notes.md
-      - name: Setup Node (frontend gate)
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: "20.19.0"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - name: Frontend checks
-        working-directory: frontend
-        run: |
-          set -euo pipefail
-          npm ci
-          npm audit --audit-level=moderate
-          npm run lint
-          npm run typecheck
-          npm run test:coverage
-          npm run build
-      - name: Setup Python 3.11 (backend gate)
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "3.11"
-      - name: Install Redis tooling
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends redis-server redis-tools
-      - name: Initialize Redis ACL
-        run: bash deploy/ci/redis-acl-init.sh
-      - name: Backend checks on Python 3.11
-        working-directory: backend
-        run: |
-          set -euo pipefail
-          python -m pip install -r requirements.txt -r requirements-dev.txt
-          pip-audit -r requirements.txt --strict
-          basedpyright --project pyrightconfig.json
-          ruff format --check app tests
-          ruff check app tests
-          python -m pytest -q
-      - name: Setup Python 3.12 (coverage gate)
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
-        with:
-          python-version: "3.12"
-      - name: Backend coverage on Python 3.12
-        working-directory: backend
-        run: |
-          set -euo pipefail
-          python -m pip install -r requirements.txt -r requirements-dev.txt
-          python -m pytest --cov=app --cov-branch --cov-fail-under=84 -q
       - name: Upload release notes artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -124,7 +68,8 @@ jobs:
   build:
     name: build-image
     runs-on: ubuntu-latest
-    needs: [validate]
+    needs: [validate, checks]
+    timeout-minutes: 20
     outputs:
       version: ${{ steps.meta.outputs.version }}
       tags: ${{ steps.meta.outputs.tags }}
@@ -170,13 +115,43 @@ jobs:
           scan-type: image
           image-ref: 3hk-new:release-local
           severity: HIGH,CRITICAL
-          # Base-image OS findings documented in deploy/compose/trivy-exceptions.md
-          exit-code: "0"
+          exit-code: "1"
           ignore-unfixed: true
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+      - name: Save scanned image
+        run: docker save -o /tmp/release-image.tar 3hk-new:release-local
+      - name: Generate scanned image SBOM
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25
+        with:
+          scan-type: image
+          image-ref: 3hk-new:release-local
+          format: cyclonedx
+          output: /tmp/release-sbom.json
+      - name: Upload SBOM
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-sbom
+          path: /tmp/release-sbom.json
+          retention-days: 7
+      - name: Upload scanned image
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: scanned-release-image
+          path: /tmp/release-image.tar
+          compression-level: 0
+          retention-days: 1
 
   publish:
     name: publish
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [validate, build]
     if: ${{ needs.build.outputs.dry_run != 'true' && startsWith(github.ref, 'refs/tags/v') }}
     permissions:
@@ -194,6 +169,11 @@ jobs:
         with:
           name: release-notes
           path: /tmp/release-notes
+      - name: Download SBOM
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
+        with:
+          name: release-sbom
+          path: /tmp/release-sbom
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
       - name: Log in to GHCR
@@ -213,17 +193,25 @@ jobs:
             type=semver,pattern={{major}}
             type=sha,format=long
             type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
-      - name: Build and push
-        id: push
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+      - name: Download scanned image
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
-          context: .
-          file: Dockerfile
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          provenance: true
-          sbom: true
+          name: scanned-release-image
+          path: /tmp/scanned-image
+      - name: Publish the scanned image without rebuilding
+        id: push
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          docker load -i /tmp/scanned-image/release-image.tar
+          while IFS= read -r tag; do
+            [ -z "$tag" ] && continue
+            docker tag 3hk-new:release-local "$tag"
+            docker push "$tag"
+          done <<< "$IMAGE_TAGS"
+          ref=$(docker image inspect 3hk-new:release-local --format '{{index .RepoDigests 0}}')
+          echo "digest=${ref##*@}" >> "$GITHUB_OUTPUT"
       - name: Attest
         if: ${{ github.event.repository.private == false }}
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
@@ -237,3 +225,4 @@ jobs:
           body_path: /tmp/release-notes/release-notes.md
           generate_release_notes: true
           prerelease: ${{ contains(github.ref_name, '-') }}
+          files: /tmp/release-sbom/release-sbom.json

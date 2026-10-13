@@ -35,6 +35,7 @@ def test_index_serves_login_html_for_add_query(
     monkeypatch: MonkeyPatch,
     tmp_path: Path,
 ) -> None:
+    _install_fake_store(monkeypatch)
     login_html = tmp_path / "login.html"
     login_html.write_text("<html>fixture login</html>", encoding="utf-8")
     monkeypatch.setattr(main, "FRONTEND_DIST_DIR", tmp_path)

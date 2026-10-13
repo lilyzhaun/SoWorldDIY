@@ -10,7 +10,7 @@
 
 ```bash
 cd backend
-.venv/bin/pip-audit -r requirements.txt --strict
+.venv/bin/pip-audit -r requirements.lock --strict
 .venv/bin/python -m compileall -q app
 PYTHONWARNINGS=error .venv/bin/python -c "from app.main import create_app; create_app().openapi()"
 basedpyright --project pyrightconfig.json
@@ -70,6 +70,17 @@ npm test
 
 - `npm run test:unit`：普通单元、组件和 contract 测试，排除 `tests/browser/**`。
 - `npm run test:browser`：真实 Chromium 测试，使用 `--no-file-parallelism` 串行执行。
+
+CI 和 Release 共用验收工作流：Python 3.11/3.12/3.13，Node 20.19 与 24。
+Python 3.12 执行分支覆盖率门槛；前端默认收集 `.ts`、`.tsx` 与 `.mjs` 契约测试。
+Chromium 用例在 CI 执行，可通过 `CHROME_BIN` 指定本地可执行文件。
+
+新增安全回归覆盖会话 CAS、SID 轮换、跨站登录、缓存隔离、限流配额污染、请求体上限、
+无界指标、购买报价、资源归属和迁移数据篡改。测试使用模拟上游和独立 Redis，不执行
+真实购买、换号或转移。
+
+`python scripts/check_deployment.py` 使用合成密钥验证 Docker 忽略规则和 Prometheus
+配置；要求 Docker，不访问生产服务。
 
 单元测试和组件测试与源码同目录放置（`src/**/*.test.ts` / `src/**/*.test.tsx`）；跨模块 contract 位于 `tests/contracts/`；浏览器测试、共享 harness 和 fixture 位于 `tests/browser/`。
 

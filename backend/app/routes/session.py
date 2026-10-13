@@ -8,6 +8,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from redis.exceptions import RedisError
 from starlette.responses import Response
 
+from ..blocking import run_blocking
+from ..cache_store import profile_cache_key
 from ..public_errors import REDIS_UNAVAILABLE, SERVICE_UNAVAILABLE, UNAUTHORIZED
 from ..responses import _public_error
 from .deps import RouteDeps
@@ -61,7 +63,9 @@ def register_session_routes(app: FastAPI, deps: RouteDeps) -> None:
 
         if req_ident:
             try:
-                has_left = deps.internal_logout_account(ctx, req_ident)
+                has_left = await run_blocking(
+                    deps.internal_logout_account, ctx, req_ident
+                )
             except RuntimeError as exc:
                 logger.error(
                     "logout failed operation=logout_account error_class=%s",
@@ -76,14 +80,17 @@ def register_session_routes(app: FastAPI, deps: RouteDeps) -> None:
                 first_id = list(accounts.keys())[0]
                 return RedirectResponse(url=f"/main/{first_id}", status_code=302)
 
+        account_ids = list(ctx.data.get("accounts", {}))
         try:
-            deps._clear_session(ctx)
+            await run_blocking(deps._clear_session, ctx)
         except RuntimeError as exc:
             logger.error(
                 "logout failed operation=logout_clear error_class=%s",
                 type(exc).__name__,
             )
             return _public_error(SERVICE_UNAVAILABLE, 503)
+        for account_id in account_ids:
+            deps.delete_cache(profile_cache_key(ctx.sid, account_id))
         deps._mark_session_cookie_for_deletion(request)
         return RedirectResponse(url="/", status_code=302)
 
@@ -91,11 +98,13 @@ def register_session_routes(app: FastAPI, deps: RouteDeps) -> None:
     async def session_cleanup(request: Request) -> JSONResponse:
         provided_secret = request.headers.get("x-session-secret", "")
         expected = deps.SESSION_SECRET
-        if not secrets.compare_digest(provided_secret, expected):
+        if not secrets.compare_digest(
+            provided_secret.encode("utf-8"), expected.encode("utf-8")
+        ):
             return _public_error(UNAUTHORIZED, 401)
 
         try:
-            redis_ok = bool(deps.redis_client.ping())
+            redis_ok = bool(await run_blocking(deps.redis_client.ping))
         except RedisError:
             logger.error(
                 "session_cleanup failed operation=session_cleanup error_class=RedisError",

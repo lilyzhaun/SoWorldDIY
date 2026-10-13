@@ -11,6 +11,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from . import runtime as _runtime
+from .blocking import run_blocking
 from .public_errors import CSRF_INVALID
 from .responses import _public_error
 from .runtime import (
@@ -24,7 +25,7 @@ from .runtime import (
     session_store as _default_store,
 )
 from .security import csrf_token_matches, new_csrf_token
-from .session_store import SessionContext
+from .session_store import SessionConflictError, SessionContext
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class SessionStoreProtocol(Protocol):
     def create(self, data: dict[str, Any]) -> SessionContext: ...
     def save(self, sid: str, data: dict[str, Any]) -> None: ...
     def delete(self, sid: str) -> None: ...
+    def rotate(self, sid: str, data: dict[str, Any]) -> SessionContext: ...
 
 
 class ValidateCsrfFn(Protocol):
@@ -162,25 +164,51 @@ def get_account_context(
 
 class SessionMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Any) -> Response:
-        ctx = _get_session_if_exists(request)
+        if request.url.path == "/_health":
+            return await call_next(request)
+        try:
+            ctx = await run_blocking(_get_session_if_exists, request)
+            if ctx is not None:
+                await run_blocking(_daily_refresh_session_if_needed, ctx)
+        except SessionConflictError:
+            response = JSONResponse(
+                {
+                    "status": "error",
+                    "code": "session_conflict",
+                    "message": "会话已变更，请刷新或重新登录",
+                },
+                status_code=409,
+            )
+            response.delete_cookie(
+                SESSION_COOKIE_NAME, secure=bool(_runtime.COOKIE_SECURE)
+            )
+            response.delete_cookie(
+                CSRF_COOKIE_NAME, secure=bool(_runtime.COOKIE_SECURE)
+            )
+            return response
         request.state.session_ctx = ctx
         request.state.delete_session_cookie = False
         if ctx is None and request.cookies.get(SESSION_COOKIE_NAME):
             request.state.delete_session_cookie = True
-        if ctx is not None:
-            _daily_refresh_session_if_needed(ctx)
         response = await call_next(request)
+        if request.url.path == "/" or request.url.path.startswith(
+            ("/api/", "/main", "/login", "/logout")
+        ):
+            response.headers["Cache-Control"] = "no-store"
+            response.headers["Referrer-Policy"] = "no-referrer"
         current_ctx = getattr(request.state, "session_ctx", None)
         secure = bool(_runtime.COOKIE_SECURE)
         if getattr(request.state, "delete_session_cookie", False):
             response.delete_cookie(key=SESSION_COOKIE_NAME, path="/", secure=secure)
             response.delete_cookie(key=CSRF_COOKIE_NAME, path="/", secure=secure)
         elif current_ctx is not None:
-            csrf_token = _ensure_csrf_token(current_ctx)
+            csrf_token = await run_blocking(_ensure_csrf_token, current_ctx)
             response.set_cookie(
                 key=SESSION_COOKIE_NAME,
                 value=current_ctx.sid,
-                max_age=SESSION_LIFETIME_SECONDS,
+                max_age=SESSION_LIFETIME_SECONDS
+                if current_ctx.data.get("accounts")
+                else 900,
                 httponly=True,
                 samesite="lax",
                 path="/",
@@ -189,7 +217,9 @@ class SessionMiddleware(BaseHTTPMiddleware):
             response.set_cookie(
                 key=CSRF_COOKIE_NAME,
                 value=csrf_token,
-                max_age=SESSION_LIFETIME_SECONDS,
+                max_age=SESSION_LIFETIME_SECONDS
+                if current_ctx.data.get("accounts")
+                else 900,
                 httponly=False,
                 samesite="lax",
                 path="/",

@@ -8,7 +8,7 @@ import requests
 from fastapi import Request
 
 from .runtime import BASE_HEADERS, PROXIES
-from .session_store import SessionContext
+from .session_store import SessionConflictError, SessionContext
 from .upstream_urls import simworld_url
 
 logger = logging.getLogger(__name__)
@@ -118,7 +118,15 @@ def attempt_silent_relogin(
                 if account_id in accounts:
                     accounts[account_id]["cookies"] = new_cookies
                     ctx.data["accounts"] = accounts
-                    d._save_session(ctx)
+                    try:
+                        d._save_session(ctx)
+                    except SessionConflictError:
+                        request.state.session_ctx = None
+                        request.state.delete_session_cookie = True
+                        logger.info(
+                            "Silent re-login abandoned operation=silent_relogin reason=session_conflict"
+                        )
+                        return False
                     logger.info("Silent re-login successful operation=silent_relogin")
                     return True
     except Exception as exc:
@@ -203,7 +211,18 @@ def make_3hk_request(
                         if account_id in accounts:
                             accounts[account_id] = account_context
                             ctx.data["accounts"] = accounts
-                    d._save_session(ctx)
+                    try:
+                        d._save_session(ctx)
+                    except RuntimeError as exc:
+                        # Preserve the known upstream result even when the
+                        # ancillary cookie refresh loses a CAS race or Redis
+                        # fails; never imply a completed write is safe to retry.
+                        request.state.session_ctx = None
+                        request.state.delete_session_cookie = True
+                        logger.warning(
+                            "Session refresh skipped operation=make_3hk_request error_class=%s",
+                            type(exc).__name__,
+                        )
 
             return response
     except Exception as exc:

@@ -18,7 +18,7 @@ from ..responses import (
 from ..runtime import SetCacheFn
 from ..services import FetchPlansBackgroundFn
 from ..session_store import SessionContext
-from ..session_utils import ValidateCsrfFn
+from ..session_utils import SessionStoreProtocol, ValidateCsrfFn
 from ..upstream import Make3hkRequestFn
 
 
@@ -32,6 +32,9 @@ class RouteDeps(Protocol):
 
     @property
     def get_isolated_session(self) -> Callable[[], requests.Session]: ...
+
+    @property
+    def session_store(self) -> SessionStoreProtocol: ...
 
     @property
     def verify_auth_code(self) -> Callable[[Any, bool], tuple[bool, str]]: ...

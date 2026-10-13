@@ -10,7 +10,7 @@
 
 1. 准备 Redis。
 2. 准备 `backend/.env`，设置强随机密钥和生产 Redis 地址。
-3. 安装后端依赖（`pip install -r requirements.txt`）。
+3. 安装锁定后端依赖（`pip install --require-hashes -r requirements.lock`）。
 4. 安装并构建前端（`npm ci && npm run build`）。
 5. 用 systemd 或进程管理器运行 Uvicorn，监听本机端口。
 6. 用 Nginx、Caddy 或其他反向代理转发到后端监听端口，对外提供 HTTPS。
@@ -33,7 +33,7 @@ npm run build
 cd backend
 python -m venv .venv
 . .venv/bin/activate
-pip install -r requirements.txt
+pip install --require-hashes -r requirements.lock
 HOST=127.0.0.1 PORT=8888 ./start.sh
 ```
 

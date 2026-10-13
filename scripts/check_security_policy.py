@@ -16,6 +16,7 @@ FORBIDDEN_TRACKED = [
     "backend/app/request_overrides_local.py",
     "backend/requirements-local.txt",
     "frontend/dist",
+    "deploy/compose/.env",
 ]
 
 UNPINNED_ACTION = re.compile(
@@ -107,6 +108,20 @@ def main() -> int:
         metrics.read_text(encoding="utf-8")
     ):
         errors.append("sensitive_metric_label: metrics.py")
+
+    ignore = (ROOT / ".dockerignore").read_text().splitlines()
+    if "**/.env" not in ignore or "**/.env.*" not in ignore:
+        errors.append("nested_env_not_dockerignored")
+    checks = (workflows / "checks.yml").read_text()
+    if "npm run test:browser" not in checks:
+        errors.append("browser_tests_not_in_ci")
+    if re.search(r'exit-code:\s*[\'\"]?0\b', checks):
+        errors.append("nonblocking_image_scan")
+
+    ci = (workflows / "ci.yml").read_text()
+    for context in ("backend", "frontend", "secret-scan", "trivy", "workflow-policy"):
+        if not re.search(rf"(?m)^    name: {re.escape(context)}$", ci):
+            errors.append(f"missing_protected_branch_status: {context}")
 
     if errors:
         print("SECURITY_POLICY_FAIL")

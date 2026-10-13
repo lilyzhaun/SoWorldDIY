@@ -41,6 +41,8 @@ class MigrationRedisClient(Protocol):
         mapping: Mapping[str, object] | None = None,
     ) -> object: ...
     def exists(self, *names: str) -> int | bool: ...
+    def get(self, name: str) -> bytes | None: ...
+    def pexpire(self, name: str, ttl: int) -> object: ...
 
 
 @dataclass(frozen=True)
@@ -127,8 +129,12 @@ def _restore_binary(
     payload = source.dump(item.source_key)
     if payload is None:
         raise RuntimeError(f"missing dump for {item.kind} key")
-    ttl = item.pttl_ms if item.pttl_ms > 0 else 0
-    dest.restore(item.dest_key, ttl, payload, replace=True)
+    remaining = _safe_pttl(source, item.source_key)
+    if remaining == -2:
+        raise RuntimeError("source key expired during migration")
+    ttl = max(1, remaining) if remaining >= 0 else 0
+    # Refuse to overwrite an independently populated destination.
+    dest.restore(item.dest_key, ttl, payload, replace=False)
 
 
 def _copy_auth_hash(
@@ -137,7 +143,14 @@ def _copy_auth_hash(
     mapping = {str(k): str(v) for k, v in dict(source.hgetall(item.source_key)).items()}
     if not mapping:
         raise RuntimeError(f"empty auth hash for {item.kind}")
+    if dest.exists(item.dest_key):
+        raise RuntimeError("destination auth key already exists")
     dest.hset(item.dest_key, mapping=mapping)
+    remaining = _safe_pttl(source, item.source_key)
+    if remaining >= 0:
+        dest.pexpire(item.dest_key, max(1, remaining))
+    elif remaining == -2:
+        raise RuntimeError("source auth key expired during migration")
 
 
 def apply_plan(
@@ -179,12 +192,22 @@ def verify_plan(
             dst = {str(k): str(v) for k, v in dict(dest.hgetall(item.dest_key)).items()}
             if src != dst:
                 mismatches.append(f"hash_mismatch:{item.kind}")
-        if item.pttl_ms > 0:
+        else:
+            # Project session/cache keys are strings. Compare GET values, not
+            # DUMP bytes (RDB encodings may differ across Redis versions).
+            if source.get(item.source_key) != dest.get(item.dest_key):
+                mismatches.append(f"value_mismatch:{item.kind}")
+        source_pttl = _safe_pttl(source, item.source_key)
+        if source_pttl >= 0:
             dest_pttl = _safe_pttl(dest, item.dest_key)
             if dest_pttl < 0:
                 mismatches.append(f"ttl_missing:{item.kind}")
-            elif abs(dest_pttl - item.pttl_ms) > ttl_slack_ms:
+            elif abs(dest_pttl - source_pttl) > ttl_slack_ms:
                 mismatches.append(f"ttl_drift:{item.kind}")
+        elif source_pttl == -2:
+            mismatches.append(f"source_expired:{item.kind}")
+        elif _safe_pttl(dest, item.dest_key) != -1:
+            mismatches.append(f"unexpected_ttl:{item.kind}")
     return {
         "ok": not mismatches,
         "planned": len(plan.items),

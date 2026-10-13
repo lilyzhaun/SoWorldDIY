@@ -30,6 +30,9 @@ def test_purchase_exception_does_not_leak_to_response_or_logs(
         raise RuntimeError(SECRET_SENTINEL)
 
     monkeypatch.setattr(main, "make_3hk_request", boom)
+    from app.routes import commerce
+
+    monkeypatch.setattr(commerce, "validate_purchase", lambda *args: boom())
     request = authed_request(
         "/api/purchase",
         "POST",
@@ -40,7 +43,7 @@ def test_purchase_exception_does_not_leak_to_response_or_logs(
                 "items": [{"offerId": "o", "quantity": 1}],
                 "price": 1,
                 "txnAmount": 1,
-                "paymentType": "WALLET",
+                "paymentType": "MPGS",
                 "new_line": False,
             }
         ).encode(),
@@ -390,6 +393,9 @@ def test_session_store_logging_redacts_sid_and_exception() -> None:
         def get(self, name: str) -> None:
             raise RedisError(SECRET_SENTINEL)
 
+        def eval(self, *args: object) -> int:
+            raise RedisError(SECRET_SENTINEL)
+
         def setex(self, name: str, time: int, value: str) -> None:
             raise RedisError(SECRET_SENTINEL)
 
@@ -574,6 +580,11 @@ def test_session_store_create_load_delete_success() -> None:
         def delete(self, key: str) -> int:
             return 1 if self.data.pop(key, None) is not None else 0
 
+        def eval(self, script, numkeys, *args):
+            from tests.test_session_concurrency import ScriptRedis
+
+            return ScriptRedis.eval(self, script, numkeys, *args)
+
     store = RedisSessionStore(
         redis_client=OkRedis(),
         key_prefix="session:",
@@ -594,6 +605,9 @@ def test_session_store_load_invalid_json_returns_none() -> None:
     class BadJsonRedis:
         def get(self, key: str) -> str:
             return "{not-json"
+
+        def eval(self, *args: object) -> int:
+            return 0
 
         def setex(self, *a: object, **k: object) -> None:
             return None

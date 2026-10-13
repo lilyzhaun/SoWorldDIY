@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- 会话使用 Redis 原子版本检查，阻止旧快照恢复已注销会话和账号；登录轮换 SID/CSRF。
+- 登录校验 CSRF 与来源；无效鉴权码不污染目标账号配额，代理链按可信边界解析。
+- 资料缓存按会话隔离；请求体、并发和指标标签有界；同步上游请求不阻塞事件循环。
+- 敏感写操作核对新鲜上游报价、订阅和资源；会话刷新失败不掩盖已完成操作的结果。
+- 更新依赖和基础镜像，运行镜像移除安装工具，Trivy 恢复阻断门禁，无宽泛漏洞豁免。
+- 递归排除 `.env`，关闭参考部署的原始访问日志，补充并分发第三方许可证。
+
+### Fixed
+- 修复 Prometheus 文件认证头配置和迁移内容/TTL 核验。
+- 默认运行遗漏的 `.mjs` 契约测试；CI/Release 共用 Python 3.11–3.13、Node 20.19/24 和 Chromium 验收。
+- 发布传递同一个已扫描镜像，不在发布步骤重新构建；附带 SBOM。
+
+### Upgrade notes
+- 切换新会话写入逻辑前停止旧版本；禁止旧 SETEX 写入版本与 CAS 版本并行运行。
+- 非浏览器登录客户端先获取登录页，携带 CSRF；`409 session_conflict` 需要刷新或重新登录。
+- Linux x86_64/aarch64 使用 `pip install --require-hashes -r requirements.lock`。
+
 ## [0.1.0] - 2026-07-20
 
 ### Added

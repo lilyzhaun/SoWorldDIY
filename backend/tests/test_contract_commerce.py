@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from typing import Any
 
+import pytest
+
 from app import main
+from app.routes import commerce
 from tests.contract_support import (
     CSRF_HEADER_NAME,
     FakeResponse,
@@ -13,6 +16,13 @@ from tests.contract_support import (
     authed_request,
     run_endpoint,
 )
+
+
+@pytest.fixture(autouse=True)
+def _verified_quote(monkeypatch):
+    # Payload contracts start after validation; real read-only validation and
+    # route rejection are covered by test_write_validation.py.
+    monkeypatch.setattr(commerce, "validate_purchase", lambda *args: "THREE")
 
 
 def _purchase_request(body: dict[str, Any], csrf: str | None = "tok") -> Request:
@@ -93,7 +103,7 @@ def test_purchase_normal_flow_payload_and_success(monkeypatch: MonkeyPatch) -> N
         "status": "success",
         "paymentUrl": "https://pay/x",
     }
-    assert invalidated == ["profile_a@b.com"]
+    assert invalidated == ["profile_sid-seeded_a@b.com"]
     payload = captured[-1]["json"]
     assert payload["purchaseType"] == "SOSIM_VAS"
     assert payload["fUrl"] == "https://simworld.net/SIMworld/main/tc"
