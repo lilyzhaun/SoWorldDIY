@@ -22,7 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - 修复分类切换清空购物车、新开号码支付金额不一致和带 `+` 邮箱的 URL 编码问题。
 - 指标抓取实时刷新 Redis 和应用就绪状态，告警改用实际存在的指标。
-- 重写首次部署 README，替换运营商品牌图标为项目 SIM 卡图案。
+- 重写首次部署 README。
+- 恢复作者原创 PWA 图标，纠正之前错误的图标来源说明。
 - 修复 Prometheus 文件认证头配置和迁移内容/TTL 核验。
 - 默认运行遗漏的 `.mjs` 契约测试；CI/Release 共用 Python 3.11–3.13、Node 20.19/24 和 Chromium 验收。
 - 发布传递同一个已扫描镜像，不在发布步骤重新构建；附带 SBOM。
