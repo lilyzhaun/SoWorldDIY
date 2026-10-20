@@ -35,6 +35,12 @@
 | `/api/inbox` | GET | Query: `account_id` | 查询收件箱消息并按时间倒序返回。 |
 | `/api/history` | GET | Query: `account_id`, `subscriptionId`, `startDate`, `endDate` | 查询交易记录。 |
 
+`/api/profile` 的 `activeOffers` 包含 `ACTIVE` / `PREACTIVE` 的 VAS 套餐、
+带非货币用量的 `PROMOTION/BONUS` 奖赏及 DTO 转入资源聚合项；不包含 BASE 套餐或失效项目。
+同一 `offerId` 可对应多笔订购或奖赏，不能据此去重。每项额外提供 `instanceId`，用于列表标识和展开状态；
+普通套餐优先使用 `offerId` 与上游 `matrixxResourceId` 组合，缺少资源 ID 时使用列表位置区分，
+DTO 聚合项使用固定标识。交易请求仍使用原始 `offerId`，不能用 `instanceId` 替代。
+
 ## 套餐与购买
 
 ### 交易幂等与结果确认

@@ -53,8 +53,9 @@ export function ActiveOffersSection({
         </button>
       </div>
       <div id="activeOffersList" className="plan-list">
-        {activeOffers.map((offer) => {
-          const isOpen = selectedPlanId === `sub-${offer.offerId}`
+        {activeOffers.map((offer, index) => {
+          const instanceId = offer.instanceId ?? `${offer.offerId}-index-${index}`
+          const isOpen = selectedPlanId === `sub-${instanceId}`
           let status = offer.planStatus || ''
           let statusColor = '#64748b'
           let statusBackground = '#f1f5f9'
@@ -68,14 +69,14 @@ export function ActiveOffersSection({
             statusBackground = '#fef3c7'
           }
           return (
-            <div key={offer.offerId} className={`plan-card ${isOpen ? 'open' : ''}`}>
+            <div key={instanceId} className={`plan-card ${isOpen ? 'open' : ''}`}>
               {offer.isVoWifi ? <div className="tag-vowifi">VoWiFi</div> : null}
               <button
                 type="button"
                 className="plan-card-disclosure"
                 aria-expanded={isOpen}
-                aria-controls={`active-offer-details-${offer.offerId}`}
-                onClick={() => onSelectOffer(isOpen ? null : `sub-${offer.offerId}`)}
+                aria-controls={`active-offer-details-${instanceId}`}
+                onClick={() => onSelectOffer(isOpen ? null : `sub-${instanceId}`)}
               >
                 <div className="card-header">
                   <div className="plan-name">{offer.name}</div>
@@ -104,7 +105,7 @@ export function ActiveOffersSection({
                 </div>
               </button>
               <div
-                id={`active-offer-details-${offer.offerId}`}
+                id={`active-offer-details-${instanceId}`}
                 className={`card-details ${isOpen ? 'open' : ''}`}
                 aria-hidden={!isOpen}
                 inert={!isOpen}

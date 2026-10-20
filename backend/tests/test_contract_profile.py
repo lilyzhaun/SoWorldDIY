@@ -165,6 +165,47 @@ def test_profile_aggregates_offers_and_caches(monkeypatch: MonkeyPatch) -> None:
     assert set_calls and set_calls[0][0] == "profile_sid-seeded_a@b.com"
 
 
+def test_profile_keeps_repeated_bonus_quotas(monkeypatch: MonkeyPatch) -> None:
+    upstream = _profile_upstream("THREE")
+    for resource_id in ["38", "33"]:
+        upstream["subscriptions"][0]["subscriptionOffers"].append(
+            {
+                "offerId": "BONUS300",
+                "matrixxResourceId": resource_id,
+                "offerType": "PROMOTION",
+                "offerSubType": "BONUS",
+                "planStatus": "ACTIVE",
+                "subscriptionProducts": [
+                    {
+                        "productName": "Local Voice 300 Minutes",
+                        "productSpecType": "VOICE",
+                        "matrixxBalanceInfos": [
+                            {"unit": "Minutes", "grantAmount": 300, "amount": 300}
+                        ],
+                    }
+                ],
+            }
+        )
+    monkeypatch.setattr(main, "get_cache", lambda key: None)
+    monkeypatch.setattr(main, "set_cache", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        main, "make_3hk_request", lambda **kwargs: FakeResponse(200, upstream)
+    )
+    request = authed_request("/api/profile", "GET")
+    request.scope["query_string"] = b"account_id=a@b.com"
+
+    resp = run_endpoint("/api/profile", request)
+
+    assert resp.status_code == 200
+    body = json.loads(bytes(resp.body))
+    offers = body["data"]["current"]["activeOffers"]
+    assert len(offers) == 3
+    bonuses = [offer for offer in offers if offer["offerId"] == "BONUS300"]
+    assert len(bonuses) == 2
+    assert len({offer["instanceId"] for offer in bonuses}) == 2
+    assert [offer["usage"][0]["remain"] for offer in bonuses] == [300, 300]
+
+
 def test_balance_no_account_returns_zero(monkeypatch: MonkeyPatch) -> None:
     _install_fake_store(monkeypatch)
     request = authed_request(
