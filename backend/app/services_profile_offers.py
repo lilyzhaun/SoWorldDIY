@@ -21,6 +21,7 @@ class UsageEntry(TypedDict):
 
 class ActiveOffer(TypedDict):
     offerId: object
+    instanceId: str
     name: object
     desc: object
     price: object
@@ -143,14 +144,15 @@ def build_active_offers(
     dto_voice_agg: DTOAgg = {"usages": [], "dates": [], "is_vowifi": False}
     dto_data_agg: DTOAgg = {"usages": [], "dates": [], "is_vowifi": False}
 
-    for offer in raw_offers:
+    for index, offer in enumerate(raw_offers):
         if offer.get("planStatus") not in ["ACTIVE", "PREACTIVE"]:
             continue
         offer_type = offer.get("offerType")
         sub_type = offer.get("offerSubType")
         is_dto = sub_type == "DTO"
         is_vas = offer_type == "VAS"
-        if not (is_vas or is_dto):
+        is_bonus = offer_type == "PROMOTION" and sub_type == "BONUS"
+        if not (is_vas or is_dto or is_bonus):
             continue
 
         raw_products = require_mapping_list(offer.get("subscriptionProducts", []))
@@ -185,9 +187,16 @@ def build_active_offers(
                     if is_vowifi:
                         target_agg["is_vowifi"] = True
         elif usage_list or is_vas:
+            resource_id = offer.get("matrixxResourceId")
+            instance_id = (
+                f"{current_offer_id}-resource-{resource_id}"
+                if resource_id is not None
+                else f"{current_offer_id}-index-{index}"
+            )
             active_offers.append(
                 {
                     "offerId": current_offer_id,
+                    "instanceId": instance_id,
                     "name": offer.get("offerNameChi", offer.get("offerName")),
                     "desc": offer.get("offerDescChi", offer.get("offerDesc")),
                     "price": offer.get("offerPrice", 0),
@@ -202,6 +211,7 @@ def build_active_offers(
         active_offers.append(
             {
                 "offerId": "DTO_VOICE_AGG",
+                "instanceId": "DTO_VOICE_AGG",
                 "name": "轉入的分鐘",
                 "desc": "來自好友互傳的語音資源聚合",
                 "price": 0,
@@ -217,6 +227,7 @@ def build_active_offers(
         active_offers.append(
             {
                 "offerId": "DTO_DATA_AGG",
+                "instanceId": "DTO_DATA_AGG",
                 "name": "轉入的數據",
                 "desc": "來自好友互傳的上網數據聚合",
                 "price": 0,

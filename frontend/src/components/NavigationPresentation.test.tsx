@@ -21,7 +21,7 @@ describe('navigation presentation contracts', () => {
         onRefresh={vi.fn()}
         onSelectOffer={vi.fn()}
         refreshingUsage={false}
-        selectedPlanId="sub-offer-1"
+        selectedPlanId="sub-offer-1-index-0"
         visible
       />,
     )
@@ -112,10 +112,12 @@ describe('navigation presentation contracts', () => {
     expect(cmnCooldown).toContain('换一批（<span class="cmn-refresh-countdown" id="refresh-timer">8s</span>）')
     expect(activeOffers).toContain('class="plan-card open"')
     expect(activeOffers).toContain(
-      '<button type="button" class="plan-card-disclosure" aria-expanded="true" aria-controls="active-offer-details-offer-1"',
+      '<button type="button" class="plan-card-disclosure" aria-expanded="true" aria-controls="active-offer-details-offer-1-index-0"',
     )
     expect(activeOffers).not.toContain('<div class="plan-card open" role="button"')
-    expect(activeOffers).toContain('id="active-offer-details-offer-1" class="card-details open" aria-hidden="false"')
+    expect(activeOffers).toContain(
+      'id="active-offer-details-offer-1-index-0" class="card-details open" aria-hidden="false"',
+    )
     expect(plans).toContain('class="plan-card open"')
     expect(plans).toContain(
       '<button type="button" class="plan-card-disclosure" aria-expanded="true" aria-controls="plan-details-offer-1"',
@@ -181,7 +183,7 @@ describe('navigation presentation contracts', () => {
     expect(plans).toContain('id="plan-details-offer-1" class="card-details " aria-hidden="true" inert=""')
     expect(plans).toContain('加入购物车')
     expect(activeOffers).toContain(
-      'id="active-offer-details-offer-1" class="card-details " aria-hidden="true" inert=""',
+      'id="active-offer-details-offer-1-index-0" class="card-details " aria-hidden="true" inert=""',
     )
     expect(activeOffers).toContain('>转移</button>')
   })

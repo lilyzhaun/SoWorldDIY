@@ -12,6 +12,7 @@ export type UsageItem = {
 
 export type ActiveOffer = {
   offerId: string
+  instanceId?: string
   name: string
   desc?: string
   price?: number

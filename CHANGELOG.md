@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 递归排除 `.env`，关闭参考部署的原始访问日志，补充并分发第三方许可证。
 
 ### Fixed
+- “已订购”补回有效的增值奖赏用量，按实例区分同一套餐的多笔奖赏，避免重复标识和展开联动。
 - 修复分类切换清空购物车、新开号码支付金额不一致和带 `+` 邮箱的 URL 编码问题。
 - 指标抓取实时刷新 Redis 和应用就绪状态，告警改用实际存在的指标。
 - 重写首次部署 README。
