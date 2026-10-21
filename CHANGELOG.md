@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- 停止 Dependabot 自动依赖更新 PR，保留仓库漏洞告警，改为维护者按需升级。
 - 配套升级 React / React DOM 19.2.7 及类型声明，适配 JSX、可空 ref 与原生布尔 inert 属性。
 - 更新 Python 运行依赖、redis-py 8、开发工具和 GitHub Actions，并同步带哈希的运行锁文件。
 - 容器使用 Node 26 / Python 3.14，补齐两种 Linux 架构的 Python 3.14 wheel 哈希与 CI 验收。
