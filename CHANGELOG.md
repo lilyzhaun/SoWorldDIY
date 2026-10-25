@@ -8,12 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- 停止 Dependabot 自动依赖更新 PR，保留仓库漏洞告警，改为维护者按需升级。
 - 配套升级 React / React DOM 19.2.7 及类型声明，适配 JSX、可空 ref 与原生布尔 inert 属性。
 - 更新 Python 运行依赖、redis-py 8、开发工具和 GitHub Actions，并同步带哈希的运行锁文件。
 - 容器使用 Node 26 / Python 3.14，补齐两种 Linux 架构的 Python 3.14 wheel 哈希与 CI 验收。
 - Dependabot 将 React、React DOM 和对应类型声明分组更新，避免拆分升级造成版本冲突。
 
 ### Security
+- 更新 Vitest / coverage-v8 至 4.1.12、Happy DOM 至 21.0.4，修复测试依赖的模拟注册注入、路径绕过和代码执行漏洞。
+- 将 `certifi` 升级至 2026.10.19，移除受影响的 emSign 根证书；Prometheus 使用 Go 1.27.3 重建，修复 CVE-2026-111943。
 - 交易接口增加 24 小时 Redis 幂等记录与 `Idempotency-Key`；结果未知时停止重复执行并提示核对。
 - 撤销鉴权码不再由启动种子导入恢复，所有模式拒绝将 v2 摘要直接当作鉴权码。
 - 常规请求不再回写或清除会话 Cookie，避免旧并发响应覆盖登录轮换结果。

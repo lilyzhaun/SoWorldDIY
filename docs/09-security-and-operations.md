@@ -113,7 +113,7 @@ IP 先限流；有效鉴权码之后才消耗目标账号 OTP 配额。无效鉴
 ## CI 供应链
 
 - 第三方 GitHub Actions 固定到 40 位提交 SHA，由 `scripts/check_actions_pinned.py` 检查。
-- Dependabot 每周检查 pip（`/backend`）、npm（`/frontend`）、Docker（`/`）和 GitHub Actions（`/`）。
+- Dependabot 不自动创建版本更新或安全修复 PR；仓库保留漏洞告警，依赖升级由维护者按需处理。
 - CI 执行覆盖率、`pip-audit`、`npm audit`、actionlint、Gitleaks，以及 Trivy 文件系统和镜像扫描。
 - 基础镜像 OS 漏洞只有在 `deploy/compose/trivy-exceptions.md` 记录 ID、理由和复查期限后才能例外处理。
 - Trivy 对有修复的 HIGH/CRITICAL 返回失败；不使用全局 `exit-code: 0` 豁免。
