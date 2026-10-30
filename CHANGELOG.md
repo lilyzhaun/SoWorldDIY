@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dependabot 将 React、React DOM 和对应类型声明分组更新，避免拆分升级造成版本冲突。
 
 ### Security
+- 构建应用镜像时显式更新 `libssl3` / `openssl`，修复固定基础镜像中的 CVE-2026-84782。
 - 更新 Vitest / coverage-v8 至 4.1.12、Happy DOM 至 21.0.4，修复测试依赖的模拟注册注入、路径绕过和代码执行漏洞。
 - 将 `certifi` 升级至 2026.10.19，移除受影响的 emSign 根证书；Prometheus 使用 Go 1.27.3 重建，修复 CVE-2026-111943。
 - 交易接口增加 24 小时 Redis 幂等记录与 `Idempotency-Key`；结果未知时停止重复执行并提示核对。
@@ -29,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 递归排除 `.env`，关闭参考部署的原始访问日志，补充并分发第三方许可证。
 
 ### Fixed
+- 修复套餐和换号购买直接成功、无需支付跳转时被误报失败的问题，保留待处理结果的交易核对提示。
 - “已订购”补回有效的增值奖赏用量，按实例区分同一套餐的多笔奖赏，避免重复标识和展开联动。
 - 修复分类切换清空购物车、新开号码支付金额不一致和带 `+` 邮箱的 URL 编码问题。
 - 指标抓取实时刷新 Redis 和应用就绪状态，告警改用实际存在的指标。
