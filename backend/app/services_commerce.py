@@ -8,9 +8,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import Final, TypedDict
+from typing import Final, Literal, NotRequired, TypedDict
 
 from .brand import ensure_within_cache_dir
+from .idempotency import UpstreamWriteUncertain
 from .schemas.requests import CmnPurchaseRequest, PurchaseRequest
 from .upstream_urls import (
     SIMWORLD_PAYMENT_FINISHED,
@@ -21,6 +22,33 @@ from .upstream_urls import (
 logger = logging.getLogger(__name__)
 
 BASE_NEW_LINE_OFFER: Final = "H3OF00000000001"
+
+
+class PurchaseResult(TypedDict):
+    status: Literal["success", "error"]
+    paymentUrl: NotRequired[str]
+
+
+def parse_purchase_result(data: object) -> PurchaseResult:
+    """Follow SIMWorld's payment result codes, not the presence of a redirect."""
+    if not isinstance(data, dict):
+        raise UpstreamWriteUncertain("Invalid purchase result")
+    code = data.get("code")
+    # The upstream checkout handles 1 as direct success (e.g. wallet-only),
+    # 2 as failure, 3/4/5 as redirects, and 9 as pending.
+    if type(code) is int:
+        if code == 1:
+            return {"status": "success"}
+        if code == 2:
+            return {"status": "error"}
+    payment_url = data.get("paymentUrl")
+    if (
+        (code is None or (type(code) is int and code in (3, 4, 5)))
+        and isinstance(payment_url, str)
+        and payment_url.strip()
+    ):
+        return {"status": "success", "paymentUrl": payment_url}
+    raise UpstreamWriteUncertain("Missing or pending payment result")
 
 
 class PurchaseOfferPayload(TypedDict):

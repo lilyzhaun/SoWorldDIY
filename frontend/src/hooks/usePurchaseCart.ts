@@ -103,9 +103,11 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
         },
         { headers: { 'Idempotency-Key': requestId.current } },
       )
-      if (data.status === 'success' && data.paymentUrl) {
+      if (data.status === 'success') {
         setCart([])
-        window.location.href = data.paymentUrl
+        setPurchaseDraft(null)
+        if (data.paymentUrl) window.location.href = data.paymentUrl
+        else showAlert('购买成功，请刷新查看最新套餐和余额', '成功')
       } else {
         showAlert(data.message || '提交失败', '错误')
         setPurchaseDraft((previous) => (previous ? { ...previous, submitting: false } : null))
@@ -149,8 +151,10 @@ export function usePurchaseCart(accountId: string, currentSubId: string, balance
         },
         { headers: { 'Idempotency-Key': requestId.current } },
       )
-      if (data.status === 'success' && data.paymentUrl) {
-        window.location.href = data.paymentUrl
+      if (data.status === 'success') {
+        setPurchaseDraft(null)
+        if (data.paymentUrl) window.location.href = data.paymentUrl
+        else showAlert('换号购买成功，请刷新查看最新号码和余额', '成功')
       } else {
         showAlert(data.message || '提交失败', '失败')
         setPurchaseDraft((previous) => (previous ? { ...previous, submitting: false } : null))

@@ -33,9 +33,10 @@ RUN groupadd --system --gid 10001 app \
 
 WORKDIR /app/backend
 
-# System deps minimal (ca-certificates for HTTPS upstream)
+# Keep HTTPS dependencies current even when the runtime base is digest-pinned.
+# Explicitly upgrade OpenSSL to include the fix for CVE-2026-84782.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates \
+ && apt-get install -y --no-install-recommends ca-certificates libssl3 openssl \
  && rm -rf /var/lib/apt/lists/*
 
 COPY backend/requirements.txt /app/backend/requirements.txt

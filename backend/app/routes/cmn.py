@@ -12,7 +12,7 @@ from ..idempotency import IDEMPOTENCY_OPENAPI, UpstreamWriteUncertain, idempoten
 from ..public_errors import INTERNAL_ERROR, INVALID_REQUEST
 from ..responses import _public_error
 from ..schemas import CmnPurchaseRequest
-from ..services_commerce import build_cmn_purchase_payload
+from ..services_commerce import build_cmn_purchase_payload, parse_purchase_result
 from ..services_validation import WriteValidationError, validate_cmn
 from ..upstream_urls import simworld_url
 from .deps import RouteDeps
@@ -188,13 +188,13 @@ def register_cmn_routes(app: FastAPI, deps: RouteDeps) -> None:
                 account_id=req_ident,
                 account_context=account_ctx,
             )
-            if r and r.status_code == 200 and "paymentUrl" in r.json():
-                deps.delete_cache(profile_cache_key(ctx.sid, req_ident))
-                return deps._json_success(
-                    {"status": "success", "paymentUrl": r.json()["paymentUrl"]}
-                )
             if r is not None and r.status_code == 200:
-                raise UpstreamWriteUncertain("Missing payment result")
+                result = parse_purchase_result(r.json())
+                if result["status"] == "success":
+                    deps.delete_cache(profile_cache_key(ctx.sid, req_ident))
+                    return deps._json_success(result)
+            elif r is not None and 200 <= r.status_code < 300:
+                raise UpstreamWriteUncertain("Pending payment result")
             return deps._upstream_error(
                 r,
                 "换号购买请求失败，请稍后重试",

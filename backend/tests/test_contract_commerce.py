@@ -174,3 +174,71 @@ def test_purchase_upstream_no_payment_url_is_an_unknown_result(
     )
     assert resp.status_code == 409
     assert json.loads(bytes(resp.body))["code"] == "upstream_result_unknown"
+
+
+@pytest.mark.parametrize("path", ["/api/purchase", "/api/cmn/purchase"])
+@pytest.mark.parametrize(
+    ("upstream_status", "upstream_body", "expected_status", "expected_body"),
+    [
+        (200, {"code": 1, "purchaseId": "order-1"}, 200, {"status": "success"}),
+        (
+            200,
+            {"code": 1, "paymentUrl": None},
+            200,
+            {"status": "success"},
+        ),
+        (200, {"code": 2, "paymentUrl": "https://pay/x"}, 400, None),
+        (200, {"code": 9, "paymentUrl": "https://pay/x"}, 409, None),
+        (202, {"code": 9}, 409, None),
+        (
+            200,
+            {"code": 3, "paymentUrl": "https://pay/x"},
+            200,
+            {"status": "success", "paymentUrl": "https://pay/x"},
+        ),
+    ],
+)
+def test_purchase_result_codes(
+    monkeypatch, path, upstream_status, upstream_body, expected_status, expected_body
+):
+    from app.routes import cmn
+
+    monkeypatch.setattr(cmn, "validate_cmn", lambda *args: "THREE")
+    monkeypatch.setattr(
+        main,
+        "make_3hk_request",
+        lambda **kw: (
+            FakeResponse(200, {"accessPurchaseKey": "KEY"})
+            if kw["method"] == "GET"
+            else FakeResponse(upstream_status, upstream_body)
+        ),
+    )
+    invalidated = []
+    monkeypatch.setattr(main, "delete_cache", invalidated.append)
+    request = authed_request(
+        path,
+        "POST",
+        content_type="application/json",
+        body=json.dumps(
+            {
+                "account_id": "a@b.com",
+                "subscriptionId": "s",
+                "items": [{"offerId": "OFF", "quantity": 1}],
+                "offerId": "CMN",
+                "selectedNumber": "51234567",
+                "price": 10,
+                "txnAmount": 10,
+            }
+        ).encode(),
+    )
+    response = run_endpoint(path, request)
+    assert response.status_code == expected_status
+    result = json.loads(bytes(response.body))
+    if expected_body is not None:
+        assert result == expected_body
+        assert invalidated == ["profile_sid-seeded_a@b.com"]
+    else:
+        assert result["status"] == "error"
+        if expected_status == 409:
+            assert result["code"] == "upstream_result_unknown"
+        assert invalidated == []

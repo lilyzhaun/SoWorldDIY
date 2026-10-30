@@ -65,7 +65,9 @@ def request(body=None, key=KEY):
         ),
     ],
 )
-@pytest.mark.parametrize("failure", ["timeout", "500", "invalid_json", "success"])
+@pytest.mark.parametrize(
+    "failure", ["timeout", "500", "invalid_json", "success", "direct_success"]
+)
 def test_financial_routes_never_repeat_a_claimed_write(
     monkeypatch, path, module, validator, payload, failure
 ):
@@ -91,6 +93,8 @@ def test_financial_routes_never_repeat_a_claimed_write(
                     )
                 if failure == "500":
                     return FakeResponse(500)
+                if failure == "direct_success":
+                    return FakeResponse(200, {"code": 1, "purchaseId": "completed"})
                 if failure == "invalid_json" and path != "/api/sim/transfer":
                     response = FakeResponse(200)
                     response.json = lambda: (_ for _ in ()).throw(
@@ -135,6 +139,8 @@ def test_financial_routes_never_repeat_a_claimed_write(
         assert json.loads(responses[0].body)["code"] == "upstream_result_unknown"
     else:
         assert responses[0].status_code == 200
+        if failure == "direct_success" and path != "/api/sim/transfer":
+            assert json.loads(responses[0].body) == {"status": "success"}
 
 
 def test_concurrent_submission_and_replay_execute_once():

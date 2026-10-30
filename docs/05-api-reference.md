@@ -60,7 +60,7 @@ Redis 不可用时拒绝开始交易。幂等记录过期、丢失或 `SESSION_S
 | 路径 | 方法 | 请求 | 说明 |
 | --- | --- | --- | --- |
 | `/api/plans` | GET | Query: `account_id`, `subscriptionId`, 可选 `brand` | 获取套餐列表。会使用 `backend/plans_cache/` 缓存。 |
-| `/api/purchase` | POST | JSON: `account_id`, `subscriptionId`, `items`, `price`, `txnAmount`, `paymentType`, `new_line` | 创建套餐购买订单，成功时返回 `paymentUrl`。 |
+| `/api/purchase` | POST | JSON: `account_id`, `subscriptionId`, `items`, `price`, `txnAmount`, `paymentType`, `new_line` | 创建套餐购买订单；需要支付跳转时返回 `paymentUrl`，直接完成时返回 `status: success`，不含跳转链接。 |
 
 ## CMN 换号
 
@@ -68,7 +68,7 @@ Redis 不可用时拒绝开始交易。幂等记录过期、丢失或 `SESSION_S
 | --- | --- | --- | --- |
 | `/api/cmn/check` | GET | Query: `account_id`, `subscriptionId` | 查询是否有 CMN 换号资格。 |
 | `/api/cmn/numbers` | POST | Form: `account_id`, `subscriptionId` | 向上游锁定候选号码 15 分钟并返回号码列表。需 CSRF。当前请求上游数量为 9。 |
-| `/api/cmn/purchase` | POST | JSON: `account_id`, `subscriptionId`, `selectedNumber`, `offerId`, `price`, `txnAmount`, `paymentType` | 创建换号购买订单，成功时返回 `paymentUrl`。 |
+| `/api/cmn/purchase` | POST | JSON: `account_id`, `subscriptionId`, `selectedNumber`, `offerId`, `price`, `txnAmount`, `paymentType` | 创建换号购买订单；需要支付跳转时返回 `paymentUrl`，直接完成时返回 `status: success`，不含跳转链接。 |
 
 ## 资源转移
 

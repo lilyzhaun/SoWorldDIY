@@ -7,14 +7,44 @@ from pathlib import Path
 
 import pytest
 
+from app.idempotency import UpstreamWriteUncertain
 from app.schemas.requests import CmnPurchaseRequest, PurchaseItem, PurchaseRequest
 from app.services_commerce import (
     build_cmn_purchase_payload,
     build_plan_purchase_payload,
     load_plans_from_cache,
+    parse_purchase_result,
     parse_wallet_balance,
 )
 from app.upstream_urls import SIMWORLD_PAYMENT_FINISHED
+
+
+@pytest.mark.parametrize("code", [None, 3, 4, 5])
+def test_parse_purchase_result_redirect(code):
+    assert parse_purchase_result({"code": code, "paymentUrl": "https://pay/x"}) == {
+        "status": "success",
+        "paymentUrl": "https://pay/x",
+    }
+
+
+@pytest.mark.parametrize(
+    "data",
+    [
+        None,
+        [],
+        {},
+        {"code": True},
+        {"code": "1"},
+        {"code": 3},
+        {"code": 9, "paymentUrl": "https://pay/x"},
+        {"code": 99, "paymentUrl": "https://pay/x"},
+        {"paymentUrl": None},
+        {"paymentUrl": " "},
+    ],
+)
+def test_parse_purchase_result_unknown(data):
+    with pytest.raises(UpstreamWriteUncertain):
+        parse_purchase_result(data)
 
 
 def test_parse_wallet_balance_max_amount() -> None:
