@@ -17,6 +17,7 @@ from ..schemas import PurchaseRequest
 from ..services_commerce import (
     build_plan_purchase_payload,
     load_plans_from_cache,
+    parse_purchase_result,
     parse_wallet_balance,
 )
 from ..services_validation import WriteValidationError, validate_purchase
@@ -171,13 +172,13 @@ def register_commerce_routes(app: FastAPI, deps: RouteDeps) -> None:
                 account_id=str(req_ident),
                 account_context=account_ctx,
             )
-            if r and r.status_code == 200 and "paymentUrl" in r.json():
-                deps.delete_cache(profile_cache_key(ctx.sid, str(req_ident)))
-                return deps._json_success(
-                    {"status": "success", "paymentUrl": r.json()["paymentUrl"]}
-                )
             if r is not None and r.status_code == 200:
-                raise UpstreamWriteUncertain("Missing payment result")
+                result = parse_purchase_result(r.json())
+                if result["status"] == "success":
+                    deps.delete_cache(profile_cache_key(ctx.sid, str(req_ident)))
+                    return deps._json_success(result)
+            elif r is not None and 200 <= r.status_code < 300:
+                raise UpstreamWriteUncertain("Pending payment result")
             return deps._upstream_error(
                 r,
                 "购买请求失败，请稍后重试",

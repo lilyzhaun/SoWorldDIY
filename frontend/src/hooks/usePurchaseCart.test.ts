@@ -142,6 +142,38 @@ describe('usePurchaseCart', () => {
     expect(result.current.cart).toHaveLength(0)
   })
 
+  it.each(['cart', 'cmn'] as const)('handles %s purchases completed without a payment URL', async (source) => {
+    const showAlert = vi.fn()
+    const fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ status: 'success' }),
+    })
+    vi.stubGlobal('fetch', fetch)
+    const navigate = vi.fn()
+    vi.stubGlobal('location', {
+      set href(value: string) {
+        navigate(value)
+      },
+    })
+    const { result } = renderHook(() => usePurchaseCart('acc', 'sub1', '20'))
+    act(() => result.current.setCartQtyDraft({ offerId: 'o1', name: 'Plan', price: 5, quantity: 1 }))
+    act(() => result.current.confirmAddToCart(vi.fn()))
+    act(() => result.current.openPurchaseModal('order', 5, source, vi.fn()))
+    const submit = async () => {
+      if (source === 'cart') await result.current.submitCheckout(showAlert)
+      else await result.current.submitCmnPurchase({ offerId: 'off', price: 5 }, '51234567', showAlert)
+    }
+
+    await act(submit)
+
+    expect(showAlert).toHaveBeenCalledWith(expect.stringContaining('购买成功'), '成功')
+    expect(result.current.purchaseDraft).toBeNull()
+    if (source === 'cart') expect(result.current.cart).toHaveLength(0)
+    expect(navigate).not.toHaveBeenCalled()
+    await act(submit)
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+
   it('alerts on checkout failure and network errors', async () => {
     const showAlert = vi.fn()
     document.cookie = 'csrf_token=tok'
